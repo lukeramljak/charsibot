@@ -8,11 +8,14 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 dotenv.config();
 
 client.commands = new Collection();
-
 const commandsPath = path.join(__dirname, 'commands');
 const commandFiles = fs
 	.readdirSync(commandsPath)
 	.filter((file) => file.endsWith('.js'));
+
+client.once(Events.ClientReady, (c) => {
+	console.log(`${c.user.tag} is ready!`);
+});
 
 for (const file of commandFiles) {
 	const filePath = path.join(commandsPath, file);
@@ -27,13 +30,25 @@ for (const file of commandFiles) {
 	}
 }
 
-client.on(Events.InteractionCreate, (interaction) => {
+client.on(Events.InteractionCreate, async (interaction) => {
 	if (!interaction.isChatInputCommand()) return;
-	console.log(interaction);
-});
 
-client.once(Events.ClientReady, (c) => {
-	console.log(`${c.user.tag} is ready!`);
+	const command = interaction.client.commands.get(interaction.commandName);
+
+	if (!command) {
+		console.error(`No command matching ${interaction.commandName} was found.`);
+		return;
+	}
+
+	try {
+		await command.execute(interaction);
+	} catch (error) {
+		console.error(error);
+		await interaction.reply({
+			content: 'There was an error. Please complain to <@729571283645366293>',
+			ephemeral: true,
+		});
+	}
 });
 
 client.login(process.env.token);
