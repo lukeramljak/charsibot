@@ -1,19 +1,19 @@
 {
-  "dependencies": {
-    "discord.js": "^14.7.1",
-    "dotenv": "^16.0.3"
-  },
-  "name": "discord-bot",
-  "version": "1.0.0",
-  "main": "src/bot.js",
-  "scripts": {
-    "test": "node ."
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
-  "devDependencies": {
-    "eslint": "^8.34.0"
-  }
+	"dependencies": {
+		"discord.js": "^14.7.1",
+		"dotenv": "^16.0.3"
+	},
+	"name": "discord-bot",
+	"version": "1.0.0",
+	"main": "bot.js",
+	"scripts": {
+		"test": "node ."
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"description": "",
+	"devDependencies": {
+		"eslint": "^8.34.0"
+	}
 }
