@@ -1,21 +1,24 @@
 const dotenv = require('dotenv');
+dotenv.config();
 const fs = require('fs');
 const path = require('path');
 const { Client, Events, GatewayIntentBits, Collection } = require('discord.js');
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
-
-dotenv.config();
+const client = new Client({
+	intents: [
+		GatewayIntentBits.Guilds,
+		GatewayIntentBits.GuildMessages,
+		GatewayIntentBits.GuildMembers,
+		GatewayIntentBits.DirectMessages,
+		GatewayIntentBits.MessageContent,
+	],
+});
 
 client.commands = new Collection();
 const commandsPath = path.join(__dirname, 'commands');
 const commandFiles = fs
 	.readdirSync(commandsPath)
 	.filter((file) => file.endsWith('.js'));
-
-client.once(Events.ClientReady, (c) => {
-	console.log(`${c.user.tag} is ready!`);
-});
 
 for (const file of commandFiles) {
 	const filePath = path.join(commandsPath, file);
@@ -49,6 +52,10 @@ client.on(Events.InteractionCreate, async (interaction) => {
 			ephemeral: true,
 		});
 	}
+});
+
+client.once(Events.ClientReady, (c) => {
+	console.log(`${c.user.tag} is ready!`);
 });
 
 client.login(process.env.token);
