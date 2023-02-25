@@ -3,17 +3,16 @@
 		"discord.js": "^14.7.1",
 		"dotenv": "^16.0.3"
 	},
-	"name": "discord-bot",
+	"name": "charsibot",
 	"version": "1.0.0",
+	"description": "Discord bot for Charsibel's server",
 	"main": "bot.js",
 	"scripts": {
-		"test": "node ."
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"start": "node .",
+		"lint": "eslint ."
 	},
 	"keywords": [],
-	"author": "",
-	"license": "ISC",
-	"description": "",
-	"devDependencies": {
-		"eslint": "^8.34.0"
-	}
+	"author": "Luke Ramljak",
+	"license": "ISC"
 }
