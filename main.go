@@ -2,24 +2,19 @@ package main
 
 import (
 	"charsibot/bot"
-	"flag"
 	"log"
 	"os"
 	"os/signal"
-)
 
-var (
-	appID   = flag.String("app", "", "Application ID")
-	guildID = flag.String("guild", "", "Guild ID. If not passed, bot will register commands globally")
-	token   = flag.String("token", "", "Bot access token")
+	_ "github.com/joho/godotenv/autoload"
 )
-
-func init() {
-	flag.Parse()
-}
 
 func main() {
-	bot, err := bot.NewBot(*appID, *guildID, *token)
+	appID := os.Getenv("APP_ID")
+	guildID := os.Getenv("GUILD_ID")
+	token := os.Getenv("TOKEN")
+
+	bot, err := bot.NewBot(appID, guildID, token)
 	if err != nil {
 		log.Fatal(err)
 	}
