@@ -7,7 +7,10 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-var manageMessagesPermission int64 = discordgo.PermissionManageMessages
+var (
+	manageMessagesPermission int64 = discordgo.PermissionManageMessages
+	administratorPermission  int64 = discordgo.PermissionAdministrator
+)
 
 var Commands = []*discordgo.ApplicationCommand{
 	{
@@ -74,6 +77,49 @@ var Commands = []*discordgo.ApplicationCommand{
 				Name:        "name",
 				Description: "The person to hug",
 				Required:    true,
+			},
+		},
+	},
+	{
+		Name:                     "poll",
+		Description:              "Create a poll with up to 5 options",
+		DefaultMemberPermissions: &manageMessagesPermission,
+		Options: []*discordgo.ApplicationCommandOption{
+			{
+				Type:        discordgo.ApplicationCommandOptionString,
+				Name:        "question",
+				Description: "The poll question",
+				Required:    true,
+			},
+			{
+				Type:        discordgo.ApplicationCommandOptionString,
+				Name:        "1",
+				Description: "Option 1",
+				Required:    true,
+			},
+			{
+				Type:        discordgo.ApplicationCommandOptionString,
+				Name:        "2",
+				Description: "Option 2",
+				Required:    true,
+			},
+			{
+				Type:        discordgo.ApplicationCommandOptionString,
+				Name:        "3",
+				Description: "Option 3",
+				Required:    false,
+			},
+			{
+				Type:        discordgo.ApplicationCommandOptionString,
+				Name:        "4",
+				Description: "Option 4",
+				Required:    false,
+			},
+			{
+				Type:        discordgo.ApplicationCommandOptionString,
+				Name:        "5",
+				Description: "Option 5",
+				Required:    false,
 			},
 		},
 	},
@@ -202,6 +248,60 @@ var CommandHandlers = map[string]func(s *discordgo.Session, i *discordgo.Interac
 				Content: response,
 			},
 		})
+	},
+
+	"poll": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		question := i.ApplicationCommandData().Options[0].StringValue()
+		options := i.ApplicationCommandData().Options[1:]
+
+		optionsList := ""
+		for idx, option := range options {
+			optionsList += fmt.Sprintf("\n%d. %s", idx+1, option.StringValue())
+		}
+
+		response := fmt.Sprintf("**%s**%s", question, optionsList)
+
+		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "Creating poll...",
+				Flags:   discordgo.MessageFlagsEphemeral,
+			},
+		})
+		if err != nil {
+			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: "Error creating poll",
+					Flags:   discordgo.MessageFlagsEphemeral,
+				},
+			})
+		}
+
+		message, err := s.ChannelMessageSend(i.ChannelID, response)
+		if err != nil {
+			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: "Error sending poll message",
+					Flags:   discordgo.MessageFlagsEphemeral,
+				},
+			})
+		}
+
+		emojis := []string{"1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣"}
+		for idx := 0; idx < len(options); idx++ {
+			err = s.MessageReactionAdd(message.ChannelID, message.ID, emojis[idx])
+			if err != nil {
+				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Content: "Error adding reactions to poll message",
+						Flags:   discordgo.MessageFlagsEphemeral,
+					},
+				})
+			}
+		}
 	},
 
 	"smooch": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
