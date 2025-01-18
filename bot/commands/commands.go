@@ -7,6 +7,8 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
+var manageMessagesPermission int64 = discordgo.PermissionManageMessages
+
 var Commands = []*discordgo.ApplicationCommand{
 	{
 		Name:        "bonk",
@@ -41,6 +43,21 @@ var Commands = []*discordgo.ApplicationCommand{
 				Name:        "name",
 				Description: "The person whose brain is not working",
 				Required:    true,
+			},
+		},
+	},
+	{
+		Name:                     "clear",
+		Description:              "Clear messages in a channel",
+		DefaultMemberPermissions: &manageMessagesPermission,
+		Options: []*discordgo.ApplicationCommandOption{
+			{
+				Type:        discordgo.ApplicationCommandOptionInteger,
+				Name:        "amount",
+				Description: "The number of messages to clear",
+				Required:    true,
+				MinValue:    &[]float64{1}[0],
+				MaxValue:    100,
 			},
 		},
 	},
@@ -98,6 +115,7 @@ var CommandHandlers = map[string]func(s *discordgo.Session, i *discordgo.Interac
 			},
 		})
 	},
+
 	"burrito": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		user := i.ApplicationCommandData().Options[0].UserValue(nil).Mention()
 		response := fmt.Sprintf("%s has tucked %s into a burrito blanket. awwww goodnight %s <:burritoblanket:1021275794678497291>", i.Member.User.GlobalName, user, user)
@@ -109,6 +127,7 @@ var CommandHandlers = map[string]func(s *discordgo.Session, i *discordgo.Interac
 			},
 		})
 	},
+
 	"brain": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		user := i.ApplicationCommandData().Options[0].UserValue(nil).Mention()
 		response := fmt.Sprintf("Oh dear, it looks like %s's brain has stopped working... Please wait a moment while it restarts. <:rip:1057489640636035102>", user)
@@ -120,6 +139,47 @@ var CommandHandlers = map[string]func(s *discordgo.Session, i *discordgo.Interac
 			},
 		})
 	},
+
+	"clear": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		amount := int(i.ApplicationCommandData().Options[0].IntValue())
+		messages, err := s.ChannelMessages(i.ChannelID, amount, "", "", "")
+		if err != nil {
+			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: "Error fetching messages",
+					Flags:   discordgo.MessageFlagsEphemeral,
+				},
+			})
+			return
+		}
+
+		var messageIDs []string
+		for _, m := range messages {
+			messageIDs = append(messageIDs, m.ID)
+		}
+
+		err = s.ChannelMessagesBulkDelete(i.ChannelID, messageIDs)
+		if err != nil {
+			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: "Error deleting messages",
+					Flags:   discordgo.MessageFlagsEphemeral,
+				},
+			})
+			return
+		}
+
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: fmt.Sprintf("Deleted %d messages", amount),
+				Flags:   discordgo.MessageFlagsEphemeral,
+			},
+		})
+	},
+
 	"coinflip": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		coin := []string{"Heads", "Tails"}
 		response := coin[rand.Intn(len(coin))]
@@ -131,6 +191,7 @@ var CommandHandlers = map[string]func(s *discordgo.Session, i *discordgo.Interac
 			},
 		})
 	},
+
 	"hug": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		user := i.ApplicationCommandData().Options[0].UserValue(nil).Mention()
 		response := fmt.Sprintf("_hugs %s_", user)
@@ -142,6 +203,7 @@ var CommandHandlers = map[string]func(s *discordgo.Session, i *discordgo.Interac
 			},
 		})
 	},
+
 	"smooch": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		user := i.ApplicationCommandData().Options[0].UserValue(nil).Mention()
 		response := fmt.Sprintf("%s has given %s a big smooch. MWAHHH! <:cuddle:1299195758960054364>", i.Member.User.GlobalName, user)
@@ -153,6 +215,7 @@ var CommandHandlers = map[string]func(s *discordgo.Session, i *discordgo.Interac
 			},
 		})
 	},
+
 	"tomato": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		user := i.ApplicationCommandData().Options[0].UserValue(nil).Mention()
 		response := fmt.Sprintf("%s threw a tomato at %s. tomato tomato tomato! <:rip:1057489640636035102>", i.Member.User.GlobalName, user)
