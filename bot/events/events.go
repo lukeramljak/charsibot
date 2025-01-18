@@ -1,6 +1,8 @@
 package events
 
 import (
+	"log"
+
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -88,4 +90,30 @@ func ping(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 func GuildMemberRemove(s *discordgo.Session, gm *discordgo.GuildMemberRemove) {
 	s.ChannelMessageSend("1018070065423335437", gm.User.Username+" has left the server. <:periodt:1302882591552307240>")
+}
+
+func SinglePollReaction(s *discordgo.Session, r *discordgo.MessageReactionAdd) {
+	if r.UserID == s.State.User.ID {
+		return
+	}
+
+	msg, err := s.ChannelMessage(r.ChannelID, r.MessageID)
+	if err != nil {
+		return
+	}
+
+	if len(msg.Embeds) == 0 || s.State.User == nil || msg.Author.ID != s.State.User.ID {
+		return
+	}
+
+	for _, reaction := range msg.Reactions {
+		if reaction.Emoji.Name == r.Emoji.Name {
+			continue
+		}
+
+		err := s.MessageReactionRemove(r.ChannelID, r.MessageID, reaction.Emoji.Name, r.UserID)
+		if err != nil {
+			log.Printf("Error removing reaction: %v", err)
+		}
+	}
 }

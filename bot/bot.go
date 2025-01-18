@@ -19,7 +19,7 @@ func NewBot(appID string, guildID string, token string) (*Bot, error) {
 		return nil, fmt.Errorf("Error creating Discord session: %w", err)
 	}
 
-	session.Identify.Intents = discordgo.IntentsGuildMessages | discordgo.IntentsGuildMembers
+	session.Identify.Intents = discordgo.IntentsGuildMessages | discordgo.IntentsGuildMembers | discordgo.IntentGuildMessageReactions
 
 	addAllHandlers(session)
 	registerCommands(session, appID, guildID)
@@ -54,6 +54,7 @@ func addAllHandlers(s *discordgo.Session) {
 		s.AddHandler(handler)
 	}
 	s.AddHandler(events.GuildMemberRemove)
+	s.AddHandler(events.SinglePollReaction)
 	s.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		if h, ok := commands.CommandHandlers[i.ApplicationCommandData().Name]; ok {
 			h(s, i)

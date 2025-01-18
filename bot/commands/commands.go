@@ -328,6 +328,9 @@ var CommandHandlers = map[string]func(s *discordgo.Session, i *discordgo.Interac
 					Value: choicesList,
 				},
 			},
+			Footer: &discordgo.MessageEmbedFooter{
+				Text: "Single votes only",
+			},
 		})
 		if err != nil {
 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
