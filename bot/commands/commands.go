@@ -81,6 +81,19 @@ var Commands = []*discordgo.ApplicationCommand{
 		},
 	},
 	{
+		Name:                     "live",
+		Description:              "Go live on Twitch",
+		DefaultMemberPermissions: &administratorPermission,
+		Options: []*discordgo.ApplicationCommandOption{
+			{
+				Type:        discordgo.ApplicationCommandOptionString,
+				Name:        "message",
+				Description: "The message to display",
+				Required:    true,
+			},
+		},
+	},
+	{
 		Name:                     "poll",
 		Description:              "Create a poll with up to 5 options",
 		DefaultMemberPermissions: &manageMessagesPermission,
@@ -248,6 +261,40 @@ var CommandHandlers = map[string]func(s *discordgo.Session, i *discordgo.Interac
 				Content: response,
 			},
 		})
+	},
+
+	"live": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		message := i.ApplicationCommandData().Options[0].StringValue()
+		response := fmt.Sprintf("%s @everyone https://twitch.tv/charsibel", message)
+
+		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "Going live, have fun!",
+				Flags:   discordgo.MessageFlagsEphemeral,
+			},
+		})
+		if err != nil {
+			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: "Error going live. Please try again.",
+					Flags:   discordgo.MessageFlagsEphemeral,
+				},
+			})
+			return
+		}
+
+		_, err = s.ChannelMessageSend(i.ChannelID, response)
+		if err != nil {
+			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: "Error sending live message. Please try again.",
+					Flags:   discordgo.MessageFlagsEphemeral,
+				},
+			})
+		}
 	},
 
 	"poll": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
