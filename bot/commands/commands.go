@@ -95,7 +95,7 @@ var Commands = []*discordgo.ApplicationCommand{
 	},
 	{
 		Name:                     "poll",
-		Description:              "Create a poll with up to 5 options",
+		Description:              "Create a poll with up to 5 choices",
 		DefaultMemberPermissions: &manageMessagesPermission,
 		Options: []*discordgo.ApplicationCommandOption{
 			{
@@ -107,31 +107,31 @@ var Commands = []*discordgo.ApplicationCommand{
 			{
 				Type:        discordgo.ApplicationCommandOptionString,
 				Name:        "1",
-				Description: "Option 1",
+				Description: "Choice 1",
 				Required:    true,
 			},
 			{
 				Type:        discordgo.ApplicationCommandOptionString,
 				Name:        "2",
-				Description: "Option 2",
+				Description: "Choice 2",
 				Required:    true,
 			},
 			{
 				Type:        discordgo.ApplicationCommandOptionString,
 				Name:        "3",
-				Description: "Option 3",
+				Description: "Choice 3",
 				Required:    false,
 			},
 			{
 				Type:        discordgo.ApplicationCommandOptionString,
 				Name:        "4",
-				Description: "Option 4",
+				Description: "Choice 4",
 				Required:    false,
 			},
 			{
 				Type:        discordgo.ApplicationCommandOptionString,
 				Name:        "5",
-				Description: "Option 5",
+				Description: "Choice 5",
 				Required:    false,
 			},
 		},
@@ -299,20 +299,34 @@ var CommandHandlers = map[string]func(s *discordgo.Session, i *discordgo.Interac
 
 	"poll": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		question := i.ApplicationCommandData().Options[0].StringValue()
-		options := i.ApplicationCommandData().Options[1:]
+		choices := i.ApplicationCommandData().Options[1:]
 
-		optionsList := ""
-		for idx, option := range options {
-			optionsList += fmt.Sprintf("\n%d. %s", idx+1, option.StringValue())
+		emojis := []string{"1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣"}
+
+		choicesList := ""
+		for idx, choice := range choices {
+			choicesList += fmt.Sprintf("\n%s %s", emojis[idx], choice.StringValue())
 		}
 
-		response := fmt.Sprintf("**%s**%s", question, optionsList)
-
-		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: "Creating poll...",
 				Flags:   discordgo.MessageFlagsEphemeral,
+			},
+		})
+
+		message, err := s.ChannelMessageSendEmbed(i.ChannelID, &discordgo.MessageEmbed{
+			Color: 0xFF8280,
+			Fields: []*discordgo.MessageEmbedField{
+				{
+					Name:  "Question",
+					Value: question,
+				},
+				{
+					Name:  "Choices",
+					Value: choicesList,
+				},
 			},
 		})
 		if err != nil {
@@ -325,19 +339,7 @@ var CommandHandlers = map[string]func(s *discordgo.Session, i *discordgo.Interac
 			})
 		}
 
-		message, err := s.ChannelMessageSend(i.ChannelID, response)
-		if err != nil {
-			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Content: "Error sending poll message",
-					Flags:   discordgo.MessageFlagsEphemeral,
-				},
-			})
-		}
-
-		emojis := []string{"1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣"}
-		for idx := 0; idx < len(options); idx++ {
+		for idx := 0; idx < len(choices); idx++ {
 			err = s.MessageReactionAdd(message.ChannelID, message.ID, emojis[idx])
 			if err != nil {
 				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
