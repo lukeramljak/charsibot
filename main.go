@@ -44,6 +44,11 @@ func main() {
 	}
 	defer dg.Close()
 
+	err = dg.UpdateListeningStatus("Big Chungus")
+	if err != nil {
+		fmt.Println("Error setting listening status: ", err)
+	}
+
 	fmt.Println("Bot is now running. Press CTRL-C to exit.")
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
