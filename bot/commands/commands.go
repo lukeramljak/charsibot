@@ -19,7 +19,7 @@ var Commands = []*discordgo.ApplicationCommand{
 		Options: []*discordgo.ApplicationCommandOption{
 			{
 				Type:        discordgo.ApplicationCommandOptionUser,
-				Name:        "name",
+				Name:        "user",
 				Description: "The person to bonk",
 				Required:    true,
 			},
@@ -31,7 +31,7 @@ var Commands = []*discordgo.ApplicationCommand{
 		Options: []*discordgo.ApplicationCommandOption{
 			{
 				Type:        discordgo.ApplicationCommandOptionUser,
-				Name:        "name",
+				Name:        "user",
 				Description: "The person to tuck in",
 				Required:    true,
 			},
@@ -43,7 +43,7 @@ var Commands = []*discordgo.ApplicationCommand{
 		Options: []*discordgo.ApplicationCommandOption{
 			{
 				Type:        discordgo.ApplicationCommandOptionUser,
-				Name:        "name",
+				Name:        "user",
 				Description: "The person whose brain is not working",
 				Required:    true,
 			},
@@ -74,7 +74,7 @@ var Commands = []*discordgo.ApplicationCommand{
 		Options: []*discordgo.ApplicationCommandOption{
 			{
 				Type:        discordgo.ApplicationCommandOptionUser,
-				Name:        "name",
+				Name:        "user",
 				Description: "The person to hug",
 				Required:    true,
 			},
