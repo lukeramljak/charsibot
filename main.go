@@ -9,8 +9,9 @@ import (
 )
 
 var (
-	GuildID = flag.String("guild", "", "Guild ID. If not passed, bot will register commands globally")
-	Token   = flag.String("token", "", "Bot access token")
+	appID   = flag.String("app", "", "Application ID")
+	guildID = flag.String("guild", "", "Guild ID. If not passed, bot will register commands globally")
+	token   = flag.String("token", "", "Bot access token")
 )
 
 func init() {
@@ -18,7 +19,7 @@ func init() {
 }
 
 func main() {
-	bot, err := bot.NewBot(*Token)
+	bot, err := bot.NewBot(*appID, *guildID, *token)
 	if err != nil {
 		log.Fatal(err)
 	}

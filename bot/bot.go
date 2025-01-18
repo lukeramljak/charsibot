@@ -1,6 +1,7 @@
 package bot
 
 import (
+	"charsibot/bot/commands"
 	"charsibot/bot/events"
 	"fmt"
 
@@ -11,7 +12,7 @@ type Bot struct {
 	Session *discordgo.Session
 }
 
-func NewBot(token string) (*Bot, error) {
+func NewBot(appID string, guildID string, token string) (*Bot, error) {
 	if token == "" {
 		return nil, fmt.Errorf("Bot token is required")
 	}
@@ -25,6 +26,20 @@ func NewBot(token string) (*Bot, error) {
 		session.AddHandler(handler)
 	}
 	session.AddHandler(events.GuildMemberRemove)
+	session.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		if h, ok := commands.CommandHandlers[i.ApplicationCommandData().Name]; ok {
+			h(s, i)
+		}
+	})
+
+	fmt.Println("Registering commands...")
+
+	_, err = session.ApplicationCommandBulkOverwrite(appID, guildID, commands.Commands)
+	if err != nil {
+		return nil, fmt.Errorf("Error creating commands: %w", err)
+	}
+
+	fmt.Println("Successfully registered " + fmt.Sprint(len(commands.Commands)) + " commands")
 
 	session.Identify.Intents = discordgo.IntentsGuildMessages | discordgo.IntentsGuildMembers
 
