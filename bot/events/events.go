@@ -10,6 +10,7 @@ var MessageHandlers = []func(*discordgo.Session, *discordgo.MessageCreate){
 	cow,
 	dog,
 	egg,
+	newMember,
 	ping,
 }
 
@@ -64,6 +65,14 @@ func egg(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	if MessageContains(m.Content, "egg") {
 		s.ChannelMessageSend(m.ChannelID, "egg")
+	}
+}
+
+func newMember(s *discordgo.Session, m *discordgo.MessageCreate) {
+	if m.Type == discordgo.MessageTypeGuildMemberJoin {
+		s.MessageReactionAdd(m.ChannelID, m.ID, "<a:catJAM:1111234741639848026>")
+		s.MessageReactionAdd(m.ChannelID, m.ID, "<a:hooray:1057490323561001042>")
+		s.MessageReactionAdd(m.ChannelID, m.ID, "<a:pedro:1057490323561001042>")
 	}
 }
 
