@@ -12,6 +12,10 @@ type Bot struct {
 }
 
 func NewBot(token string) (*Bot, error) {
+	if token == "" {
+		return nil, fmt.Errorf("Bot token is required")
+	}
+
 	session, err := discordgo.New("Bot " + token)
 	if err != nil {
 		return nil, fmt.Errorf("Error creating Discord session: %w", err)
