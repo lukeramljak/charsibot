@@ -2,7 +2,6 @@ package events
 
 import (
 	"math/rand"
-	"strings"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -12,49 +11,71 @@ var (
 	r               = rand.New(rand.NewSource(time.Now().UnixNano()))
 	chanceToSend    = 0.5
 	MessageHandlers = []func(*discordgo.Session, *discordgo.MessageCreate){
-		Butt,
-		Come,
-		Cow,
-		Ping,
+		butt,
+		come,
+		cow,
+		dog,
+		egg,
+		ping,
 	}
 )
 
-func Butt(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if shouldIgnoreMessage(s, m) {
+func butt(s *discordgo.Session, m *discordgo.MessageCreate) {
+	if ShouldIgnoreMessage(s, m) {
 		return
 	}
 
-	if messageContains(m.Content, "but") {
-		if shouldSendMessage() {
+	if MessageContains(m.Content, "but") {
+		if ShouldSendMessage() {
 			s.ChannelMessageSend(m.ChannelID, "butt")
 		}
 	}
 }
 
-func Come(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if shouldIgnoreMessage(s, m) {
+func come(s *discordgo.Session, m *discordgo.MessageCreate) {
+	if ShouldIgnoreMessage(s, m) {
 		return
 	}
 
-	if messageContains(m.Content, "come") || messageContains(m.Content, "coming") || messageContains(m.Content, "cum") {
-		if shouldSendMessage() {
+	if MessageContains(m.Content, "come") || MessageContains(m.Content, "coming") || MessageContains(m.Content, "cum") {
+		if ShouldSendMessage() {
 			s.ChannelMessageSend(m.ChannelID, "no coming")
 		}
 	}
 }
 
-func Cow(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if shouldIgnoreMessage(s, m) {
+func cow(s *discordgo.Session, m *discordgo.MessageCreate) {
+	if ShouldIgnoreMessage(s, m) {
 		return
 	}
 
-	if messageContains(m.Content, "cow") {
+	if MessageContains(m.Content, "cow") {
 		s.ChannelMessageSend(m.ChannelID, "MOOOOO! "+"<:rage:1302882593339084851>")
 	}
 }
 
-func Ping(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if shouldIgnoreMessage(s, m) {
+func dog(s *discordgo.Session, m *discordgo.MessageCreate) {
+	if ShouldIgnoreMessage(s, m) {
+		return
+	}
+
+	if MessageContains(m.Content, "dog") {
+		s.ChannelMessageSend(m.ChannelID, "what the dog doin'?")
+	}
+}
+
+func egg(s *discordgo.Session, m *discordgo.MessageCreate) {
+	if ShouldIgnoreMessage(s, m) {
+		return
+	}
+
+	if MessageContains(m.Content, "egg") {
+		s.ChannelMessageSend(m.ChannelID, "egg")
+	}
+}
+
+func ping(s *discordgo.Session, m *discordgo.MessageCreate) {
+	if ShouldIgnoreMessage(s, m) {
 		return
 	}
 
@@ -63,15 +84,6 @@ func Ping(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 }
 
-func shouldIgnoreMessage(s *discordgo.Session, m *discordgo.MessageCreate) bool {
-	return m.Author.ID == s.State.User.ID
-}
-
-func shouldSendMessage() bool {
-	return r.Float64() < chanceToSend
-}
-
-func messageContains(str string, substr string) bool {
-	toLower := strings.ToLower(str)
-	return strings.Contains(toLower, substr)
+func GuildMemberRemove(s *discordgo.Session, gm *discordgo.GuildMemberRemove) {
+	s.ChannelMessageSend("1018070065423335437", gm.User.Username+" has left the server. <:periodt:1302882591552307240>")
 }

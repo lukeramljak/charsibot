@@ -33,7 +33,9 @@ func main() {
 		dg.AddHandler(handler)
 	}
 
-	dg.Identify.Intents = discordgo.IntentsGuildMessages | discordgo.IntentsMessageContent
+	dg.AddHandler(events.GuildMemberRemove)
+
+	dg.Identify.Intents = discordgo.IntentsGuildMessages | discordgo.IntentsGuildMembers
 
 	err = dg.Open()
 	if err != nil {
