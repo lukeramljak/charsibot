@@ -1,7 +1,9 @@
 package events
 
 import (
+	"math/rand"
 	"strings"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -11,7 +13,8 @@ func ShouldIgnoreMessage(s *discordgo.Session, m *discordgo.MessageCreate) bool 
 }
 
 func ShouldSendMessage() bool {
-	return r.Float64() < chanceToSend
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	return r.Float64() < 0.5
 }
 
 func MessageContains(str string, substr string) bool {

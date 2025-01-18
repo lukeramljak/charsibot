@@ -1,24 +1,17 @@
 package events
 
 import (
-	"math/rand"
-	"time"
-
 	"github.com/bwmarrin/discordgo"
 )
 
-var (
-	r               = rand.New(rand.NewSource(time.Now().UnixNano()))
-	chanceToSend    = 0.5
-	MessageHandlers = []func(*discordgo.Session, *discordgo.MessageCreate){
-		butt,
-		come,
-		cow,
-		dog,
-		egg,
-		ping,
-	}
-)
+var MessageHandlers = []func(*discordgo.Session, *discordgo.MessageCreate){
+	butt,
+	come,
+	cow,
+	dog,
+	egg,
+	ping,
+}
 
 func butt(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if ShouldIgnoreMessage(s, m) {

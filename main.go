@@ -1,14 +1,11 @@
 package main
 
 import (
-	events "charsibot/bot"
+	"charsibot/bot"
 	"flag"
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
-
-	"github.com/bwmarrin/discordgo"
 )
 
 var (
@@ -16,40 +13,19 @@ var (
 	Token   = flag.String("token", "", "Bot access token")
 )
 
-var s *discordgo.Session
-
 func init() {
 	flag.Parse()
 }
 
 func main() {
-	dg, err := discordgo.New("Bot " + *Token)
+	bot, err := bot.NewBot(*Token)
 	if err != nil {
-		fmt.Println("Error creating Discord session: ", err)
-		return
+		log.Fatal(err)
 	}
 
-	for _, handler := range events.MessageHandlers {
-		dg.AddHandler(handler)
-	}
+	go bot.Start()
+	defer bot.Close()
 
-	dg.AddHandler(events.GuildMemberRemove)
-
-	dg.Identify.Intents = discordgo.IntentsGuildMessages | discordgo.IntentsGuildMembers
-
-	err = dg.Open()
-	if err != nil {
-		fmt.Println("Error opening Discord session: ", err)
-		return
-	}
-	defer dg.Close()
-
-	err = dg.UpdateListeningStatus("Big Chungus")
-	if err != nil {
-		fmt.Println("Error setting listening status: ", err)
-	}
-
-	fmt.Println("Ready! Logged in as", dg.State.User.Username+". Press CTRL-C to exit.")
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
 	<-stop
