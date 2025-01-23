@@ -14,7 +14,7 @@ func ShouldIgnoreMessage(s *discordgo.Session, m *discordgo.MessageCreate) bool 
 
 func ShouldSendMessage() bool {
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	return r.Float64() < 0.5
+	return r.Float64() < 0.2
 }
 
 func MessageContains(str string, substr string) bool {
