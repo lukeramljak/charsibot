@@ -1,5 +1,6 @@
 services:
   charsibot:
     build: .
+    container_name: charsibot
     env_file: .env
     restart: unless-stopped
