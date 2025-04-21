@@ -66,11 +66,11 @@ func addAllHandlers(s *discordgo.Session) {
 }
 
 func registerCommands(s *discordgo.Session, appID string, guildID string) error {
-	fmt.Println("Registering commands...")
+	log.Println("Registering commands...")
 	createdCommands, err := s.ApplicationCommandBulkOverwrite(appID, guildID, commands.Commands)
 	if err != nil {
 		return fmt.Errorf("Error creating commands: %w", err)
 	}
-	fmt.Printf("Successfully registered %d commands\n", len(createdCommands))
+	log.Printf("Successfully registered %d commands\n", len(createdCommands))
 	return nil
 }
