@@ -1,8 +1,6 @@
 package events
 
 import (
-	"log"
-
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -17,55 +15,55 @@ var MessageHandlers = []func(*discordgo.Session, *discordgo.MessageCreate){
 }
 
 func butt(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if ShouldIgnoreMessage(s, m) {
+	if shouldIgnoreMessage(s, m) {
 		return
 	}
 
-	if MessageContains(m.Content, "but") {
-		if ShouldSendMessage() {
+	if messageContains(m.Content, "but") {
+		if shouldSendMessage() {
 			s.ChannelMessageSend(m.ChannelID, "butt")
 		}
 	}
 }
 
 func come(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if ShouldIgnoreMessage(s, m) {
+	if shouldIgnoreMessage(s, m) {
 		return
 	}
 
-	if MessageContains(m.Content, "come") || MessageContains(m.Content, "coming") || MessageContains(m.Content, "cum") {
-		if ShouldSendMessage() {
+	if messageContains(m.Content, "come") || messageContains(m.Content, "coming") || messageContains(m.Content, "cum") {
+		if shouldSendMessage() {
 			s.ChannelMessageSend(m.ChannelID, "no coming")
 		}
 	}
 }
 
 func cow(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if ShouldIgnoreMessage(s, m) {
+	if shouldIgnoreMessage(s, m) {
 		return
 	}
 
-	if MessageContains(m.Content, "cow") {
+	if messageContains(m.Content, "cow") {
 		s.ChannelMessageSend(m.ChannelID, "MOOOOO! "+"<:rage:1302882593339084851>")
 	}
 }
 
 func dog(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if ShouldIgnoreMessage(s, m) {
+	if shouldIgnoreMessage(s, m) {
 		return
 	}
 
-	if MessageContains(m.Content, "dog") {
+	if messageContains(m.Content, "dog") {
 		s.ChannelMessageSend(m.ChannelID, "what the dog doin'?")
 	}
 }
 
 func egg(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if ShouldIgnoreMessage(s, m) {
+	if shouldIgnoreMessage(s, m) {
 		return
 	}
 
-	if MessageContains(m.Content, "egg") {
+	if messageContains(m.Content, "egg") {
 		s.ChannelMessageSend(m.ChannelID, "egg")
 	}
 }
@@ -79,41 +77,11 @@ func newMember(s *discordgo.Session, m *discordgo.MessageCreate) {
 }
 
 func ping(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if ShouldIgnoreMessage(s, m) {
+	if shouldIgnoreMessage(s, m) {
 		return
 	}
 
 	if m.Content == "ping" {
 		s.ChannelMessageSend(m.ChannelID, "Pong!")
-	}
-}
-
-func GuildMemberRemove(s *discordgo.Session, gm *discordgo.GuildMemberRemove) {
-	s.ChannelMessageSend("1018070065423335437", gm.User.Username+" has left the server. <:periodt:1302882591552307240>")
-}
-
-func SinglePollReaction(s *discordgo.Session, r *discordgo.MessageReactionAdd) {
-	if r.UserID == s.State.User.ID {
-		return
-	}
-
-	msg, err := s.ChannelMessage(r.ChannelID, r.MessageID)
-	if err != nil {
-		return
-	}
-
-	if len(msg.Embeds) == 0 || s.State.User == nil || msg.Author.ID != s.State.User.ID {
-		return
-	}
-
-	for _, reaction := range msg.Reactions {
-		if reaction.Emoji.Name == r.Emoji.Name {
-			continue
-		}
-
-		err := s.MessageReactionRemove(r.ChannelID, r.MessageID, reaction.Emoji.Name, r.UserID)
-		if err != nil {
-			log.Printf("Error removing reaction: %v", err)
-		}
 	}
 }
