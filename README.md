@@ -22,4 +22,4 @@ charsibot is a Discord bot used in [Charsibel](https://twitch.tv/charsibel)'s se
 1. SSH into the server
 2. Navigate to the bot directory: `cd charsibot`
 3. Pull the latest changes: `git pull`
-4. Rebuild and restart the Docker image: `docker-compose up --build -d`
+4. Rebuild and restart the Docker image: `docker compose up --build -d`
