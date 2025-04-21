@@ -15,31 +15,31 @@ var MessageHandlers = []func(*discordgo.Session, *discordgo.MessageCreate){
 }
 
 func butt(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if shouldIgnoreMessage(s, m) {
+	if isBotMessage(s, m) {
 		return
 	}
 
 	if messageContains(m.Content, "but") {
-		if shouldSendMessage() {
+		if chanceSucceeded(0.2) {
 			s.ChannelMessageSend(m.ChannelID, "butt")
 		}
 	}
 }
 
 func come(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if shouldIgnoreMessage(s, m) {
+	if isBotMessage(s, m) {
 		return
 	}
 
 	if messageContains(m.Content, "come") || messageContains(m.Content, "coming") || messageContains(m.Content, "cum") {
-		if shouldSendMessage() {
+		if chanceSucceeded(0.2) {
 			s.ChannelMessageSend(m.ChannelID, "no coming")
 		}
 	}
 }
 
 func cow(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if shouldIgnoreMessage(s, m) {
+	if isBotMessage(s, m) {
 		return
 	}
 
@@ -49,7 +49,7 @@ func cow(s *discordgo.Session, m *discordgo.MessageCreate) {
 }
 
 func dog(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if shouldIgnoreMessage(s, m) {
+	if isBotMessage(s, m) {
 		return
 	}
 
@@ -59,7 +59,7 @@ func dog(s *discordgo.Session, m *discordgo.MessageCreate) {
 }
 
 func egg(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if shouldIgnoreMessage(s, m) {
+	if isBotMessage(s, m) {
 		return
 	}
 
@@ -77,7 +77,7 @@ func newMember(s *discordgo.Session, m *discordgo.MessageCreate) {
 }
 
 func ping(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if shouldIgnoreMessage(s, m) {
+	if isBotMessage(s, m) {
 		return
 	}
 

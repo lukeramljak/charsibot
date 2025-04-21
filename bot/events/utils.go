@@ -8,13 +8,13 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-func shouldIgnoreMessage(s *discordgo.Session, m *discordgo.MessageCreate) bool {
+func isBotMessage(s *discordgo.Session, m *discordgo.MessageCreate) bool {
 	return m.Author.ID == s.State.User.ID
 }
 
-func shouldSendMessage() bool {
+func chanceSucceeded(prob float64) bool {
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	return r.Float64() < 0.2
+	return r.Float64() < prob
 }
 
 func messageContains(str string, substr string) bool {
