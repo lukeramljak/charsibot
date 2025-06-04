@@ -54,7 +54,9 @@ func dog(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	if messageContains(m.Content, "dog") {
-		s.ChannelMessageSend(m.ChannelID, "what the dog doin'?")
+		if chanceSucceeded(0.2) {
+			s.ChannelMessageSend(m.ChannelID, "what the dog doin'?")
+		}
 	}
 }
 
