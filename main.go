@@ -5,16 +5,16 @@ import (
 	"log"
 	"os"
 	"os/signal"
-
-	_ "github.com/joho/godotenv/autoload"
 )
 
 func main() {
-	appID := os.Getenv("APP_ID")
-	guildID := os.Getenv("GUILD_ID")
-	token := os.Getenv("TOKEN")
+	bot, err := bot.NewBot()
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	bot, err := bot.NewBot(appID, guildID, token)
+	bot.RegisterHandlers()
+	err = bot.RegisterCommands()
 	if err != nil {
 		log.Fatal(err)
 	}
