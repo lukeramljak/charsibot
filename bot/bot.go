@@ -22,7 +22,10 @@ func NewBot(appID string, guildID string, token string) (*Bot, error) {
 	session.Identify.Intents = discordgo.IntentsGuildMessages | discordgo.IntentsGuildMembers | discordgo.IntentGuildMessageReactions
 
 	addAllHandlers(session)
-	registerCommands(session, appID, guildID)
+	err = registerCommands(session, appID, guildID)
+	if err != nil {
+		return nil, err
+	}
 
 	return &Bot{Session: session}, nil
 }
