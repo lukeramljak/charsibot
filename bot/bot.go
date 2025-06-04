@@ -16,7 +16,7 @@ type Bot struct {
 func NewBot(appID string, guildID string, token string) (*Bot, error) {
 	session, err := discordgo.New("Bot " + token)
 	if err != nil {
-		return nil, fmt.Errorf("Error creating Discord session: %w", err)
+		return nil, fmt.Errorf("error creating Discord session: %w", err)
 	}
 
 	session.Identify.Intents = discordgo.IntentsGuildMessages | discordgo.IntentsGuildMembers | discordgo.IntentGuildMessageReactions
@@ -30,12 +30,12 @@ func NewBot(appID string, guildID string, token string) (*Bot, error) {
 func (b *Bot) Start() error {
 	err := b.Session.Open()
 	if err != nil {
-		return fmt.Errorf("Error opening Discord session: %w", err)
+		return fmt.Errorf("error opening Discord session: %w", err)
 	}
 
 	err = b.Session.UpdateListeningStatus("Big Chungus")
 	if err != nil {
-		return fmt.Errorf("Error setting listening status: %w", err)
+		return fmt.Errorf("error setting listening status: %w", err)
 	}
 
 	return nil
@@ -44,7 +44,7 @@ func (b *Bot) Start() error {
 func (b *Bot) Close() error {
 	err := b.Session.Close()
 	if err != nil {
-		return fmt.Errorf("Error closing Discord session: %w", err)
+		return fmt.Errorf("error closing Discord session: %w", err)
 	}
 	return nil
 }
@@ -69,7 +69,7 @@ func registerCommands(s *discordgo.Session, appID string, guildID string) error 
 	log.Println("Registering commands...")
 	createdCommands, err := s.ApplicationCommandBulkOverwrite(appID, guildID, commands.Commands)
 	if err != nil {
-		return fmt.Errorf("Error creating commands: %w", err)
+		return fmt.Errorf("error registering commands: %w", err)
 	}
 	log.Printf("Successfully registered %d commands\n", len(createdCommands))
 	return nil
