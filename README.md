@@ -14,8 +14,8 @@ charsibot is a Discord bot used in [Charsibel](https://twitch.tv/charsibel)'s se
 1. Clone the repository: `git clone https://github.com/lukeramljak/charsibot.git`
 2. Install dependencies: `go mod tidy`
 3. Create an `.env` file using the provided `.env.example`
-4. During development, you can use `go run main.go`
-5. To build the bot: `go build -o charsibot`
+4. During development, you can use `go run ./cmd/bot`
+5. To build the bot: `go build -o charsibot ./cmd/bot`
 
 ## Deployment & Updates
 

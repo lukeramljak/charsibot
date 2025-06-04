@@ -8,7 +8,7 @@ RUN go mod download
 
 COPY . .
 
-RUN go build -o charsibot
+RUN go build -o charsibot ./cmd/bot
 
 FROM alpine:latest
 
