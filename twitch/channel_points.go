@@ -72,11 +72,19 @@ func (tc *TwitchClient) handleIncreaseRandomStat(username string) error {
 			"@%s %s %s",
 		username, username, outcome, randomStat)
 
-	return tc.SendChatMessage(message)
+	if err := tc.SendChatMessage(message); err != nil {
+		slog.Error("Failed to send message", "error", err)
+		return err
+	}
+
+	return tc.handleStats(username, "")
 }
 
 func (tc *TwitchClient) handleRollDice(username string) error {
-	tc.SendChatMessage(fmt.Sprintf("@%s has rolled with initiative.", username))
+	if err := tc.SendChatMessage(fmt.Sprintf("@%s has rolled with initiative.", username)); err != nil {
+		slog.Error("Failed to send message", "error", err)
+		return err
+	}
 	return tc.handleStats(username, "")
 }
 
