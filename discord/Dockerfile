@@ -14,6 +14,6 @@ FROM alpine:latest
 
 WORKDIR /root/
 
-COPY --from=builder /app/charsibot .
+COPY --from=builder /app/charsibot-discord .
 
 CMD ["./charsibot-discord"]
