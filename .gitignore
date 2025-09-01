@@ -1,0 +1,16 @@
+# Build artifacts
+tmp/
+*/tmp/
+charsibot
+charsibot-*
+
+# Environment files
+.env
+*/.env
+
+# Go workspace sum
+go.work.sum
+
+# Logs
+logs/
+*/logs/

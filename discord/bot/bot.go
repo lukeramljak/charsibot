@@ -1,11 +1,12 @@
 package bot
 
 import (
-	"charsibot/bot/commands"
-	"charsibot/bot/events"
 	"fmt"
 	"log"
 	"os"
+
+	"github.com/lukeramljak/charsibot/discord/bot/commands"
+	"github.com/lukeramljak/charsibot/discord/bot/events"
 
 	"github.com/bwmarrin/discordgo"
 	_ "github.com/joho/godotenv/autoload"
@@ -18,9 +19,9 @@ type Bot struct {
 }
 
 func NewBot() (*Bot, error) {
-	appID := os.Getenv("APP_ID")
-	guildID := os.Getenv("GUILD_ID")
-	token := os.Getenv("TOKEN")
+	appID := os.Getenv("DISCORD_APP_ID")
+	guildID := os.Getenv("DISCORD_GUILD_ID")
+	token := os.Getenv("DISCORD_TOKEN")
 
 	session, err := discordgo.New("Bot " + token)
 	if err != nil {

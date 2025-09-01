@@ -1,10 +1,11 @@
 package main
 
 import (
-	"charsibot/bot"
 	"log"
 	"os"
 	"os/signal"
+
+	"github.com/lukeramljak/charsibot/discord/bot"
 )
 
 func main() {

@@ -1,4 +1,4 @@
-FROM golang:1.23.4-alpine AS builder
+FROM golang:1.25-alpine AS builder
 
 WORKDIR /app
 
@@ -8,7 +8,7 @@ RUN go mod download
 
 COPY . .
 
-RUN go build -o charsibot ./cmd/bot
+RUN go build -o charsibot-discord ./cmd/bot
 
 FROM alpine:latest
 
@@ -16,6 +16,4 @@ WORKDIR /root/
 
 COPY --from=builder /app/charsibot .
 
-COPY .env .
-
-CMD ["./charsibot"]
+CMD ["./charsibot-discord"]
