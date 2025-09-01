@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"database/sql"
 	"encoding/json"
@@ -9,6 +10,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 )
@@ -32,11 +34,12 @@ type TwitchClient struct {
 
 func NewTwitchClient(config *Config, db *sql.DB) *TwitchClient {
 	tc := &TwitchClient{
-		config:      config,
-		accessToken: config.OAuthToken,
-		httpClient:  &http.Client{Timeout: 10 * time.Second},
-		handlers:    make(map[string]func(username, message string) error),
-		db:          db,
+		config:       config,
+		accessToken:  config.OAuthToken,
+		refreshToken: config.RefreshToken,
+		httpClient:   &http.Client{Timeout: 10 * time.Second},
+		handlers:     make(map[string]func(username, message string) error),
+		db:           db,
 	}
 
 	tc.RegisterChatCommand("!stats", tc.handleStats)
@@ -56,7 +59,10 @@ func (tc *TwitchClient) ValidateAuth() error {
 
 	if resp.StatusCode != 200 {
 		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("invalid token (%d): %s", resp.StatusCode, body)
+		slog.Error("Invalid token", "status", resp.StatusCode, "body", string(body))
+		if err := tc.refreshAccessToken(); err != nil {
+			return err
+		}
 	}
 
 	slog.Info("✅ Validated token")
@@ -65,6 +71,8 @@ func (tc *TwitchClient) ValidateAuth() error {
 }
 
 func (tc *TwitchClient) refreshAccessToken() error {
+	slog.Info("🔄 Refreshing token...")
+
 	form := url.Values{}
 	form.Set("grant_type", "refresh_token")
 	form.Set("refresh_token", tc.refreshToken)
@@ -93,8 +101,48 @@ func (tc *TwitchClient) refreshAccessToken() error {
 
 	tc.accessToken = tr.AccessToken
 	tc.refreshToken = tr.RefreshToken
+
+	if err := tc.updateEnvFile(tr.AccessToken, tr.RefreshToken); err != nil {
+		slog.Error("Failed to update .env file", "error", err)
+	}
+
 	slog.Info("🔑 Refreshed token")
 
+	return nil
+}
+
+func (tc *TwitchClient) updateEnvFile(newAccessToken, newRefreshToken string) error {
+	envPath := "../.env"
+
+	file, err := os.Open(envPath)
+	if err != nil {
+		return fmt.Errorf("failed to open .env file: %w", err)
+	}
+	defer file.Close()
+
+	var lines []string
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, "TWITCH_OAUTH_TOKEN=") {
+			lines = append(lines, "TWITCH_OAUTH_TOKEN="+newAccessToken)
+		} else if strings.HasPrefix(line, "TWITCH_REFRESH_TOKEN=") {
+			lines = append(lines, "TWITCH_REFRESH_TOKEN="+newRefreshToken)
+		} else {
+			lines = append(lines, line)
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return fmt.Errorf("error reading .env file: %w", err)
+	}
+
+	content := strings.Join(lines, "\n") + "\n"
+	if err := os.WriteFile(envPath, []byte(content), 0644); err != nil {
+		return fmt.Errorf("failed to write .env file: %w", err)
+	}
+
+	slog.Info("💾 Updated .env file with new tokens")
 	return nil
 }
 

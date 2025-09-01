@@ -1,9 +1,10 @@
 package main
 
 import (
+	"log"
 	"os"
 
-	_ "github.com/joho/godotenv/autoload"
+	"github.com/joho/godotenv"
 )
 
 type Config struct {
@@ -18,6 +19,10 @@ type Config struct {
 }
 
 func loadConfig() *Config {
+	if err := godotenv.Load("../.env"); err != nil {
+		log.Printf("Warning: Could not load .env file: %v", err)
+	}
+
 	return &Config{
 		ClientID:          os.Getenv("TWITCH_CLIENT_ID"),
 		ClientSecret:      os.Getenv("TWITCH_CLIENT_SECRET"),
