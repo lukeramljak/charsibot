@@ -9,7 +9,7 @@ import (
 	"github.com/lukeramljak/charsibot/discord/bot/events"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/joho/godotenv"
+	_ "github.com/joho/godotenv/autoload"
 )
 
 type Bot struct {
@@ -19,10 +19,6 @@ type Bot struct {
 }
 
 func NewBot() (*Bot, error) {
-	if err := godotenv.Load("../.env"); err != nil {
-		log.Printf("Warning: Could not load .env file: %v", err)
-	}
-
 	appID := os.Getenv("DISCORD_APP_ID")
 	guildID := os.Getenv("DISCORD_GUILD_ID")
 	token := os.Getenv("DISCORD_TOKEN")

@@ -29,8 +29,13 @@ This project contains two independent services:
 
 3. Set up environment variables:
    ```bash
-   cp .env.example .env
-   # Edit .env with your actual credentials
+   # Discord bot
+   cp discord/.env.example discord/.env
+   # Edit discord/.env with your Discord credentials
+   
+   # Twitch bot  
+   cp twitch/.env.example twitch/.env
+   # Edit twitch/.env with your Twitch credentials
    ```
 
 ## Running Services
