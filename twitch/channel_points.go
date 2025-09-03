@@ -67,9 +67,9 @@ func (tc *TwitchClient) handleIncreaseRandomStat(username string) error {
 	}
 
 	message := fmt.Sprintf(
-		"A shifty looking merchant hands @%s a glittering potion. "+
+		"A shifty looking merchant hands %s a glittering potion. "+
 			"Without hesitation, they sink the whole drink. "+
-			"@%s %s %s",
+			"%s %s %s",
 		username, username, outcome, randomStat)
 
 	if err := tc.SendChatMessage(message); err != nil {
@@ -81,7 +81,7 @@ func (tc *TwitchClient) handleIncreaseRandomStat(username string) error {
 }
 
 func (tc *TwitchClient) handleRollDice(username string) error {
-	if err := tc.SendChatMessage(fmt.Sprintf("@%s has rolled with initiative.", username)); err != nil {
+	if err := tc.SendChatMessage(fmt.Sprintf("%s has rolled with initiative.", username)); err != nil {
 		slog.Error("Failed to send message", "error", err)
 		return err
 	}

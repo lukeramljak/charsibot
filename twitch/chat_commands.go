@@ -51,7 +51,7 @@ func (tc *TwitchClient) handleStats(username, message string) error {
 	}
 
 	statsMessage := fmt.Sprintf(
-		"@%s's stats: STR: %d | INT: %d | CHA: %d | LUCK: %d | DEX: %d | PENIS: %d",
+		"%s's stats: STR: %d | INT: %d | CHA: %d | LUCK: %d | DEX: %d | PENIS: %d",
 		username,
 		stats.Strength,
 		stats.Intelligence,
