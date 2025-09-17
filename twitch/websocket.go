@@ -179,7 +179,7 @@ func (wsc *WebSocketClient) handleChatMessage(msg *WebSocketMessage) {
 		"message_id", event.MessageID,
 		"text", text)
 
-	wsc.twitchClient.handleChatCommand(username, text)
+	wsc.twitchClient.handleChatCommand(event)
 }
 
 func (wsc *WebSocketClient) handleChannelPointsRedemption(msg *WebSocketMessage) {

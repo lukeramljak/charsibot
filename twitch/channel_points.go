@@ -21,24 +21,24 @@ func (tc *TwitchClient) handleChannelPointsRedemption(event *Event) error {
 
 	switch event.Reward.Title {
 	case "Drink a Potion":
-		return tc.handleIncreaseRandomStat(event.UserLogin)
+		return tc.handleIncreaseRandomStat(event)
 
 	case "Tempt the Dice":
-		return tc.handleRollDice(event.UserLogin)
+		return tc.handleRollDice(event)
 
 	default:
 		return nil
 	}
 }
 
-func (tc *TwitchClient) handleIncreaseRandomStat(username string) error {
+func (tc *TwitchClient) handleIncreaseRandomStat(event *Event) error {
 	randomStat := tc.getRandomStat()
 	randomModifier := tc.randomStatModifier()
 	statLower := strings.ToLower(randomStat)
 
-	updateSQL := fmt.Sprintf("UPDATE stats SET %s = %s + ? WHERE username = ?", statLower, statLower)
+	updateSQL := fmt.Sprintf("UPDATE stats SET %s = %s + ? WHERE id = ?", statLower, statLower)
 
-	result, err := tc.db.Exec(updateSQL, randomModifier, username)
+	result, err := tc.db.Exec(updateSQL, randomModifier, event.UserID)
 	if err != nil {
 		return err
 	}
@@ -49,13 +49,13 @@ func (tc *TwitchClient) handleIncreaseRandomStat(username string) error {
 	}
 
 	if rowsAffected == 0 {
-		_, err := tc.db.Exec("INSERT INTO stats (username) VALUES (?)", username)
+		_, err := tc.db.Exec("INSERT INTO stats (id, username) VALUES (?, ?)", event.UserID, event.UserLogin)
 		if err != nil {
-			return fmt.Errorf("failed to create stats for user %s: %w", username, err)
+			return fmt.Errorf("failed to create stats for user %s: %w", event.UserLogin, err)
 		}
-		slog.Info("Created new stats for user", "username", username)
+		slog.Info("Created new stats for user", "username", event.UserLogin)
 
-		_, err = tc.db.Exec(updateSQL, randomModifier, username)
+		_, err = tc.db.Exec(updateSQL, randomModifier, event.UserID)
 		if err != nil {
 			return err
 		}
@@ -70,22 +70,28 @@ func (tc *TwitchClient) handleIncreaseRandomStat(username string) error {
 		"A shifty looking merchant hands %s a glittering potion. "+
 			"Without hesitation, they sink the whole drink. "+
 			"%s %s %s",
-		username, username, outcome, randomStat)
+		event.UserLogin, event.UserLogin, outcome, randomStat)
 
 	if err := tc.SendChatMessage(message); err != nil {
 		slog.Error("Failed to send message", "error", err)
 		return err
 	}
 
-	return tc.handleStats(username, "")
+	return tc.handleStats(&Event{
+		ChatterUserID:    event.UserID,
+		ChatterUserLogin: event.UserLogin,
+	})
 }
 
-func (tc *TwitchClient) handleRollDice(username string) error {
-	if err := tc.SendChatMessage(fmt.Sprintf("%s has rolled with initiative.", username)); err != nil {
+func (tc *TwitchClient) handleRollDice(event *Event) error {
+	if err := tc.SendChatMessage(fmt.Sprintf("%s has rolled with initiative.", event.UserLogin)); err != nil {
 		slog.Error("Failed to send message", "error", err)
 		return err
 	}
-	return tc.handleStats(username, "")
+	return tc.handleStats(&Event{
+		ChatterUserID:    event.UserID,
+		ChatterUserLogin: event.UserLogin,
+	})
 }
 
 func (tc *TwitchClient) getRandomStat() string {

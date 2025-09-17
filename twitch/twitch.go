@@ -26,7 +26,7 @@ type TwitchClient struct {
 	accessToken  string
 	refreshToken string
 	httpClient   *http.Client
-	handlers     map[string]func(username, message string) error
+	handlers     map[string]func(event *Event) error
 	db           *sql.DB
 }
 
@@ -36,7 +36,7 @@ func NewTwitchClient(config *Config, db *sql.DB) *TwitchClient {
 		accessToken:  config.OAuthToken,
 		refreshToken: config.RefreshToken,
 		httpClient:   &http.Client{Timeout: 10 * time.Second},
-		handlers:     make(map[string]func(username, message string) error),
+		handlers:     make(map[string]func(event *Event) error),
 		db:           db,
 	}
 

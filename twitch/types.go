@@ -165,6 +165,7 @@ type ChannelPointsMaxPerUserPerStream struct {
 }
 
 type Stats struct {
+	ID           string
 	Username     string
 	Strength     int
 	Intelligence int
