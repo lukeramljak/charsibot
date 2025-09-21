@@ -2,13 +2,11 @@ services:
   charsibot-discord:
     build: ./discord
     container_name: charsibot-discord
-    env_file: ./discord/.env
     restart: unless-stopped
 
   charsibot-twitch:
     build: ./twitch
     container_name: charsibot-twitch
-    env_file: ./twitch/.env
     restart: unless-stopped
     volumes:
       - ./twitch/logs:/var/log/charsibot-twitch
