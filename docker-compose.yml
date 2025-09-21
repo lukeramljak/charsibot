@@ -1,13 +1,26 @@
 services:
   charsibot-discord:
     build: ./discord
-    container_name: charsibot-discord
+    container_name: discord
     restart: unless-stopped
+    environment:
+      - DISCORD_APP_ID
+      - DISCORD_GUILD_ID
+      - DISCORD_TOKEN
 
   charsibot-twitch:
     build: ./twitch
-    container_name: charsibot-twitch
+    container_name: twitch
     restart: unless-stopped
+    environment:
+      - TWITCH_CLIENT_ID
+      - TWITCH_CLIENT_SECRET
+      - TWITCH_OAUTH_TOKEN
+      - TWITCH_REFRESH_TOKEN
+      - TWITCH_BOT_USER_ID
+      - TWITCH_CHANNEL_USER_ID
+      - TURSO_DATABASE_URL
+      - TURSO_AUTH_TOKEN
     volumes:
       - ./twitch/logs:/var/log/charsibot-twitch
     healthcheck:
