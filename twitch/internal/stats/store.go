@@ -71,7 +71,7 @@ func (s *Store) RandomDelta(r *rand.Rand) int {
 }
 
 func (s *Store) Format(username string, st *Stats) string {
-	return fmt.Sprintf("@%s's stats: STR: %d | INT: %d | CHA: %d | LUCK: %d | DEX: %d | PENIS: %d", username, st.Strength, st.Intelligence, st.Charisma, st.Luck, st.Dexterity, st.Penis)
+	return fmt.Sprintf("%s's stats: STR: %d | INT: %d | CHA: %d | LUCK: %d | DEX: %d | PENIS: %d", username, st.Strength, st.Intelligence, st.Charisma, st.Luck, st.Dexterity, st.Penis)
 }
 
 func (s *Store) GetMessage(ctx context.Context, userID, username string) (string, error) {
