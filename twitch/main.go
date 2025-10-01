@@ -20,7 +20,7 @@ func main() {
 	devMode := flag.Bool("dev", false, "Enable development mode (use Twitch CLI local websocket)")
 	flag.Parse()
 
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	slog.SetDefault(logger)
 
 	cfg := &twitchapp.Config{

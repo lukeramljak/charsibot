@@ -1,7 +1,9 @@
 package constants
 
 const (
-	CmdStats = "!stats"
+	CmdGetStats = "!stats"
+	CmdAddStat  = "!addstat"
+	CmdRmStat   = "!rmstat"
 )
 
 const (

@@ -17,7 +17,7 @@ func (c *Client) rewardDrinkPotion(ctx context.Context, event *eventsub.ChannelP
 	stat := c.statsStore.RandomStat(c.rng)
 	delta := c.statsStore.RandomDelta(c.rng)
 
-	if err := c.statsStore.IncrementStat(ctx, event.UserID, event.UserLogin, stat.Column, delta); err != nil {
+	if err := c.statsStore.ModifyStat(ctx, event.UserID, event.UserLogin, stat.Column, delta); err != nil {
 		return err
 	}
 

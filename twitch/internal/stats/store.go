@@ -36,7 +36,7 @@ func (s *Store) UpsertAndGet(ctx context.Context, userID, username string) (*Sta
 	return &st, nil
 }
 
-func (s *Store) IncrementStat(ctx context.Context, userID, username, column string, delta int) error {
+func (s *Store) ModifyStat(ctx context.Context, userID, username, column string, delta int) error {
 	if _, ok := s.statCols[column]; !ok {
 		return fmt.Errorf("invalid stat column: %s", column)
 	}
