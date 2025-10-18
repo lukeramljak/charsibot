@@ -26,8 +26,10 @@ func main() {
 	cfg := &twitchapp.Config{
 		ClientID:          os.Getenv("TWITCH_CLIENT_ID"),
 		ClientSecret:      os.Getenv("TWITCH_CLIENT_SECRET"),
-		OAuthToken:        os.Getenv("TWITCH_OAUTH_TOKEN"),
-		RefreshToken:      os.Getenv("TWITCH_REFRESH_TOKEN"),
+		OAuthToken:        os.Getenv("TWITCH_OAUTH_TOKEN"),       // Streamer's token
+		RefreshToken:      os.Getenv("TWITCH_REFRESH_TOKEN"),     // Streamer's refresh token
+		BotOAuthToken:     os.Getenv("TWITCH_BOT_OAUTH_TOKEN"),   // Bot's token
+		BotRefreshToken:   os.Getenv("TWITCH_BOT_REFRESH_TOKEN"), // Bot's refresh token
 		BotUserID:         os.Getenv("TWITCH_BOT_USER_ID"),
 		ChatChannelUserID: os.Getenv("TWITCH_CHANNEL_USER_ID"),
 		DbURL:             os.Getenv("TURSO_DATABASE_URL"),

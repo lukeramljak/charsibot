@@ -18,8 +18,10 @@ import (
 type Config struct {
 	ClientID          string
 	ClientSecret      string
-	OAuthToken        string
-	RefreshToken      string
+	OAuthToken        string // Streamer's access token (for EventSub subscriptions)
+	RefreshToken      string // Streamer's refresh token
+	BotOAuthToken     string // Bot's access token (for sending chat messages)
+	BotRefreshToken   string // Bot's refresh token
 	BotUserID         string
 	ChatChannelUserID string
 	DbURL             string
@@ -27,14 +29,15 @@ type Config struct {
 }
 
 type Client struct {
-	db          *sql.DB
-	helixClient *helix.Client
-	cfg         *Config
-	statsStore  *stats.Store
-	commands    *router.CommandRouter
-	rewards     *router.RewardRouter
-	rng         *rand.Rand
-	wsClient    *twitchws.Client
+	db             *sql.DB
+	helixClient    *helix.Client // Authenticated as streamer (for EventSub)
+	botHelixClient *helix.Client // Authenticated as bot (for sending messages)
+	cfg            *Config
+	statsStore     *stats.Store
+	commands       *router.CommandRouter
+	rewards        *router.RewardRouter
+	rng            *rand.Rand
+	wsClient       *twitchws.Client
 }
 
 func New(db *sql.DB, cfg *Config) *Client {
@@ -59,10 +62,10 @@ func (c *Client) RegisterReward(title string, h router.RewardHandler) {
 }
 
 func (c *Client) SendChatMessage(ctx context.Context, message string) error {
-	if c.helixClient == nil {
-		return fmt.Errorf("helix client not initialized")
+	if c.botHelixClient == nil {
+		return fmt.Errorf("bot helix client not initialised")
 	}
-	_, err := c.helixClient.SendChatMessage(&helix.SendChatMessageParams{
+	_, err := c.botHelixClient.SendChatMessage(&helix.SendChatMessageParams{
 		BroadcasterID: c.cfg.ChatChannelUserID,
 		Message:       message,
 		SenderID:      c.cfg.BotUserID,
@@ -74,10 +77,10 @@ func (c *Client) SendChatMessage(ctx context.Context, message string) error {
 }
 
 func (c *Client) SendReply(ctx context.Context, parentID string, message string) error {
-	if c.helixClient == nil {
-		return fmt.Errorf("helix client not initialized")
+	if c.botHelixClient == nil {
+		return fmt.Errorf("bot helix client not initialised")
 	}
-	_, err := c.helixClient.SendChatMessage(&helix.SendChatMessageParams{
+	_, err := c.botHelixClient.SendChatMessage(&helix.SendChatMessageParams{
 		BroadcasterID:        c.cfg.ChatChannelUserID,
 		Message:              message,
 		SenderID:             c.cfg.BotUserID,
@@ -149,6 +152,7 @@ func (c *Client) onNotificationEvent(_ *twitchws.Metadata, payload *twitchws.Pay
 
 	switch event := notification.Event.(type) {
 	case *eventsub.ChannelChatMessage:
+		slog.Debug("received chat message", "user", event.ChatterUserLogin, "message", event.Message.Text)
 		if event.Reply != nil {
 			return
 		}
@@ -178,23 +182,53 @@ func (c *Client) onDisconnect() {
 }
 
 func (c *Client) initHelix(sessionID string) error {
-	helixClient, err := helix.NewClient(&helix.Options{ClientID: c.cfg.ClientID, ClientSecret: c.cfg.ClientSecret, UserAccessToken: c.cfg.OAuthToken, RefreshToken: c.cfg.RefreshToken, APIBaseURL: helix.DefaultAPIBaseURL})
+	helixClient, err := helix.NewClient(&helix.Options{
+		ClientID:        c.cfg.ClientID,
+		ClientSecret:    c.cfg.ClientSecret,
+		UserAccessToken: c.cfg.OAuthToken,
+		RefreshToken:    c.cfg.RefreshToken,
+		APIBaseURL:      helix.DefaultAPIBaseURL,
+	})
 	if err != nil {
-		return fmt.Errorf("create helix client: %w", err)
+		return fmt.Errorf("create streamer helix client: %w", err)
 	}
 
 	refresh, err := helixClient.RefreshUserAccessToken(helixClient.GetRefreshToken())
 	if err != nil {
-		return fmt.Errorf("refresh tokens: %w", err)
+		return fmt.Errorf("refresh streamer tokens: %w", err)
 	}
 	helixClient.SetUserAccessToken(refresh.Data.AccessToken)
 	helixClient.SetRefreshToken(refresh.Data.RefreshToken)
 
 	c.helixClient = helixClient
+	slog.Info("Streamer authenticated successfully", "expires_in", refresh.Data.ExpiresIn)
 
+	botHelixClient, err := helix.NewClient(&helix.Options{
+		ClientID:        c.cfg.ClientID,
+		ClientSecret:    c.cfg.ClientSecret,
+		UserAccessToken: c.cfg.BotOAuthToken,
+		RefreshToken:    c.cfg.BotRefreshToken,
+		APIBaseURL:      helix.DefaultAPIBaseURL,
+	})
+	if err != nil {
+		return fmt.Errorf("create bot helix client: %w", err)
+	}
+
+	botRefresh, err := botHelixClient.RefreshUserAccessToken(botHelixClient.GetRefreshToken())
+	if err != nil {
+		return fmt.Errorf("refresh bot tokens: %w", err)
+	}
+	botHelixClient.SetUserAccessToken(botRefresh.Data.AccessToken)
+	botHelixClient.SetRefreshToken(botRefresh.Data.RefreshToken)
+
+	c.botHelixClient = botHelixClient
+	slog.Info("Bot authenticated successfully", "expires_in", botRefresh.Data.ExpiresIn)
+
+	// Create EventSub subscriptions using the streamer's authenticated client
 	transport := helix.EventSubTransport{Method: "websocket", SessionID: sessionID}
 	subs := []helix.EventSubSubscription{
-		{Type: helix.EventSubTypeChannelChatMessage, Version: "1", Condition: helix.EventSubCondition{BroadcasterUserID: c.cfg.ChatChannelUserID, UserID: c.cfg.BotUserID}, Transport: transport},
+		// Listen to all messages in the streamer's chat (UserID = the authenticated user, which is the streamer)
+		{Type: helix.EventSubTypeChannelChatMessage, Version: "1", Condition: helix.EventSubCondition{BroadcasterUserID: c.cfg.ChatChannelUserID, UserID: c.cfg.ChatChannelUserID}, Transport: transport},
 		{Type: helix.EventSubTypeChannelPointsCustomRewardRedemptionAdd, Version: "1", Condition: helix.EventSubCondition{BroadcasterUserID: c.cfg.ChatChannelUserID}, Transport: transport},
 	}
 
