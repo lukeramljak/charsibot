@@ -1,4 +1,4 @@
-package commands
+package main
 
 import (
 	"fmt"
@@ -12,7 +12,7 @@ var (
 	administratorPermission  int64 = discordgo.PermissionAdministrator
 )
 
-var Commands = []*discordgo.ApplicationCommand{
+var commands = []*discordgo.ApplicationCommand{
 	{
 		Name:        "bonk",
 		Description: "Bonk someone",
@@ -162,7 +162,7 @@ var Commands = []*discordgo.ApplicationCommand{
 	},
 }
 
-var CommandHandlers = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
+var commandHandlers = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
 	"bonk": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		user := i.ApplicationCommandData().Options[0].UserValue(nil).Mention()
 		response := fmt.Sprintf("<a:bonk:1310467659090886678> %s", user)

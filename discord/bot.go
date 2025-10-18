@@ -1,15 +1,11 @@
-package bot
+package main
 
 import (
 	"fmt"
 	"log"
 	"os"
 
-	"github.com/lukeramljak/charsibot/discord/bot/commands"
-	"github.com/lukeramljak/charsibot/discord/bot/events"
-
 	"github.com/bwmarrin/discordgo"
-	_ "github.com/joho/godotenv/autoload"
 )
 
 type Bot struct {
@@ -34,13 +30,11 @@ func NewBot() (*Bot, error) {
 }
 
 func (b *Bot) Start() error {
-	err := b.session.Open()
-	if err != nil {
+	if err := b.session.Open(); err != nil {
 		return fmt.Errorf("error opening Discord session: %w", err)
 	}
 
-	err = b.session.UpdateListeningStatus("Big Chungus")
-	if err != nil {
+	if err := b.session.UpdateListeningStatus("Big Chungus"); err != nil {
 		return fmt.Errorf("error setting listening status: %w", err)
 	}
 
@@ -48,14 +42,14 @@ func (b *Bot) Start() error {
 }
 
 func (b *Bot) RegisterHandlers() {
-	for _, handler := range events.MessageHandlers {
+	for _, handler := range messageHandlers {
 		b.session.AddHandler(handler)
 	}
-	b.session.AddHandler(events.GuildMemberRemove)
-	b.session.AddHandler(events.SinglePollReaction)
+	b.session.AddHandler(handleGuildMemberRemove)
+	b.session.AddHandler(handleSinglePollReaction)
 	b.session.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-		if h, ok := commands.CommandHandlers[i.ApplicationCommandData().Name]; ok {
-			h(s, i)
+		if handler, ok := commandHandlers[i.ApplicationCommandData().Name]; ok {
+			handler(s, i)
 		}
 	})
 	b.session.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
@@ -65,7 +59,7 @@ func (b *Bot) RegisterHandlers() {
 
 func (b *Bot) RegisterCommands() error {
 	log.Println("Registering commands...")
-	createdCommands, err := b.session.ApplicationCommandBulkOverwrite(b.appID, b.guildID, commands.Commands)
+	createdCommands, err := b.session.ApplicationCommandBulkOverwrite(b.appID, b.guildID, commands)
 	if err != nil {
 		return fmt.Errorf("error registering commands: %w", err)
 	}
@@ -74,8 +68,7 @@ func (b *Bot) RegisterCommands() error {
 }
 
 func (b *Bot) Close() error {
-	err := b.session.Close()
-	if err != nil {
+	if err := b.session.Close(); err != nil {
 		return fmt.Errorf("error closing Discord session: %w", err)
 	}
 	return nil

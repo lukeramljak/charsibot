@@ -5,18 +5,17 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/lukeramljak/charsibot/discord/bot"
+	_ "github.com/joho/godotenv/autoload"
 )
 
 func main() {
-	bot, err := bot.NewBot()
+	bot, err := NewBot()
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	bot.RegisterHandlers()
-	err = bot.RegisterCommands()
-	if err != nil {
+	if err := bot.RegisterCommands(); err != nil {
 		log.Fatal(err)
 	}
 
