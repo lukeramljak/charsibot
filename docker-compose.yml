@@ -13,6 +13,7 @@ services:
     container_name: twitch
     restart: unless-stopped
     environment:
+      - LOG_LEVEL
       - TWITCH_CLIENT_ID
       - TWITCH_CLIENT_SECRET
       - TWITCH_OAUTH_TOKEN

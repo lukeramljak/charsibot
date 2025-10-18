@@ -142,6 +142,7 @@ func (c *Client) Connect(ctx context.Context, websocketUrl string) error {
 
 func (c *Client) onWelcomeEvent(_ *twitchws.Metadata, payload *twitchws.Payload) {
 	session, _ := payload.Payload.(twitchws.Session)
+	slog.Info("received welcome event - initialising Helix client and subscriptions", "session_id", session.ID)
 	if err := c.initHelix(session.ID); err != nil {
 		slog.Error("helix init failed", "error", err)
 	}
@@ -172,16 +173,16 @@ func (c *Client) onNotificationEvent(_ *twitchws.Metadata, payload *twitchws.Pay
 }
 
 func (c *Client) onReconnect(metadata *twitchws.Metadata, payload *twitchws.Payload) {
-	slog.Info("Reconnect", "metadata", metadata, "payload", payload)
+	slog.Warn("websocket reconnecting", "metadata", metadata, "payload", payload)
 }
 func (c *Client) onRevocationEvent(_ *twitchws.Metadata, payload *twitchws.Payload) {
-	slog.Info("Revocation", "payload", payload)
+	slog.Error("EventSub subscription revoked - authorization may have been revoked", "payload", payload)
 }
 func (c *Client) onConnect() {
-	slog.Info("Connected to twitch")
+	slog.Info("connected to Twitch websocket")
 }
 func (c *Client) onDisconnect() {
-	slog.Info("Disconnected from twitch")
+	slog.Warn("disconnected from Twitch websocket")
 }
 
 func (c *Client) initHelix(sessionID string) error {
