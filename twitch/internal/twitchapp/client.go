@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/lukeramljak/charsibot/twitch/internal/auth"
 	"github.com/lukeramljak/charsibot/twitch/internal/router"
 	"github.com/lukeramljak/charsibot/twitch/internal/stats"
 	"github.com/nicklaw5/helix/v2"
@@ -33,6 +34,7 @@ type Client struct {
 	helixClient    *helix.Client // Authenticated as streamer (for EventSub)
 	botHelixClient *helix.Client // Authenticated as bot (for sending messages)
 	cfg            *Config
+	tokenStore     *auth.TokenStore
 	statsStore     *stats.Store
 	commands       *router.CommandRouter
 	rewards        *router.RewardRouter
@@ -44,6 +46,7 @@ func New(db *sql.DB, cfg *Config) *Client {
 	c := &Client{
 		db:         db,
 		cfg:        cfg,
+		tokenStore: auth.NewTokenStore(db),
 		statsStore: stats.NewStore(db),
 		commands:   router.NewCommandRouter(),
 		rewards:    router.NewRewardRouter(),
@@ -182,11 +185,28 @@ func (c *Client) onDisconnect() {
 }
 
 func (c *Client) initHelix(sessionID string) error {
+	ctx := context.Background()
+
+	if err := c.tokenStore.InitSchema(ctx); err != nil {
+		return fmt.Errorf("init token schema: %w", err)
+	}
+
+	streamerAccessToken := c.cfg.OAuthToken
+	streamerRefreshToken := c.cfg.RefreshToken
+
+	if storedTokens, err := c.tokenStore.GetTokens(ctx, auth.TokenTypeStreamer); err == nil && storedTokens != nil {
+		slog.Info("Loaded streamer tokens from database")
+		streamerAccessToken = storedTokens.AccessToken
+		streamerRefreshToken = storedTokens.RefreshToken
+	} else {
+		slog.Info("Using streamer tokens from environment variables")
+	}
+
 	helixClient, err := helix.NewClient(&helix.Options{
 		ClientID:        c.cfg.ClientID,
 		ClientSecret:    c.cfg.ClientSecret,
-		UserAccessToken: c.cfg.OAuthToken,
-		RefreshToken:    c.cfg.RefreshToken,
+		UserAccessToken: streamerAccessToken,
+		RefreshToken:    streamerRefreshToken,
 		APIBaseURL:      helix.DefaultAPIBaseURL,
 	})
 	if err != nil {
@@ -200,14 +220,29 @@ func (c *Client) initHelix(sessionID string) error {
 	helixClient.SetUserAccessToken(refresh.Data.AccessToken)
 	helixClient.SetRefreshToken(refresh.Data.RefreshToken)
 
+	if err := c.tokenStore.SaveTokens(ctx, auth.TokenTypeStreamer, refresh.Data.AccessToken, refresh.Data.RefreshToken); err != nil {
+		slog.Error("Failed to save streamer tokens", "error", err)
+	}
+
 	c.helixClient = helixClient
 	slog.Info("Streamer authenticated successfully", "expires_in", refresh.Data.ExpiresIn)
+
+	botAccessToken := c.cfg.BotOAuthToken
+	botRefreshToken := c.cfg.BotRefreshToken
+
+	if storedTokens, err := c.tokenStore.GetTokens(ctx, auth.TokenTypeBot); err == nil && storedTokens != nil {
+		slog.Info("Loaded bot tokens from database")
+		botAccessToken = storedTokens.AccessToken
+		botRefreshToken = storedTokens.RefreshToken
+	} else {
+		slog.Info("Using bot tokens from environment variables")
+	}
 
 	botHelixClient, err := helix.NewClient(&helix.Options{
 		ClientID:        c.cfg.ClientID,
 		ClientSecret:    c.cfg.ClientSecret,
-		UserAccessToken: c.cfg.BotOAuthToken,
-		RefreshToken:    c.cfg.BotRefreshToken,
+		UserAccessToken: botAccessToken,
+		RefreshToken:    botRefreshToken,
 		APIBaseURL:      helix.DefaultAPIBaseURL,
 	})
 	if err != nil {
@@ -221,13 +256,16 @@ func (c *Client) initHelix(sessionID string) error {
 	botHelixClient.SetUserAccessToken(botRefresh.Data.AccessToken)
 	botHelixClient.SetRefreshToken(botRefresh.Data.RefreshToken)
 
+	if err := c.tokenStore.SaveTokens(ctx, auth.TokenTypeBot, botRefresh.Data.AccessToken, botRefresh.Data.RefreshToken); err != nil {
+		slog.Error("Failed to save bot tokens", "error", err)
+	}
+
 	c.botHelixClient = botHelixClient
 	slog.Info("Bot authenticated successfully", "expires_in", botRefresh.Data.ExpiresIn)
 
 	// Create EventSub subscriptions using the streamer's authenticated client
 	transport := helix.EventSubTransport{Method: "websocket", SessionID: sessionID}
 	subs := []helix.EventSubSubscription{
-		// Listen to all messages in the streamer's chat (UserID = the authenticated user, which is the streamer)
 		{Type: helix.EventSubTypeChannelChatMessage, Version: "1", Condition: helix.EventSubCondition{BroadcasterUserID: c.cfg.ChatChannelUserID, UserID: c.cfg.ChatChannelUserID}, Transport: transport},
 		{Type: helix.EventSubTypeChannelPointsCustomRewardRedemptionAdd, Version: "1", Condition: helix.EventSubCondition{BroadcasterUserID: c.cfg.ChatChannelUserID}, Transport: transport},
 	}
