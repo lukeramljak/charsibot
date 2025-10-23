@@ -207,6 +207,13 @@ func (b *Bot) initHelix(sessionID string) error {
 		return fmt.Errorf("create streamer helix client: %w", err)
 	}
 
+	helixClient.OnUserAccessTokenRefreshed(func(newAccessToken, newRefreshToken string) {
+		slog.Info("streamer tokens auto-refreshed")
+		if err := b.store.SaveTokens(context.Background(), "streamer", newAccessToken, newRefreshToken); err != nil {
+			slog.Error("failed to save streamer tokens during auto-refresh", "error", err)
+		}
+	})
+
 	refresh, err := helixClient.RefreshUserAccessToken(helixClient.GetRefreshToken())
 	if err != nil {
 		return fmt.Errorf("refresh streamer tokens: %w", err)
@@ -239,6 +246,13 @@ func (b *Bot) initHelix(sessionID string) error {
 	if err != nil {
 		return fmt.Errorf("create bot helix client: %w", err)
 	}
+
+	botHelixClient.OnUserAccessTokenRefreshed(func(newAccessToken, newRefreshToken string) {
+		slog.Info("bot tokens auto-refreshed")
+		if err := b.store.SaveTokens(context.Background(), "bot", newAccessToken, newRefreshToken); err != nil {
+			slog.Error("failed to save bot tokens during auto-refresh", "error", err)
+		}
+	})
 
 	botRefresh, err := botHelixClient.RefreshUserAccessToken(botHelixClient.GetRefreshToken())
 	if err != nil {
