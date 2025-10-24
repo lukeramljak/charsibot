@@ -10,6 +10,7 @@ export interface Config {
   channelUserId: string;
   dbUrl: string;
   dbAuthToken: string;
+  useMockServer: boolean;
 }
 
 const REQUIRED_VARS = [
@@ -43,5 +44,6 @@ export const loadConfig = (): Config => {
     channelUserId: process.env.TWITCH_CHANNEL_USER_ID!,
     dbUrl: process.env.TURSO_DATABASE_URL!,
     dbAuthToken: process.env.TURSO_AUTH_TOKEN!,
+    useMockServer: process.env.USE_MOCK_SERVER === "true",
   };
 };

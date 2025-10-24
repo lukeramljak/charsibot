@@ -1,15 +1,17 @@
 import { AccessTokenWithUserId, RefreshingAuthProvider } from "@twurple/auth";
 import { ApiClient } from "@twurple/api";
-import { EventSubWsListener } from "@twurple/eventsub-ws";
+import { EventSubWsConfig, EventSubWsListener } from "@twurple/eventsub-ws";
 import { Config } from "./config";
 import { Store, formatStats, statList, Stat } from "./store";
 import { parseModifyStatCommand } from "./command-parser";
 import type { EventSubChannelChatMessageEvent } from "@twurple/eventsub-base";
 import { log } from "./logger";
+import { MockEventSubListener } from "./mock-eventsub";
 
 export class Bot {
   private api: ApiClient;
   private listener: EventSubWsListener;
+  private mockListener?: MockEventSubListener;
   private store: Store;
   private authProvider: RefreshingAuthProvider;
 
@@ -70,54 +72,83 @@ export class Bot {
     await this.refreshTokens();
     log.info("tokens initialised");
 
-    this.listener.onChannelChatMessage(
-      this.config.channelUserId,
-      this.config.channelUserId,
-      (e) => {
-        if (!e.messageText.startsWith("!")) return;
+    if (this.config.useMockServer) {
+      this.mockListener = new MockEventSubListener({
+        url: "ws://127.0.0.1:8080/ws",
+        onRedemption: async (data) => {
+          log.info(
+            {
+              reward: data.rewardTitle,
+              user: data.userName,
+              userId: data.userId,
+            },
+            "channel point reward redeemed"
+          );
 
-        const [cmd] = e.messageText.toLowerCase().split(" ");
-        log.info(
-          { command: cmd, user: e.chatterDisplayName, message: e.messageText },
-          "chat command received"
-        );
+          if (data.rewardTitle === "Drink a Potion") {
+            await this.onDrinkPotion(data.userId, data.userName);
+          } else if (data.rewardTitle === "Tempt the Dice") {
+            await this.onTemptDice(data.userId, data.userName);
+          }
+        },
+      });
+      this.mockListener.start();
+      log.info("mock eventsub started");
+    } else {
+      this.listener.onChannelChatMessage(
+        this.config.channelUserId,
+        this.config.channelUserId,
+        (e) => {
+          if (!e.messageText.startsWith("!")) return;
 
-        switch (cmd) {
-          case "!stats":
-            this.handleStats(e.chatterId, e.chatterDisplayName);
-            break;
-          case "!addstat":
-            this.handleModifyStat(e.messageText, e, false);
-            break;
-          case "!rmstat":
-            this.handleModifyStat(e.messageText, e, true);
-            break;
+          const [cmd] = e.messageText.toLowerCase().split(" ");
+          log.info(
+            {
+              command: cmd,
+              user: e.chatterDisplayName,
+              message: e.messageText,
+            },
+            "chat command received"
+          );
+
+          switch (cmd) {
+            case "!stats":
+              this.handleStats(e.chatterId, e.chatterDisplayName);
+              break;
+            case "!addstat":
+              this.handleModifyStat(e.messageText, e, false);
+              break;
+            case "!rmstat":
+              this.handleModifyStat(e.messageText, e, true);
+              break;
+          }
         }
-      }
-    );
+      );
 
-    this.listener.onChannelRedemptionAdd(
-      this.config.channelUserId,
-      async (e) => {
-        log.info(
-          { reward: e.rewardTitle, user: e.userName, userId: e.userId },
-          "channel point reward redeemed"
-        );
+      this.listener.onChannelRedemptionAdd(
+        this.config.channelUserId,
+        async (e) => {
+          log.info(
+            { reward: e.rewardTitle, user: e.userName, userId: e.userId },
+            "channel point reward redeemed"
+          );
 
-        if (e.rewardTitle === "Drink a Potion") {
-          await this.onDrinkPotion(e.userId, e.userName);
-        } else if (e.rewardTitle === "Tempt the Dice") {
-          await this.onTemptDice(e.userId, e.userName);
+          if (e.rewardTitle === "Drink a Potion") {
+            await this.onDrinkPotion(e.userId, e.userName);
+          } else if (e.rewardTitle === "Tempt the Dice") {
+            await this.onTemptDice(e.userId, e.userName);
+          }
         }
-      }
-    );
+      );
 
-    try {
-      this.listener.start();
-      log.info("eventsub started");
-    } catch (err) {
-      log.error({ err }, "eventsub start failed");
+      try {
+        this.listener.start();
+        log.info("eventsub started");
+      } catch (err) {
+        log.error({ err }, "eventsub start failed");
+      }
     }
+
     log.info("bot ready");
   }
 
