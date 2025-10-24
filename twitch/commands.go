@@ -9,11 +9,11 @@ import (
 	"github.com/vpetrigo/go-twitch-ws/pkg/eventsub"
 )
 
-func (b *Bot) handleStatsCommand(ctx context.Context, msg *eventsub.ChannelChatMessage) (string, error) {
+func (b *Bot) onStatsCommand(ctx context.Context, msg *eventsub.ChannelChatMessage) (string, error) {
 	return b.getStatsMessage(ctx, msg.ChatterUserID, msg.ChatterUserLogin)
 }
 
-func (b *Bot) handleModifyStatCommand(ctx context.Context, msg *eventsub.ChannelChatMessage) (string, error) {
+func (b *Bot) onModifyStatCommand(ctx context.Context, msg *eventsub.ChannelChatMessage) (string, error) {
 	isMod := false
 	for _, badge := range msg.Badges {
 		if badge.SetID == "moderator" || badge.SetID == "broadcaster" {

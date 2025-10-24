@@ -26,16 +26,18 @@ type Config struct {
 	DbAuthToken       string
 }
 
+type CommandHandler func(context.Context, *eventsub.ChannelChatMessage) (string, error)
+type RewardHandler func(context.Context, *eventsub.ChannelPointsCustomRewardRedemptionAddEvent) error
+
 type Bot struct {
 	store          *Store
 	helixClient    *helix.Client // Authenticated as streamer (for EventSub)
 	botHelixClient *helix.Client // Authenticated as bot (for sending messages)
 	cfg            *Config
 	rng            *rand.Rand
-	wsClient       *twitchws.Client
 
-	commands map[string]func(context.Context, *eventsub.ChannelChatMessage) (string, error)
-	rewards  map[string]func(context.Context, *eventsub.ChannelPointsCustomRewardRedemptionAddEvent) error
+	commands map[string]CommandHandler
+	rewards  map[string]RewardHandler
 }
 
 func NewBot(store *Store, cfg *Config) *Bot {
@@ -43,16 +45,20 @@ func NewBot(store *Store, cfg *Config) *Bot {
 		store:    store,
 		cfg:      cfg,
 		rng:      rand.New(rand.NewSource(time.Now().UnixNano())),
-		commands: make(map[string]func(context.Context, *eventsub.ChannelChatMessage) (string, error)),
-		rewards:  make(map[string]func(context.Context, *eventsub.ChannelPointsCustomRewardRedemptionAddEvent) error),
+		commands: make(map[string]CommandHandler),
+		rewards:  make(map[string]RewardHandler),
 	}
 
-	b.commands["!stats"] = b.handleStatsCommand
-	b.commands["!addstat"] = b.handleModifyStatCommand
-	b.commands["!rmstat"] = b.handleModifyStatCommand
+	b.commands = map[string]CommandHandler{
+		"!stats":   b.onStatsCommand,
+		"!addstat": b.onModifyStatCommand,
+		"!rmstat":  b.onModifyStatCommand,
+	}
 
-	b.rewards["Drink a Potion"] = b.handleDrinkPotion
-	b.rewards["Tempt the Dice"] = b.handleTemptDice
+	b.rewards = map[string]RewardHandler{
+		"Drink a Potion": b.onDrinkPotion,
+		"Tempt the Dice": b.onTemptDice,
+	}
 
 	return b
 }
@@ -60,8 +66,8 @@ func NewBot(store *Store, cfg *Config) *Bot {
 func (b *Bot) Connect(ctx context.Context, websocketUrl string) error {
 	client := twitchws.NewClient(
 		websocketUrl,
-		twitchws.WithOnWelcome(b.onWelcome),
-		twitchws.WithOnNotification(b.onNotification),
+		twitchws.WithOnWelcome(b.onWelcomeEvent),
+		twitchws.WithOnNotification(b.onNotificationEvent),
 		twitchws.WithOnConnect(func() { slog.Info("connected to Twitch websocket") }),
 		twitchws.WithOnDisconnect(func() { slog.Warn("disconnected from Twitch websocket") }),
 		twitchws.WithOnRevocation(func(_ *twitchws.Metadata, payload *twitchws.Payload) {
@@ -70,7 +76,6 @@ func (b *Bot) Connect(ctx context.Context, websocketUrl string) error {
 		twitchws.WithOnReconnect(func(metadata *twitchws.Metadata, payload *twitchws.Payload) {
 			slog.Warn("websocket reconnecting", "metadata", metadata, "payload", payload)
 		}))
-	b.wsClient = client
 
 	if err := client.Connect(); err != nil {
 		return fmt.Errorf("connect: %w", err)
@@ -94,16 +99,106 @@ func (b *Bot) Connect(ctx context.Context, websocketUrl string) error {
 	}
 }
 
-func (b *Bot) onWelcome(_ *twitchws.Metadata, payload *twitchws.Payload) {
+func (b *Bot) onWelcomeEvent(_ *twitchws.Metadata, payload *twitchws.Payload) {
 	session, _ := payload.Payload.(twitchws.Session)
 	slog.Info("received welcome event", "session_id", session.ID)
 
-	if err := b.initHelix(session.ID); err != nil {
-		slog.Error("helix init failed", "error", err)
+	ctx := context.Background()
+
+	if err := b.store.InitTokenSchema(ctx); err != nil {
+		slog.Error("init token schema failed", "error", err)
+		return
+	}
+
+	streamerAccessToken := b.cfg.OAuthToken
+	streamerRefreshToken := b.cfg.RefreshToken
+	if tokens, err := b.store.GetTokens(ctx, "streamer"); err == nil && tokens != nil {
+		slog.Info("loaded streamer tokens from database")
+		streamerAccessToken = tokens.AccessToken
+		streamerRefreshToken = tokens.RefreshToken
+	} else {
+		slog.Info("using streamer tokens from environment")
+	}
+
+	helixClient, err := helix.NewClient(&helix.Options{
+		ClientID:        b.cfg.ClientID,
+		ClientSecret:    b.cfg.ClientSecret,
+		UserAccessToken: streamerAccessToken,
+		RefreshToken:    streamerRefreshToken,
+	})
+	if err != nil {
+		slog.Error("create streamer helix client failed", "error", err)
+		return
+	}
+
+	helixClient.OnUserAccessTokenRefreshed(func(newAccessToken, newRefreshToken string) {
+		slog.Info("streamer tokens auto-refreshed")
+		if err := b.store.SaveTokens(context.Background(), "streamer", newAccessToken, newRefreshToken); err != nil {
+			slog.Error("failed to save streamer tokens during auto-refresh", "error", err)
+		}
+	})
+
+	b.helixClient = helixClient
+	slog.Info("streamer helix client initialised")
+
+	botAccessToken := b.cfg.BotOAuthToken
+	botRefreshToken := b.cfg.BotRefreshToken
+	if tokens, err := b.store.GetTokens(ctx, "bot"); err == nil && tokens != nil {
+		slog.Info("loaded bot tokens from database")
+		botAccessToken = tokens.AccessToken
+		botRefreshToken = tokens.RefreshToken
+	} else {
+		slog.Info("using bot tokens from environment")
+	}
+
+	botHelixClient, err := helix.NewClient(&helix.Options{
+		ClientID:        b.cfg.ClientID,
+		ClientSecret:    b.cfg.ClientSecret,
+		UserAccessToken: botAccessToken,
+		RefreshToken:    botRefreshToken,
+	})
+	if err != nil {
+		slog.Error("create bot helix client failed", "error", err)
+		return
+	}
+
+	botHelixClient.OnUserAccessTokenRefreshed(func(newAccessToken, newRefreshToken string) {
+		slog.Info("bot tokens auto-refreshed")
+		if err := b.store.SaveTokens(context.Background(), "bot", newAccessToken, newRefreshToken); err != nil {
+			slog.Error("failed to save bot tokens during auto-refresh", "error", err)
+		}
+	})
+
+	b.botHelixClient = botHelixClient
+	slog.Info("bot helix client initialised")
+
+	transport := helix.EventSubTransport{Method: "websocket", SessionID: session.ID}
+	subs := []helix.EventSubSubscription{
+		{
+			Type:      helix.EventSubTypeChannelChatMessage,
+			Version:   "1",
+			Condition: helix.EventSubCondition{BroadcasterUserID: b.cfg.ChatChannelUserID, UserID: b.cfg.ChatChannelUserID},
+			Transport: transport,
+		},
+		{
+			Type:      helix.EventSubTypeChannelPointsCustomRewardRedemptionAdd,
+			Version:   "1",
+			Condition: helix.EventSubCondition{BroadcasterUserID: b.cfg.ChatChannelUserID},
+			Transport: transport,
+		},
+	}
+
+	for _, sub := range subs {
+		resp, err := helixClient.CreateEventSubSubscription(&sub)
+		if err != nil {
+			slog.Error("eventsub subscription failed", "type", sub.Type, "error", err)
+			continue
+		}
+		slog.Debug("eventsub subscribed", "type", sub.Type, "status", resp.StatusCode)
 	}
 }
 
-func (b *Bot) onNotification(_ *twitchws.Metadata, payload *twitchws.Payload) {
+func (b *Bot) onNotificationEvent(_ *twitchws.Metadata, payload *twitchws.Payload) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
@@ -111,15 +206,13 @@ func (b *Bot) onNotification(_ *twitchws.Metadata, payload *twitchws.Payload) {
 
 	switch event := notification.Event.(type) {
 	case *eventsub.ChannelChatMessage:
-		b.handleChatMessage(ctx, event)
+		b.onChatMessage(ctx, event)
 	case *eventsub.ChannelPointsCustomRewardRedemptionAddEvent:
-		b.handleRewardRedemption(ctx, event)
+		b.onRewardRedemption(ctx, event)
 	}
 }
 
-func (b *Bot) handleChatMessage(ctx context.Context, event *eventsub.ChannelChatMessage) {
-	slog.Debug("received chat message", "user", event.ChatterUserLogin, "message", event.Message.Text)
-
+func (b *Bot) onChatMessage(ctx context.Context, event *eventsub.ChannelChatMessage) {
 	if event.Reply != nil {
 		return
 	}
@@ -148,7 +241,7 @@ func (b *Bot) handleChatMessage(ctx context.Context, event *eventsub.ChannelChat
 	}
 }
 
-func (b *Bot) handleRewardRedemption(ctx context.Context, event *eventsub.ChannelPointsCustomRewardRedemptionAddEvent) {
+func (b *Bot) onRewardRedemption(ctx context.Context, event *eventsub.ChannelPointsCustomRewardRedemptionAddEvent) {
 	handler, ok := b.rewards[event.Reward.Title]
 	if !ok {
 		return
@@ -177,122 +270,13 @@ func (b *Bot) send(message, replyToMessageID string) error {
 	}
 
 	_, err := b.botHelixClient.SendChatMessage(params)
+
+	if err != nil && strings.Contains(err.Error(), "Failed to decode API response") {
+		time.Sleep(50 * time.Millisecond)
+		_, err = b.botHelixClient.SendChatMessage(params)
+	}
+
 	return err
-}
-
-func (b *Bot) initHelix(sessionID string) error {
-	ctx := context.Background()
-
-	if err := b.store.InitTokenSchema(ctx); err != nil {
-		return fmt.Errorf("init token schema: %w", err)
-	}
-
-	streamerAccessToken := b.cfg.OAuthToken
-	streamerRefreshToken := b.cfg.RefreshToken
-	if tokens, err := b.store.GetTokens(ctx, "streamer"); err == nil && tokens != nil {
-		slog.Info("loaded streamer tokens from database")
-		streamerAccessToken = tokens.AccessToken
-		streamerRefreshToken = tokens.RefreshToken
-	} else {
-		slog.Info("using streamer tokens from environment")
-	}
-
-	helixClient, err := helix.NewClient(&helix.Options{
-		ClientID:        b.cfg.ClientID,
-		ClientSecret:    b.cfg.ClientSecret,
-		UserAccessToken: streamerAccessToken,
-		RefreshToken:    streamerRefreshToken,
-	})
-	if err != nil {
-		return fmt.Errorf("create streamer helix client: %w", err)
-	}
-
-	helixClient.OnUserAccessTokenRefreshed(func(newAccessToken, newRefreshToken string) {
-		slog.Info("streamer tokens auto-refreshed")
-		if err := b.store.SaveTokens(context.Background(), "streamer", newAccessToken, newRefreshToken); err != nil {
-			slog.Error("failed to save streamer tokens during auto-refresh", "error", err)
-		}
-	})
-
-	refresh, err := helixClient.RefreshUserAccessToken(helixClient.GetRefreshToken())
-	if err != nil {
-		return fmt.Errorf("refresh streamer tokens: %w", err)
-	}
-	helixClient.SetUserAccessToken(refresh.Data.AccessToken)
-	helixClient.SetRefreshToken(refresh.Data.RefreshToken)
-
-	if err := b.store.SaveTokens(ctx, "streamer", refresh.Data.AccessToken, refresh.Data.RefreshToken); err != nil {
-		slog.Error("failed to save streamer tokens", "error", err)
-	}
-	b.helixClient = helixClient
-	slog.Info("streamer authenticated", "expires_in", refresh.Data.ExpiresIn)
-
-	botAccessToken := b.cfg.BotOAuthToken
-	botRefreshToken := b.cfg.BotRefreshToken
-	if tokens, err := b.store.GetTokens(ctx, "bot"); err == nil && tokens != nil {
-		slog.Info("loaded bot tokens from database")
-		botAccessToken = tokens.AccessToken
-		botRefreshToken = tokens.RefreshToken
-	} else {
-		slog.Info("using bot tokens from environment")
-	}
-
-	botHelixClient, err := helix.NewClient(&helix.Options{
-		ClientID:        b.cfg.ClientID,
-		ClientSecret:    b.cfg.ClientSecret,
-		UserAccessToken: botAccessToken,
-		RefreshToken:    botRefreshToken,
-	})
-	if err != nil {
-		return fmt.Errorf("create bot helix client: %w", err)
-	}
-
-	botHelixClient.OnUserAccessTokenRefreshed(func(newAccessToken, newRefreshToken string) {
-		slog.Info("bot tokens auto-refreshed")
-		if err := b.store.SaveTokens(context.Background(), "bot", newAccessToken, newRefreshToken); err != nil {
-			slog.Error("failed to save bot tokens during auto-refresh", "error", err)
-		}
-	})
-
-	botRefresh, err := botHelixClient.RefreshUserAccessToken(botHelixClient.GetRefreshToken())
-	if err != nil {
-		return fmt.Errorf("refresh bot tokens: %w", err)
-	}
-	botHelixClient.SetUserAccessToken(botRefresh.Data.AccessToken)
-	botHelixClient.SetRefreshToken(botRefresh.Data.RefreshToken)
-
-	if err := b.store.SaveTokens(ctx, "bot", botRefresh.Data.AccessToken, botRefresh.Data.RefreshToken); err != nil {
-		slog.Error("failed to save bot tokens", "error", err)
-	}
-	b.botHelixClient = botHelixClient
-	slog.Info("bot authenticated", "expires_in", botRefresh.Data.ExpiresIn)
-
-	transport := helix.EventSubTransport{Method: "websocket", SessionID: sessionID}
-	subs := []helix.EventSubSubscription{
-		{
-			Type:      helix.EventSubTypeChannelChatMessage,
-			Version:   "1",
-			Condition: helix.EventSubCondition{BroadcasterUserID: b.cfg.ChatChannelUserID, UserID: b.cfg.ChatChannelUserID},
-			Transport: transport,
-		},
-		{
-			Type:      helix.EventSubTypeChannelPointsCustomRewardRedemptionAdd,
-			Version:   "1",
-			Condition: helix.EventSubCondition{BroadcasterUserID: b.cfg.ChatChannelUserID},
-			Transport: transport,
-		},
-	}
-
-	for _, sub := range subs {
-		resp, err := helixClient.CreateEventSubSubscription(&sub)
-		if err != nil {
-			slog.Error("eventsub subscription failed", "type", sub.Type, "error", err)
-			continue
-		}
-		slog.Debug("eventsub subscribed", "type", sub.Type, "status", resp.StatusCode)
-	}
-
-	return nil
 }
 
 func (b *Bot) getStatsMessage(ctx context.Context, userID, username string) (string, error) {

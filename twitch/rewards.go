@@ -7,7 +7,7 @@ import (
 	"github.com/vpetrigo/go-twitch-ws/pkg/eventsub"
 )
 
-func (b *Bot) handleDrinkPotion(ctx context.Context, event *eventsub.ChannelPointsCustomRewardRedemptionAddEvent) error {
+func (b *Bot) onDrinkPotion(ctx context.Context, event *eventsub.ChannelPointsCustomRewardRedemptionAddEvent) error {
 	stat := b.randomStat()
 	delta := b.randomDelta()
 
@@ -34,7 +34,7 @@ func (b *Bot) handleDrinkPotion(ctx context.Context, event *eventsub.ChannelPoin
 	return b.send(statsMsg, "")
 }
 
-func (b *Bot) handleTemptDice(ctx context.Context, event *eventsub.ChannelPointsCustomRewardRedemptionAddEvent) error {
+func (b *Bot) onTemptDice(ctx context.Context, event *eventsub.ChannelPointsCustomRewardRedemptionAddEvent) error {
 	if err := b.send(fmt.Sprintf("%s has rolled with initiative.", event.UserLogin), ""); err != nil {
 		return err
 	}
