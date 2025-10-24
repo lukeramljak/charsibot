@@ -177,7 +177,7 @@ func (b *Bot) onWelcomeEvent(_ *twitchws.Metadata, payload *twitchws.Payload) {
 		{
 			Type:      helix.EventSubTypeChannelChatMessage,
 			Version:   "1",
-			Condition: helix.EventSubCondition{BroadcasterUserID: b.cfg.ChatChannelUserID, UserID: b.cfg.ChatChannelUserID},
+			Condition: helix.EventSubCondition{BroadcasterUserID: b.cfg.ChatChannelUserID, UserID: b.cfg.BotUserID},
 			Transport: transport,
 		},
 		{
@@ -194,7 +194,7 @@ func (b *Bot) onWelcomeEvent(_ *twitchws.Metadata, payload *twitchws.Payload) {
 			slog.Error("eventsub subscription failed", "type", sub.Type, "error", err)
 			continue
 		}
-		slog.Debug("eventsub subscribed", "type", sub.Type, "status", resp.StatusCode)
+		slog.Info("eventsub subscribed", "type", sub.Type, "status", resp.StatusCode)
 	}
 }
 
@@ -218,13 +218,16 @@ func (b *Bot) onChatMessage(ctx context.Context, event *eventsub.ChannelChatMess
 	}
 
 	text := strings.TrimSpace(event.Message.Text)
+
 	if len(text) == 0 || text[0] != '!' {
 		return
 	}
 
 	cmd, _, _ := strings.Cut(strings.ToLower(text), " ")
+
 	handler, ok := b.commands[cmd]
 	if !ok {
+		slog.Debug("no handler for command", "cmd", cmd)
 		return
 	}
 
