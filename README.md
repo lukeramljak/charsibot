@@ -12,6 +12,7 @@ This project contains two independent services:
 ## Prerequisites
 
 - Go 1.25+
+- Bun
 - Docker & Docker Compose
 
 ## Development Setup
@@ -26,7 +27,8 @@ This project contains two independent services:
 2. Install dependencies for both services:
 
    ```bash
-   go work sync
+   cd discord && go mod tidy
+   cd twitch && bun install
    ```
 
 3. Set up environment variables:
@@ -56,7 +58,7 @@ air main.go
 
 ```bash
 cd twitch
-air main.go
+bun run dev
 ```
 
 ### Production (Docker Compose)
