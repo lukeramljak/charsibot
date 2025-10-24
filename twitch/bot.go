@@ -177,7 +177,7 @@ func (b *Bot) onWelcomeEvent(_ *twitchws.Metadata, payload *twitchws.Payload) {
 		{
 			Type:      helix.EventSubTypeChannelChatMessage,
 			Version:   "1",
-			Condition: helix.EventSubCondition{BroadcasterUserID: b.cfg.ChatChannelUserID, UserID: b.cfg.BotUserID},
+			Condition: helix.EventSubCondition{BroadcasterUserID: b.cfg.ChatChannelUserID, UserID: b.cfg.ChatChannelUserID},
 			Transport: transport,
 		},
 		{
