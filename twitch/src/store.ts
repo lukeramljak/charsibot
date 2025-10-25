@@ -28,19 +28,21 @@ const CREATE_TOKEN_TABLE = `CREATE TABLE IF NOT EXISTS oauth_tokens (
 const CREATE_STATS_TABLE = `CREATE TABLE IF NOT EXISTS stats (
   id TEXT PRIMARY KEY,
   username TEXT NOT NULL,
-  strength INTEGER DEFAULT 0,
-  intelligence INTEGER DEFAULT 0,
-  charisma INTEGER DEFAULT 0,
-  luck INTEGER DEFAULT 0,
-  dexterity INTEGER DEFAULT 0,
-  penis INTEGER DEFAULT 0
+  strength INTEGER DEFAULT 3,
+  intelligence INTEGER DEFAULT 3,
+  charisma INTEGER DEFAULT 3,
+  luck INTEGER DEFAULT 3,
+  dexterity INTEGER DEFAULT 3,
+  penis INTEGER DEFAULT 3
 )`;
 
 export class Store {
   public db: Client;
 
-  constructor(url: string, authToken: string) {
-    this.db = createClient({ url, authToken });
+  constructor(dbPath: string = "charsibot.db") {
+    this.db = createClient({
+      url: `file:${dbPath}`,
+    });
   }
 
   async init() {

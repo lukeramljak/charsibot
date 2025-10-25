@@ -1,14 +1,11 @@
 import { describe, expect, it, beforeEach, afterEach } from "bun:test";
 import { Store, formatStats } from "./store";
 
-const TEST_DB_URL = ":memory:";
-const TEST_AUTH_TOKEN = "";
-
 describe("Store", () => {
   let store: Store;
 
   beforeEach(async () => {
-    store = new Store(TEST_DB_URL, TEST_AUTH_TOKEN);
+    store = new Store(":memory:");
     await store.init();
   });
 

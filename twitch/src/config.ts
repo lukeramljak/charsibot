@@ -8,8 +8,7 @@ export interface Config {
   botUserId: string;
   botLogin?: string;
   channelUserId: string;
-  dbUrl: string;
-  dbAuthToken: string;
+  dbPath: string;
   useMockServer: boolean;
 }
 
@@ -22,8 +21,6 @@ const REQUIRED_VARS = [
   "TWITCH_BOT_REFRESH_TOKEN",
   "TWITCH_BOT_USER_ID",
   "TWITCH_CHANNEL_USER_ID",
-  "TURSO_DATABASE_URL",
-  "TURSO_AUTH_TOKEN",
 ];
 
 export const loadConfig = (): Config => {
@@ -42,8 +39,7 @@ export const loadConfig = (): Config => {
     botRefreshToken: process.env.TWITCH_BOT_REFRESH_TOKEN!,
     botUserId: process.env.TWITCH_BOT_USER_ID!,
     channelUserId: process.env.TWITCH_CHANNEL_USER_ID!,
-    dbUrl: process.env.TURSO_DATABASE_URL!,
-    dbAuthToken: process.env.TURSO_AUTH_TOKEN!,
+    dbPath: process.env.DB_PATH || "charsibot.db",
     useMockServer: process.env.USE_MOCK_SERVER === "true",
   };
 };
