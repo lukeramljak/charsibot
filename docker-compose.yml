@@ -22,9 +22,5 @@ services:
       - TWITCH_BOT_REFRESH_TOKEN
       - TWITCH_BOT_USER_ID
       - TWITCH_CHANNEL_USER_ID
-      - DB_PATH=/data/charsibot.db
-    volumes:
-      - twitch-data:/data
-
-volumes:
-  twitch-data:
+      - TURSO_DATABASE_URL
+      - TURSO_AUTH_TOKEN

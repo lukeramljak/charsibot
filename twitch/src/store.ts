@@ -39,10 +39,12 @@ const CREATE_STATS_TABLE = `CREATE TABLE IF NOT EXISTS stats (
 export class Store {
   public db: Client;
 
-  constructor(dbPath: string = "charsibot.db") {
-    this.db = createClient({
-      url: `file:${dbPath}`,
-    });
+  constructor(url: string, authToken?: string) {
+    if (authToken) {
+      this.db = createClient({ url, authToken });
+    } else {
+      this.db = createClient({ url: `file:${url}` });
+    }
   }
 
   async init() {

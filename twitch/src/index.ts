@@ -4,7 +4,7 @@ import { Bot } from "./bot";
 
 const main = async () => {
   const config = loadConfig();
-  const store = new Store(config.dbPath);
+  const store = new Store(config.dbUrl, config.dbAuthToken);
   const bot = new Bot(config, store);
   await bot.init();
 };
