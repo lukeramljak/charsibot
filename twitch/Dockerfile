@@ -28,6 +28,9 @@ COPY --from=install /temp/prod/node_modules node_modules
 COPY --from=prerelease /usr/src/app/src ./src
 COPY --from=prerelease /usr/src/app/package.json .
 
+# create data directory and set permissions
+RUN mkdir -p /data && chown -R bun:bun /data
+
 # run the app
 USER bun
 ENTRYPOINT [ "bun", "run", "src/index.ts" ]
