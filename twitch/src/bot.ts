@@ -1,12 +1,16 @@
-import { AccessTokenWithUserId, RefreshingAuthProvider } from "@twurple/auth";
 import { ApiClient } from "@twurple/api";
-import { EventSubWsConfig, EventSubWsListener } from "@twurple/eventsub-ws";
-import { Config } from "./config";
-import { Store, formatStats, statList, Stat } from "./store";
-import { parseModifyStatCommand } from "./command-parser";
+import { RefreshingAuthProvider } from "@twurple/auth";
 import type { EventSubChannelChatMessageEvent } from "@twurple/eventsub-base";
+import { EventSubWsListener } from "@twurple/eventsub-ws";
+import { parseModifyStatCommand } from "./command-parser";
+import { Config } from "./config";
 import { log } from "./logger";
 import { MockEventSubListener } from "./mock-eventsub";
+import { Stat, Store, formatStats, statList } from "./store";
+import { WebSocketServer } from "./websocket";
+import { getWeightedRandomPlushie } from "./blind-box";
+import type { CollectionType } from "@charsibot/shared/types";
+import { blindBoxConfigs } from "@charsibot/shared/blind-box-configs";
 
 export class Bot {
   private api: ApiClient;
@@ -14,9 +18,14 @@ export class Bot {
   private mockListener?: MockEventSubListener;
   private store: Store;
   private authProvider: RefreshingAuthProvider;
+  private wsServer: WebSocketServer;
 
-  constructor(private config: Config, store: Store) {
+  constructor(
+    private config: Config,
+    store: Store
+  ) {
     this.store = store;
+    this.wsServer = new WebSocketServer(config.wsPort);
 
     this.authProvider = new RefreshingAuthProvider({
       clientId: config.clientId,
@@ -69,6 +78,9 @@ export class Bot {
     await this.store.init();
     log.info("store ready");
 
+    this.wsServer.start();
+    log.info("websocket server ready");
+
     await this.refreshTokens();
     log.info("tokens initialised");
 
@@ -86,9 +98,9 @@ export class Bot {
           );
 
           if (data.rewardTitle === "Drink a Potion") {
-            await this.onDrinkPotion(data.userId, data.userName);
+            await this.handleDrinkPotionReward(data.userId, data.userName);
           } else if (data.rewardTitle === "Tempt the Dice") {
-            await this.onTemptDice(data.userId, data.userName);
+            await this.handleTemptDiceReward(data.userId, data.userName);
           }
         },
       });
@@ -113,13 +125,41 @@ export class Bot {
 
           switch (cmd) {
             case "!stats":
-              this.handleStats(e.chatterId, e.chatterDisplayName);
+              this.handleStatsCommand(e.chatterId, e.chatterDisplayName);
               break;
             case "!addstat":
-              this.handleModifyStat(e.messageText, e, false);
+              this.handleModifyStatCommand(e.messageText, e, false);
               break;
             case "!rmstat":
-              this.handleModifyStat(e.messageText, e, true);
+              this.handleModifyStatCommand(e.messageText, e, true);
+              break;
+            case "!coobubu":
+              this.handleShowCollectionCommand(
+                "coobubu",
+                e.chatterId,
+                e.chatterDisplayName
+              );
+              break;
+            case "!coobubu-redeem":
+              this.handleRedeemBlindBoxCommand(
+                "coobubu",
+                e.chatterId,
+                e.chatterDisplayName
+              );
+              break;
+            case "!olliepop":
+              this.handleShowCollectionCommand(
+                "olliepops",
+                e.chatterId,
+                e.chatterDisplayName
+              );
+              break;
+            case "!olliepop-redeem":
+              this.handleRedeemBlindBoxCommand(
+                "olliepops",
+                e.chatterId,
+                e.chatterDisplayName
+              );
               break;
           }
         }
@@ -133,10 +173,24 @@ export class Bot {
             "channel point reward redeemed"
           );
 
+          if (e.rewardTitle === "Cooper Series Blind Box") {
+            await this.handleRedeemBlindBoxCommand(
+              "coobubu",
+              e.userId,
+              e.userName
+            );
+          } else if (e.rewardTitle === "Ollie Series Blind Box") {
+            await this.handleRedeemBlindBoxCommand(
+              "olliepops",
+              e.userId,
+              e.userName
+            );
+          }
+
           if (e.rewardTitle === "Drink a Potion") {
-            await this.onDrinkPotion(e.userId, e.userName);
+            await this.handleDrinkPotionReward(e.userId, e.userName);
           } else if (e.rewardTitle === "Tempt the Dice") {
-            await this.onTemptDice(e.userId, e.userName);
+            await this.handleTemptDiceReward(e.userId, e.userName);
           }
         }
       );
@@ -182,13 +236,13 @@ export class Bot {
     log.debug({ message }, "message sent");
   }
 
-  private async handleStats(userId: string, username: string) {
+  private async handleStatsCommand(userId: string, username: string) {
     const stats = await this.store.getStats(userId, username);
     await this.sendMessage(formatStats(username, stats));
     log.info({ userId, username }, "stats command handled");
   }
 
-  private async handleModifyStat(
+  private async handleModifyStatCommand(
     command: string,
     event: EventSubChannelChatMessageEvent,
     isRemove: boolean
@@ -221,6 +275,7 @@ export class Bot {
 
     const stats = await this.store.getStats(event.chatterId, mentionedLogin);
     await this.sendMessage(formatStats(mentionedLogin, stats));
+
     log.info(
       {
         moderator: event.chatterDisplayName,
@@ -240,32 +295,112 @@ export class Bot {
     return Math.random() < 0.05 ? -1 : 1;
   }
 
-  private async onDrinkPotion(userId: string, userName: string) {
+  private async handleDrinkPotionReward(userId: string, username: string) {
     const stat = this.randStat();
     const delta = this.randDelta();
     const outcome = delta < 0 ? "lost" : "gained";
 
-    await this.store.modifyStat(userId, userName, stat.column, delta);
+    await this.store.modifyStat(userId, username, stat.column, delta);
 
-    await this.sendMessage(
-      `A shifty looking merchant hands ${userName} a glittering potion. Without hesitation, they sink the whole drink. ${userName} ${outcome} ${stat.display}`
-    );
+    const message = `A shifty looking merchant hands ${username} a glittering potion. Without hesitation, they sink the whole drink. ${username} ${outcome} ${stat.display}`;
+    await this.sendMessage(message);
 
-    const stats = await this.store.getStats(userId, userName);
-    await this.sendMessage(formatStats(userName, stats));
+    const stats = await this.store.getStats(userId, username);
+    await this.sendMessage(formatStats(username, stats));
 
     log.info(
-      { userId, userName, stat: stat.column, delta, outcome },
+      { userId, username, stat: stat.column, delta, outcome },
       "drink potion reward handled"
     );
   }
 
-  private async onTemptDice(userId: string, userName: string) {
-    await this.sendMessage(`${userName} has rolled with initiative.`);
+  private async handleTemptDiceReward(userId: string, username: string) {
+    await this.sendMessage(`${username} has rolled with initiative.`);
 
-    const stats = await this.store.getStats(userId, userName);
-    await this.sendMessage(formatStats(userName, stats));
+    const stats = await this.store.getStats(userId, username);
+    await this.sendMessage(formatStats(username, stats));
 
-    log.info({ userId, userName }, "tempt dice reward handled");
+    log.info({ userId, username }, "tempt dice reward handled");
+  }
+
+  private async handleShowCollectionCommand(
+    type: CollectionType,
+    userId: string,
+    username: string
+  ) {
+    const collection = await this.store.getUserCollections(userId, type);
+
+    this.wsServer.broadcast({
+      type: "collection_display",
+      data: {
+        userId,
+        username,
+        collectionType: type,
+        collection: collection || [],
+        collectionSize: collection?.length || 0,
+      },
+    });
+
+    log.info(
+      {
+        userId,
+        username,
+        collectionType: type,
+        collectionSize: collection?.length || 0,
+      },
+      "collection command handled"
+    );
+  }
+
+  private async handleRedeemBlindBoxCommand(
+    type: CollectionType,
+    userId: string,
+    username: string
+  ) {
+    const seriesConfig = blindBoxConfigs[type];
+    const plushieWeights = seriesConfig.plushies;
+    const seriesName = seriesConfig.rewardTitle;
+
+    const plushieKey = getWeightedRandomPlushie(plushieWeights);
+
+    const result = await this.store.addPlushieToCollection(
+      userId,
+      username,
+      type,
+      plushieKey
+    );
+
+    // Find the plushie data for the redeemed item
+    const plushieData = plushieWeights.find((p) => p.key === plushieKey);
+
+    this.wsServer.broadcast({
+      type: "blindbox_redemption",
+      data: {
+        userId,
+        username,
+        collectionType: type,
+        seriesName,
+        plushie: {
+          key: plushieKey,
+          name: plushieData?.name || "Unknown",
+          weight: plushieData?.weight || 0,
+        },
+        isNew: result?.isNew || false,
+        collectionSize: result?.collection.length || 0,
+        collection: result?.collection || [],
+      },
+    });
+
+    log.info(
+      {
+        userId,
+        username,
+        collectionType: type,
+        reward: plushieKey,
+        isNew: result?.isNew,
+        collectionSize: result?.collection.length || 0,
+      },
+      "redeem handled"
+    );
   }
 }

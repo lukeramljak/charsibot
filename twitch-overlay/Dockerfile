@@ -21,25 +21,27 @@ RUN cd /temp/prod && bun install --frozen-lockfile --production
 # then copy all (non-ignored) project files into the image
 FROM base AS prerelease
 COPY --from=install /temp/dev/node_modules node_modules
-COPY --from=install /temp/dev/twitch/node_modules twitch/node_modules
+COPY --from=install /temp/dev/twitch-overlay/node_modules twitch-overlay/node_modules
 COPY package.json .
 COPY shared ./shared
-COPY twitch ./twitch
+COPY twitch-overlay ./twitch-overlay
 
-# copy production files
+# build the SvelteKit app
 ENV NODE_ENV=production
+WORKDIR /usr/src/app/twitch-overlay
+RUN bunx svelte-kit sync
+RUN bun run build
 
-# copy production dependencies and source code into final image
+# copy production dependencies and built app into final image
 FROM base AS release
 COPY --from=install /temp/prod/node_modules node_modules
-COPY --from=install /temp/prod/twitch/node_modules twitch/node_modules
+COPY --from=install /temp/prod/twitch-overlay/node_modules twitch-overlay/node_modules
 COPY --from=prerelease /usr/src/app/package.json .
-COPY --from=prerelease /usr/src/app/shared ./shared
-COPY --from=prerelease /usr/src/app/twitch ./twitch
-
-# create data directory and set permissions
-RUN mkdir -p /data && chown -R bun:bun /data
+COPY --from=prerelease /usr/src/app/twitch-overlay/build ./twitch-overlay/build
+COPY --from=prerelease /usr/src/app/twitch-overlay/package.json ./twitch-overlay/
 
 # run the app
 USER bun
-ENTRYPOINT [ "bun", "run", "twitch/src/index.ts" ]
+EXPOSE 3000
+ENV PORT=3000
+CMD ["bun", "run", "twitch-overlay/build/index.js"]

@@ -1,0 +1,18 @@
+{
+  "name": "charsibot",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "twitch",
+    "twitch-overlay",
+    "shared"
+  ],
+  "scripts": {
+    "dev": "bun run --filter './twitch' dev & bun run --filter './twitch-overlay' dev",
+    "dev:twitch": "bun run --filter './twitch' dev",
+    "dev:overlay": "bun run --filter './twitch-overlay' dev",
+    "build": "bun run --filter './twitch' build && bun run --filter './twitch-overlay' build",
+    "build:twitch": "bun run --filter './twitch' build",
+    "build:overlay": "bun run --filter './twitch-overlay' build"
+  }
+}

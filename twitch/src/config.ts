@@ -11,6 +11,7 @@ export interface Config {
   dbUrl: string;
   dbAuthToken?: string;
   useMockServer: boolean;
+  wsPort: number;
 }
 
 const REQUIRED_VARS = [
@@ -44,5 +45,6 @@ export const loadConfig = (): Config => {
       process.env.TURSO_DATABASE_URL || process.env.DB_PATH || "charsibot.db",
     dbAuthToken: process.env.TURSO_AUTH_TOKEN,
     useMockServer: process.env.USE_MOCK_SERVER === "true",
+    wsPort: process.env.WS_PORT ? parseInt(process.env.WS_PORT, 10) : 8081,
   };
 };

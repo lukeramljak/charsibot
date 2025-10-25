@@ -4,10 +4,11 @@ A multi-service bot application for [Charsibel](https://twitch.tv/charsibel)'s D
 
 ## Architecture
 
-This project contains two independent services:
+This project contains three services:
 
 - **Discord Bot** (`/discord`) - Handles Discord server interactions and commands
 - **Twitch Bot** (`/twitch`) - Manages Twitch chat commands and channel point redemptions
+- **Twitch Overlay** (`/twitch-overlay`) - SvelteKit web app providing browser source overlays for OBS
 
 ## Prerequisites
 
@@ -27,8 +28,14 @@ This project contains two independent services:
 2. Install dependencies for both services:
 
    ```bash
+   # Discord bot
    cd discord && go mod tidy
+
+   # Twitch bot
    cd twitch && bun install
+
+   # Twitch overlay
+   cd twitch-overlay && bun install
    ```
 
 3. Set up environment variables:
@@ -41,6 +48,10 @@ This project contains two independent services:
    # Twitch bot
    cp twitch/.env.example twitch/.env
    # Edit twitch/.env with your Twitch credentials
+
+   # Twitch overlay
+   cp twitch-overlay/.env.example twitch-overlay/.env
+   # Edit twitch-overlay/.env with WebSocket URL
    ```
 
 ## Running Services
@@ -61,9 +72,16 @@ cd twitch
 bun run dev
 ```
 
+**Twitch Overlay:**
+
+```bash
+cd twitch-overlay
+bun run dev
+```
+
 ### Production (Docker Compose)
 
-**Run both services:**
+**Run all services:**
 
 ```bash
 docker compose up -d
@@ -77,6 +95,9 @@ docker compose up charsibot-discord -d
 
 # Twitch only
 docker compose up charsibot-twitch -d
+
+# Overlay only
+docker compose up twitch-overlay -d
 ```
 
 **Build and restart:**

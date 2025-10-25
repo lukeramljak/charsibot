@@ -1,4 +1,6 @@
 import { Client, createClient } from "@libsql/client";
+import { log } from "./logger";
+import type { CollectionType, RewardColumn } from "@charsibot/shared/types";
 
 export interface Tokens {
   access_token: string;
@@ -36,6 +38,34 @@ const CREATE_STATS_TABLE = `CREATE TABLE IF NOT EXISTS stats (
   penis INTEGER DEFAULT 3
 )`;
 
+const CREATE_USER_COLLECTIONS_TABLE = `CREATE TABLE IF NOT EXISTS user_collections (
+  user_id TEXT NOT NULL,
+  username TEXT NOT NULL,
+  collection_type TEXT NOT NULL,
+  reward1 INTEGER DEFAULT 0,
+  reward2 INTEGER DEFAULT 0,
+  reward3 INTEGER DEFAULT 0,
+  reward4 INTEGER DEFAULT 0,
+  reward5 INTEGER DEFAULT 0,
+  reward6 INTEGER DEFAULT 0,
+  reward7 INTEGER DEFAULT 0,
+  reward8 INTEGER DEFAULT 0,
+  PRIMARY KEY (user_id, collection_type)
+)`;
+
+const REWARD_COLUMNS = [
+  "reward1",
+  "reward2",
+  "reward3",
+  "reward4",
+  "reward5",
+  "reward6",
+  "reward7",
+  "reward8",
+] as const;
+
+const ALL_COLUMNS = REWARD_COLUMNS.join(", ");
+
 export class Store {
   public db: Client;
 
@@ -50,6 +80,7 @@ export class Store {
   async init() {
     await this.db.execute(CREATE_TOKEN_TABLE);
     await this.db.execute(CREATE_STATS_TABLE);
+    await this.db.execute(CREATE_USER_COLLECTIONS_TABLE);
   }
 
   async getTokens(tokenType: TokenType): Promise<Tokens | null> {
@@ -132,6 +163,101 @@ export class Store {
       sql: `UPDATE stats SET ${column} = ${column} + ? WHERE id = ?`,
       args: [delta, userId],
     });
+  }
+
+  async getUserCollections(
+    userId: string,
+    collectionType: CollectionType
+  ): Promise<string[] | undefined> {
+    try {
+      const result = await this.db.execute({
+        sql: `SELECT ${ALL_COLUMNS} FROM user_collections WHERE user_id = ? AND collection_type = ?`,
+        args: [userId, collectionType],
+      });
+
+      const collection: string[] = [];
+      if (result.rows.length > 0) {
+        const row = result.rows[0];
+        // Convert boolean columns to array of reward keys
+        for (const column of REWARD_COLUMNS) {
+          if (row[column]) {
+            collection.push(column);
+          }
+        }
+      }
+
+      log.info(`getUserCollection - Success: ${collection.length} items found`);
+      return collection;
+    } catch (error) {
+      log.error({ error }, "getUserCollection");
+    }
+  }
+
+  async addPlushieToCollection(
+    userId: string,
+    username: string,
+    collectionType: CollectionType,
+    rewardColumn: RewardColumn
+  ): Promise<{ collection: string[]; isNew: boolean } | undefined> {
+    log.info(
+      `addPlushieToCollection - userId: ${userId}, username: ${username}, collectionType: ${collectionType}, rewardColumn: ${rewardColumn}`
+    );
+
+    try {
+      // Check if user already has this reward
+      const existingResult = await this.db.execute({
+        sql: `SELECT ${rewardColumn} FROM user_collections WHERE user_id = ? AND collection_type = ?`,
+        args: [userId, collectionType],
+      });
+
+      const alreadyHas =
+        existingResult.rows.length > 0 &&
+        existingResult.rows[0][rewardColumn] === 1;
+
+      if (!alreadyHas) {
+        log.info(
+          `addPlushieToCollection - Adding new plushie: ${rewardColumn}`
+        );
+
+        // Insert or update the user's collection
+        await this.db.execute({
+          sql: `INSERT INTO user_collections (user_id, username, collection_type, ${rewardColumn})
+              VALUES (?, ?, ?, 1)
+              ON CONFLICT(user_id, collection_type) DO UPDATE SET ${rewardColumn} = 1, username = ?`,
+          args: [userId, username, collectionType, username],
+        });
+      } else {
+        log.info(
+          `addPlushieToCollection - Plushie already exists: ${rewardColumn}`
+        );
+      }
+
+      // Get updated collection
+      const updatedResult = await this.db.execute({
+        sql: `SELECT ${ALL_COLUMNS} FROM user_collections WHERE user_id = ? AND collection_type = ?`,
+        args: [userId, collectionType],
+      });
+
+      const collection: string[] = [];
+      if (updatedResult.rows.length > 0) {
+        const row = updatedResult.rows[0];
+        for (const column of REWARD_COLUMNS) {
+          if (row[column]) {
+            collection.push(column);
+          }
+        }
+      }
+
+      log.info(
+        `addPlushieToCollection - Success: ${
+          collection.length
+        } items, isNew: ${!alreadyHas}`
+      );
+
+      return { collection, isNew: !alreadyHas };
+    } catch (error) {
+      log.error({ error }, "addPlushieToCollection");
+    }
   }
 }
 

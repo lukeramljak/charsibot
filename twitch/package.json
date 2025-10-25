@@ -1,5 +1,5 @@
 {
-  "name": "charsibot-twitch",
+  "name": "@charsibot/twitch",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -10,6 +10,7 @@
     "test": "bun test"
   },
   "dependencies": {
+    "@charsibot/shared": "workspace:*",
     "@libsql/client": "^0.15.0",
     "@twurple/api": "^7.0.0",
     "@twurple/auth": "^7.0.0",
