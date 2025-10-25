@@ -53,12 +53,12 @@ describe("Store", () => {
 
       expect(stats.id).toBe("user123");
       expect(stats.username).toBe("testuser");
-      expect(stats.strength).toBe(0);
-      expect(stats.intelligence).toBe(0);
-      expect(stats.charisma).toBe(0);
-      expect(stats.luck).toBe(0);
-      expect(stats.dexterity).toBe(0);
-      expect(stats.penis).toBe(0);
+      expect(stats.strength).toBe(3);
+      expect(stats.intelligence).toBe(3);
+      expect(stats.charisma).toBe(3);
+      expect(stats.luck).toBe(3);
+      expect(stats.dexterity).toBe(3);
+      expect(stats.penis).toBe(3);
     });
 
     it("retrieves existing user stats", async () => {
@@ -73,15 +73,15 @@ describe("Store", () => {
       await store.modifyStat("user123", "testuser", "strength", 5);
       const stats = await store.getStats("user123", "testuser");
 
-      expect(stats.strength).toBe(5);
-      expect(stats.intelligence).toBe(0);
+      expect(stats.strength).toBe(8);
+      expect(stats.intelligence).toBe(3);
     });
 
     it("modifies intelligence stat", async () => {
       await store.modifyStat("user123", "testuser", "intelligence", 3);
       const stats = await store.getStats("user123", "testuser");
 
-      expect(stats.intelligence).toBe(3);
+      expect(stats.intelligence).toBe(6);
     });
 
     it("accumulates stat modifications", async () => {
@@ -89,7 +89,7 @@ describe("Store", () => {
       await store.modifyStat("user123", "testuser", "luck", 3);
       const stats = await store.getStats("user123", "testuser");
 
-      expect(stats.luck).toBe(5);
+      expect(stats.luck).toBe(8);
     });
 
     it("handles negative stat modifications", async () => {
@@ -97,14 +97,14 @@ describe("Store", () => {
       await store.modifyStat("user123", "testuser", "charisma", -3);
       const stats = await store.getStats("user123", "testuser");
 
-      expect(stats.charisma).toBe(7);
+      expect(stats.charisma).toBe(10);
     });
 
     it("allows stats to go negative", async () => {
       await store.modifyStat("user123", "testuser", "dexterity", -5);
       const stats = await store.getStats("user123", "testuser");
 
-      expect(stats.dexterity).toBe(-5);
+      expect(stats.dexterity).toBe(-2);
     });
 
     it("tracks multiple users independently", async () => {
@@ -114,8 +114,8 @@ describe("Store", () => {
       const aliceStats = await store.getStats("user1", "alice");
       const bobStats = await store.getStats("user2", "bob");
 
-      expect(aliceStats.strength).toBe(10);
-      expect(bobStats.strength).toBe(20);
+      expect(aliceStats.strength).toBe(13);
+      expect(bobStats.strength).toBe(23);
     });
   });
 
@@ -128,8 +128,8 @@ describe("Store", () => {
       const formatted = formatStats("testuser", stats);
 
       expect(formatted).toContain("testuser");
-      expect(formatted).toContain("STR: 5");
-      expect(formatted).toContain("INT: 3");
+      expect(formatted).toContain("STR: 8");
+      expect(formatted).toContain("INT: 6");
     });
 
     it("formats stats with negative values", async () => {
@@ -138,7 +138,7 @@ describe("Store", () => {
       const stats = await store.getStats("user123", "testuser");
       const formatted = formatStats("testuser", stats);
 
-      expect(formatted).toContain("LUCK: -2");
+      expect(formatted).toContain("LUCK: 1");
     });
   });
 });
