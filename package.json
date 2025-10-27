@@ -3,15 +3,18 @@
   "version": "0.1.0",
   "private": true,
   "workspaces": [
+    "discord",
     "twitch",
     "twitch-overlay",
     "shared"
   ],
   "scripts": {
-    "dev": "bun run --filter './twitch' dev & bun run --filter './twitch-overlay' dev",
+    "dev": "bun run --filter './discord' dev & bun run --filter './twitch' dev & bun run --filter './twitch-overlay' dev",
+    "dev:discord": "bun run --filter './discord' dev",
     "dev:twitch": "bun run --filter './twitch' dev",
     "dev:overlay": "bun run --filter './twitch-overlay' dev",
     "build": "bun run --filter './twitch' build && bun run --filter './twitch-overlay' build",
+    "build:discord": "bun run --filter './discord' build",
     "build:twitch": "bun run --filter './twitch' build",
     "build:overlay": "bun run --filter './twitch-overlay' build"
   }
