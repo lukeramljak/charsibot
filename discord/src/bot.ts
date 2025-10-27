@@ -1,16 +1,15 @@
 import {
   ActivityType,
-  Collection,
   Events,
   GuildMember,
-  Interaction,
+  type Interaction,
   Message,
   MessageFlags,
-  PartialGuildMember,
+  type PartialGuildMember,
   TextChannel,
 } from "discord.js";
 import { CustomClient } from "./client";
-import { Command } from "./commands/command";
+import type { Command } from "./commands/command";
 import { MessageHandler } from "./events/message-handler";
 
 export class Bot {

@@ -1,11 +1,11 @@
 import { GatewayIntentBits, REST, Partials } from "discord.js";
 import { CustomClient } from "./client";
 import { Bot } from "./bot";
-import { Command } from "./commands/command";
+import type { Command } from "./commands/command";
 import { CommandRegistrationService } from "./commands/command-registration-service";
 import { TriggerHandler } from "./events/trigger-handler";
 import { MessageHandler } from "./events/message-handler";
-import { Trigger } from "./triggers/trigger";
+import type { Trigger } from "./triggers/trigger";
 import { ButtTrigger } from "./triggers/butt";
 import { ComeTrigger } from "./triggers/come";
 import { CowTrigger } from "./triggers/cow";
