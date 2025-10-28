@@ -3,10 +3,6 @@
   "workspaces": {
     "": {
       "name": "charsibot",
-      "devDependencies": {
-        "@types/bun": "^1.3.1",
-        "typescript": "^5.4.0",
-      },
     },
     "discord": {
       "name": "@charsibot/discord",

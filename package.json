@@ -13,13 +13,9 @@
     "dev:discord": "bun run --filter './discord' dev",
     "dev:twitch": "bun run --filter './twitch' dev",
     "dev:overlay": "bun run --filter './twitch-overlay' dev",
-    "build": "bun run --filter './twitch' build && bun run --filter './twitch-overlay' build",
+    "build": "bun run --filter './discord' build && bun run --filter './twitch' build && bun run --filter './twitch-overlay' build",
     "build:discord": "bun run --filter './discord' build",
     "build:twitch": "bun run --filter './twitch' build",
     "build:overlay": "bun run --filter './twitch-overlay' build"
   },
-  "devDependencies": {
-    "@types/bun": "^1.3.1",
-    "typescript": "^5.4.0"
-  }
 }
