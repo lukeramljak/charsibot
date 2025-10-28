@@ -1,4 +1,4 @@
-import type { PlushieData, RewardColumn } from "shared/types";
+import type { PlushieData, RewardColumn } from "./types";
 
 /**
  * Selects a random plushie based on weighted probabilities

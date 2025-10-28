@@ -1,8 +1,7 @@
 import type { BlindBoxOverlayConfig } from '../types';
-import { coobubuConfig as sharedConfig } from 'shared/blind-box-configs';
 
 export const coobubuConfig: BlindBoxOverlayConfig = {
-  ...sharedConfig,
+  collectionType: 'coobubu',
   collectionName: 'Coobubus',
 
   boxFrontFace: '/coobubu/box-front.png',
@@ -15,8 +14,14 @@ export const coobubuConfig: BlindBoxOverlayConfig = {
 
   audioVolume: 50,
 
-  plushies: sharedConfig.plushies.map((plushie) => ({
-    ...plushie,
-    image: `/coobubu/${plushie.name.toLowerCase()}.png`
-  }))
+  plushies: [
+    { key: 'reward1', name: 'Cutey', image: '/coobubu/cutey.png' },
+    { key: 'reward2', name: 'Blueberry', image: '/coobubu/blueberry.png' },
+    { key: 'reward3', name: 'Lemony', image: '/coobubu/lemony.png' },
+    { key: 'reward4', name: 'Bibi', image: '/coobubu/bibi.png' },
+    { key: 'reward5', name: 'Pinky', image: '/coobubu/pinky.png' },
+    { key: 'reward6', name: 'Minty', image: '/coobubu/minty.png' },
+    { key: 'reward7', name: 'Cherry', image: '/coobubu/cherry.png' },
+    { key: 'reward8', name: 'Secret', image: '/coobubu/secret.png' }
+  ]
 };

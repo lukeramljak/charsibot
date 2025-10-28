@@ -1,8 +1,7 @@
 import type { BlindBoxOverlayConfig } from '../types';
-import { olliepopsConfig as sharedConfig } from 'shared/blind-box-configs';
 
 export const olliepopsConfig: BlindBoxOverlayConfig = {
-  ...sharedConfig,
+  collectionType: 'olliepops',
   collectionName: 'Olliepops',
 
   boxFrontFace: '/olliepops/box-front.png',
@@ -15,8 +14,14 @@ export const olliepopsConfig: BlindBoxOverlayConfig = {
 
   audioVolume: 50,
 
-  plushies: sharedConfig.plushies.map((plushie) => ({
-    ...plushie,
-    image: `/olliepops/${plushie.name.toLowerCase()}.png`
-  }))
+  plushies: [
+    { key: 'reward1', name: 'Berry', image: '/olliepops/berry.png' },
+    { key: 'reward2', name: 'Tangerine', image: '/olliepops/tangerine.png' },
+    { key: 'reward3', name: 'Bibble', image: '/olliepops/bibble.png' },
+    { key: 'reward4', name: 'Kiwi', image: '/olliepops/kiwi.png' },
+    { key: 'reward5', name: 'Crunchy', image: '/olliepops/crunchy.png' },
+    { key: 'reward6', name: 'Caramel', image: '/olliepops/caramel.png' },
+    { key: 'reward7', name: 'Grape', image: '/olliepops/grape.png' },
+    { key: 'reward8', name: 'Secret', image: '/olliepops/secret.png' }
+  ]
 };

@@ -1,4 +1,4 @@
-import type { CollectionType } from '@charsibot/shared/types';
+import type { CollectionType } from '$lib/types';
 
 export interface PlushieData {
   /** Unique identifier for the plushie */

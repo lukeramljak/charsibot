@@ -1,6 +1,6 @@
 import { type Client, createClient } from "@libsql/client";
 import { log } from "./logger";
-import type { CollectionType, RewardColumn } from "shared/types";
+import type { CollectionType, RewardColumn } from "./types";
 
 export interface Tokens {
   access_token: string;

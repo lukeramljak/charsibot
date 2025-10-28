@@ -1,8 +1,8 @@
 services:
-  charsibot-discord:
+  discord:
     build:
-      context: .
-      dockerfile: ./apps/discord/Dockerfile
+      context: ./apps/discord
+      dockerfile: ./Dockerfile
     container_name: discord
     restart: unless-stopped
     environment:
@@ -10,10 +10,10 @@ services:
       - DISCORD_GUILD_ID
       - DISCORD_TOKEN
 
-  charsibot-twitch:
+  twitch:
     build:
-      context: .
-      dockerfile: ./apps/twitch/Dockerfile
+      context: ./apps/twitch
+      dockerfile: ./Dockerfile
     container_name: twitch
     restart: unless-stopped
     ports:
@@ -34,13 +34,13 @@ services:
 
   twitch-overlay:
     build:
-      context: .
-      dockerfile: ./apps/twitch-overlay/Dockerfile
+      context: ./apps/twitch-overlay
+      dockerfile: ./Dockerfile
     container_name: twitch-overlay
     restart: unless-stopped
     ports:
       - "3000:3000"
     depends_on:
-      - charsibot-twitch
+      - twitch
     environment:
       - PUBLIC_TWITCH_WEBSOCKET_URL

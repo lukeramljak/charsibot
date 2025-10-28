@@ -1,9 +1,5 @@
 import type { BlindBoxConfig, RewardColumn } from "./types";
 
-/**
- * Shared blind box configurations
- * Define plushies once here and they'll be used by both bot and overlay
- */
 export const coobubuConfig: BlindBoxConfig = {
   collectionType: "coobubu",
   rewardTitle: "Cooper Series Blind Box",

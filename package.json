@@ -2,9 +2,6 @@
   "name": "charsibot",
   "version": "0.1.0",
   "private": true,
-  "workspaces": [
-    "apps/*"
-  ],
   "scripts": {
     "dev": "bun run --filter './apps/discord' dev & bun run --filter './apps/twitch' dev & bun run --filter './apps/twitch-overlay' dev",
     "dev:discord": "bun run --filter './apps/discord' dev",

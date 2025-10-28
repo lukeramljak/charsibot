@@ -9,8 +9,8 @@ import { MockEventSubListener } from "./mock-eventsub";
 import { type Stat, Store, formatStats, statList } from "./store";
 import { WebSocketServer } from "./websocket";
 import { getWeightedRandomPlushie } from "./blind-box";
-import type { CollectionType } from "shared/types";
-import { blindBoxConfigs } from "shared/blind-box-configs";
+import type { CollectionType } from "./types";
+import { blindBoxConfigs } from "./blind-box-configs";
 
 export class Bot {
   private api: ApiClient;

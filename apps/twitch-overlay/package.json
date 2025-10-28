@@ -13,9 +13,6 @@
     "format": "prettier --write .",
     "lint": "prettier --check . && eslint ."
   },
-  "dependencies": {
-    "shared": "workspace:*"
-  },
   "devDependencies": {
     "@eslint/compat": "^1.4.0",
     "@eslint/js": "^9.36.0",
