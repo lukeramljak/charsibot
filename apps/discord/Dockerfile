@@ -21,5 +21,7 @@ COPY --from=install /temp/prod/node_modules node_modules
 COPY --from=prerelease /app/src ./src
 COPY --from=prerelease /app/package.json .
 
+RUN bun run commands:register
+
 USER bun
 ENTRYPOINT [ "bun", "run", "src/index.ts" ]
