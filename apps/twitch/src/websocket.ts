@@ -1,6 +1,6 @@
 import type { ServerWebSocket } from "bun";
 import { log } from "./logger";
-import type { OverlayEvent } from "@charsibot/shared/types";
+import type { OverlayEvent } from "shared/types";
 
 export class WebSocketServer {
   private clients: Set<ServerWebSocket<unknown>> = new Set();

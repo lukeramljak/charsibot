@@ -1,5 +1,5 @@
 import type { BlindBoxOverlayConfig } from '../types';
-import { coobubuConfig as sharedConfig } from '@charsibot/shared/blind-box-configs';
+import { coobubuConfig as sharedConfig } from 'shared/blind-box-configs';
 
 export const coobubuConfig: BlindBoxOverlayConfig = {
   ...sharedConfig,

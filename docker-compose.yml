@@ -1,6 +1,8 @@
 services:
   charsibot-discord:
-    build: ./discord
+    build:
+      context: .
+      dockerfile: ./apps/discord/Dockerfile
     container_name: discord
     restart: unless-stopped
     environment:
@@ -11,7 +13,7 @@ services:
   charsibot-twitch:
     build:
       context: .
-      dockerfile: ./twitch/Dockerfile
+      dockerfile: ./apps/twitch/Dockerfile
     container_name: twitch
     restart: unless-stopped
     ports:
@@ -33,7 +35,7 @@ services:
   twitch-overlay:
     build:
       context: .
-      dockerfile: ./twitch-overlay/Dockerfile
+      dockerfile: ./apps/twitch-overlay/Dockerfile
     container_name: twitch-overlay
     restart: unless-stopped
     ports:

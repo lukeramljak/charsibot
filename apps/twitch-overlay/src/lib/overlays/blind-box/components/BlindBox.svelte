@@ -1,6 +1,6 @@
 <script lang="ts">
   import { charsibotWebSocket } from '$lib/charsibot.svelte';
-  import type { BlindBoxRedemptionEvent, CollectionDisplayEvent } from '@charsibot/shared/types';
+  import type { BlindBoxRedemptionEvent, CollectionDisplayEvent } from 'shared/types';
   import type { BlindBoxOverlayConfig, PlushieData } from '../types';
   import Box3D from './Box3D.svelte';
   import PlushieReveal from './PlushieReveal.svelte';

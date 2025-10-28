@@ -1,4 +1,4 @@
-import type { PlushieData, RewardColumn } from "@charsibot/shared/types";
+import type { PlushieData, RewardColumn } from "shared/types";
 
 /**
  * Selects a random plushie based on weighted probabilities

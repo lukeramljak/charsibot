@@ -1,5 +1,5 @@
 import type { BlindBoxOverlayConfig } from '../types';
-import { olliepopsConfig as sharedConfig } from '@charsibot/shared/blind-box-configs';
+import { olliepopsConfig as sharedConfig } from 'shared/blind-box-configs';
 
 export const olliepopsConfig: BlindBoxOverlayConfig = {
   ...sharedConfig,

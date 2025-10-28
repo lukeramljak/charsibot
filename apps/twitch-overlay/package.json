@@ -1,5 +1,5 @@
 {
-  "name": "@charsibot/twitch-overlay",
+  "name": "twitch-overlay",
   "private": true,
   "version": "0.0.1",
   "type": "module",
@@ -14,7 +14,7 @@
     "lint": "prettier --check . && eslint ."
   },
   "dependencies": {
-    "@charsibot/shared": "workspace:*"
+    "shared": "workspace:*"
   },
   "devDependencies": {
     "@eslint/compat": "^1.4.0",

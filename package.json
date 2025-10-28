@@ -3,19 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "workspaces": [
-    "discord",
-    "twitch",
-    "twitch-overlay",
-    "shared"
+    "apps/*"
   ],
   "scripts": {
-    "dev": "bun run --filter './discord' dev & bun run --filter './twitch' dev & bun run --filter './twitch-overlay' dev",
-    "dev:discord": "bun run --filter './discord' dev",
-    "dev:twitch": "bun run --filter './twitch' dev",
-    "dev:overlay": "bun run --filter './twitch-overlay' dev",
-    "build": "bun run --filter './discord' build && bun run --filter './twitch' build && bun run --filter './twitch-overlay' build",
-    "build:discord": "bun run --filter './discord' build",
-    "build:twitch": "bun run --filter './twitch' build",
-    "build:overlay": "bun run --filter './twitch-overlay' build"
-  },
+    "dev": "bun run --filter './apps/discord' dev & bun run --filter './apps/twitch' dev & bun run --filter './apps/twitch-overlay' dev",
+    "dev:discord": "bun run --filter './apps/discord' dev",
+    "dev:twitch": "bun run --filter './apps/twitch' dev",
+    "dev:overlay": "bun run --filter './apps/twitch-overlay' dev",
+    "build": "bun run --filter './apps/discord' build && bun run --filter './apps/twitch' build && bun run --filter './apps/twitch-overlay' build",
+    "build:discord": "bun run --filter './apps/discord' build",
+    "build:twitch": "bun run --filter './apps/twitch' build",
+    "build:overlay": "bun run --filter './apps/twitch-overlay' build"
+  }
 }
