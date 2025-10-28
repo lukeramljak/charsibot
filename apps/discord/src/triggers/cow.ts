@@ -2,8 +2,6 @@ import { Message } from "discord.js";
 import type { Trigger } from "./trigger";
 
 export class CowTrigger implements Trigger {
-  triggerChance = 20;
-
   shouldTrigger(message: Message): boolean {
     return message.content.toLowerCase().includes("cow");
   }
