@@ -1,5 +1,5 @@
 import { Message } from "discord.js";
-import { Trigger } from "./trigger";
+import type { Trigger } from "./trigger";
 
 export class PingTrigger implements Trigger {
   shouldTrigger(message: Message): boolean {
