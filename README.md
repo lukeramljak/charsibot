@@ -12,7 +12,6 @@ This project contains three services:
 
 ## Prerequisites
 
-- Go 1.25+
 - Bun
 - Docker & Docker Compose
 
