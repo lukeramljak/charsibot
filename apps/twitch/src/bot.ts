@@ -20,10 +20,7 @@ export class Bot {
   private authProvider: RefreshingAuthProvider;
   private wsServer: WebSocketServer;
 
-  constructor(
-    private config: Config,
-    store: Store
-  ) {
+  constructor(private config: Config, store: Store) {
     this.store = store;
     this.wsServer = new WebSocketServer(config.wsPort);
 
@@ -36,7 +33,7 @@ export class Bot {
       if (!tokenData.refreshToken) return;
 
       if (userId === this.config.channelUserId) {
-        await this.store.saveTokens(
+        this.store.saveTokens(
           "streamer",
           tokenData.accessToken,
           tokenData.refreshToken
@@ -45,7 +42,7 @@ export class Bot {
       }
 
       if (userId === this.config.botUserId) {
-        await this.store.saveTokens(
+        this.store.saveTokens(
           "bot",
           tokenData.accessToken,
           tokenData.refreshToken
@@ -237,7 +234,7 @@ export class Bot {
   }
 
   private async handleStatsCommand(userId: string, username: string) {
-    const stats = await this.store.getStats(userId, username);
+    const stats = this.store.getStats(userId, username);
     await this.sendMessage(formatStats(username, stats));
     log.info({ userId, username }, "stats command handled");
   }
@@ -266,14 +263,14 @@ export class Bot {
 
     const { mentionedLogin, statColumn, amount } = parsed;
 
-    await this.store.modifyStat(
+    this.store.modifyStat(
       event.chatterId,
       mentionedLogin,
       statColumn,
       isRemove ? -amount : amount
     );
 
-    const stats = await this.store.getStats(event.chatterId, mentionedLogin);
+    const stats = this.store.getStats(event.chatterId, mentionedLogin);
     await this.sendMessage(formatStats(mentionedLogin, stats));
 
     log.info(
@@ -300,12 +297,12 @@ export class Bot {
     const delta = this.randDelta();
     const outcome = delta < 0 ? "lost" : "gained";
 
-    await this.store.modifyStat(userId, username, stat.column, delta);
+    this.store.modifyStat(userId, username, stat.column, delta);
 
     const message = `A shifty looking merchant hands ${username} a glittering potion. Without hesitation, they sink the whole drink. ${username} ${outcome} ${stat.display}`;
     await this.sendMessage(message);
 
-    const stats = await this.store.getStats(userId, username);
+    const stats = this.store.getStats(userId, username);
     await this.sendMessage(formatStats(username, stats));
 
     log.info(
@@ -317,7 +314,7 @@ export class Bot {
   private async handleTemptDiceReward(userId: string, username: string) {
     await this.sendMessage(`${username} has rolled with initiative.`);
 
-    const stats = await this.store.getStats(userId, username);
+    const stats = this.store.getStats(userId, username);
     await this.sendMessage(formatStats(username, stats));
 
     log.info({ userId, username }, "tempt dice reward handled");
@@ -328,7 +325,7 @@ export class Bot {
     userId: string,
     username: string
   ) {
-    const collection = await this.store.getUserCollections(userId, type);
+    const collection = this.store.getUserCollections(userId, type);
 
     this.wsServer.broadcast({
       type: "collection_display",
@@ -363,7 +360,7 @@ export class Bot {
 
     const plushieKey = getWeightedRandomPlushie(plushieWeights);
 
-    const result = await this.store.addPlushieToCollection(
+    const result = this.store.addPlushieToCollection(
       userId,
       username,
       type,

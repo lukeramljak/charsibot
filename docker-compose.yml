@@ -18,9 +18,12 @@ services:
     restart: unless-stopped
     ports:
       - "8081:8081"
+    volumes:
+      - twitch-data:/data
     environment:
       - LOG_LEVEL
       - WS_PORT=8081
+      - DB_PATH=/data/charsibot.db
       - TWITCH_CLIENT_ID
       - TWITCH_CLIENT_SECRET
       - TWITCH_OAUTH_TOKEN
@@ -29,8 +32,6 @@ services:
       - TWITCH_BOT_REFRESH_TOKEN
       - TWITCH_BOT_USER_ID
       - TWITCH_CHANNEL_USER_ID
-      - TURSO_DATABASE_URL
-      - TURSO_AUTH_TOKEN
 
   twitch-overlay:
     build:
@@ -44,3 +45,6 @@ services:
       - twitch
     environment:
       - PUBLIC_TWITCH_WEBSOCKET_URL
+
+volumes:
+  twitch-data:

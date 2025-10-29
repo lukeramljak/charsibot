@@ -7,7 +7,6 @@ export const log = pino(
   {
     level,
     redact: [
-      "dbAuthToken",
       "streamerAccessToken",
       "botAccessToken",
       "streamerRefreshToken",

@@ -10,7 +10,6 @@
     "test": "bun test"
   },
   "dependencies": {
-    "@libsql/client": "^0.15.0",
     "@twurple/api": "^7.0.0",
     "@twurple/auth": "^7.0.0",
     "@twurple/eventsub-ws": "^7.0.0"
