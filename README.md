@@ -24,11 +24,11 @@ This project contains three services:
    cd charsibot
    ```
 
-2. Install dependencies for both services:
+2. Install dependencies for all services:
 
    ```bash
    # Discord bot
-   cd discord && go mod tidy
+   cd discord && bun install
 
    # Twitch bot
    cd twitch && bun install
@@ -55,27 +55,20 @@ This project contains three services:
 
 ## Running Services
 
-### Development (Individual Services)
+### Development
 
-**Discord Bot:**
-
-```bash
-cd discord
-air main.go
-```
-
-**Twitch Bot:**
+Run all services:
 
 ```bash
-cd twitch
 bun run dev
 ```
 
-**Twitch Overlay:**
+Run individual services:
 
 ```bash
-cd twitch-overlay
-bun run dev
+bun run dev:discord
+bun run dev:twitch
+bun run dev:overlay
 ```
 
 ### Production (Docker Compose)
@@ -89,11 +82,9 @@ docker compose up -d
 **Run individual service:**
 
 ```bash
-# Discord only
-docker compose up charsibot-discord -d
+docker compose up discord -d
 
-# Twitch only
-docker compose up charsibot-twitch -d
+docker compose up twitch -d
 
 # Overlay only
 docker compose up twitch-overlay -d
