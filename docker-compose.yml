@@ -46,5 +46,21 @@ services:
     environment:
       - PUBLIC_TWITCH_WEBSOCKET_URL
 
+  twitch-db-backup:
+    image: offen/docker-volume-backup:latest
+    restart: always
+    environment:
+      - BACKUP_FILENAME=charsibot-db-backup-%Y-%m-%dT%H-%M-%S.tar.gz
+      - BACKUP_CRON_EXPRESSION=0 2 * * *
+      - BACKUP_RETENTION_DAYS=7
+      - AWS_S3_PATH=${BACKUP_AWS_S3_PATH}
+      - AWS_S3_BUCKET_NAME=${BACKUP_AWS_S3_BUCKET_NAME}
+      - AWS_ENDPOINT=${BACKUP_AWS_ENDPOINT}
+      - AWS_ACCESS_KEY_ID=${BACKUP_AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${BACKUP_AWS_SECRET_ACCESS_KEY}
+    volumes:
+      - twitch-data:/backup/twitch-data:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
 volumes:
   twitch-data:
