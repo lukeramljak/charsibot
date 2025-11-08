@@ -4,6 +4,7 @@ WORKDIR /app
 FROM base AS install
 RUN mkdir -p /temp/dev
 COPY package.json /temp/dev/
+COPY drizzle /temp/dev/drizzle
 RUN cd /temp/dev && bun install --frozen-lockfile
 
 RUN mkdir -p /temp/prod
@@ -12,6 +13,7 @@ RUN cd /temp/prod && bun install --frozen-lockfile --production
 
 FROM base AS prerelease
 COPY --from=install /temp/dev/node_modules node_modules
+COPY --from=install /temp/dev/drizzle drizzle
 COPY . .
 
 ENV NODE_ENV=production
@@ -20,6 +22,7 @@ FROM base AS release
 COPY --from=install /temp/prod/node_modules node_modules
 COPY --from=prerelease /app/src ./src
 COPY --from=prerelease /app/package.json .
+COPY --from=prerelease /app/drizzle ./drizzle
 
 RUN mkdir -p /data && chown -R bun:bun /data
 
