@@ -23,5 +23,7 @@ COPY --from=prerelease /app/package.json .
 
 RUN mkdir -p /data && chown -R bun:bun /data
 
+RUN bun test
+
 USER bun
 ENTRYPOINT [ "bun", "run", "src/index.ts" ]
