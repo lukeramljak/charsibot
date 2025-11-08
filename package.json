@@ -10,6 +10,13 @@
     "build": "bun run --filter './apps/discord' build && bun run --filter './apps/twitch' build && bun run --filter './apps/twitch-overlay' build",
     "build:discord": "bun run --filter './apps/discord' build",
     "build:twitch": "bun run --filter './apps/twitch' build",
-    "build:overlay": "bun run --filter './apps/twitch-overlay' build"
+    "build:overlay": "bun run --filter './apps/twitch-overlay' build",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "prettier": "^3.6.2",
+    "prettier-plugin-svelte": "^3.4.0",
+    "prettier-plugin-tailwindcss": "^0.7.1"
   }
 }

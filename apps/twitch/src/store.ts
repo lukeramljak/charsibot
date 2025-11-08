@@ -1,10 +1,15 @@
-import { log } from "./logger";
-import type { CollectionType, RewardColumn } from "./types";
-import { Database } from "bun:sqlite";
+import { log } from './logger';
+import type { CollectionType, RewardColumn } from './types';
+import { drizzle } from 'drizzle-orm/bun-sqlite';
+import { userCollectionsTable, statsTable, tokensTable } from './schema';
+import { and, sql, eq } from 'drizzle-orm';
+import * as schema from './schema';
+import type { Database } from 'bun:sqlite';
+import { migrate } from 'drizzle-orm/bun-sqlite/migrator';
 
 export interface Tokens {
-  access_token: string;
-  refresh_token: string;
+  accessToken: string;
+  refreshToken: string;
 }
 
 export interface Stats {
@@ -18,170 +23,126 @@ export interface Stats {
   penis: number;
 }
 
-export type TokenType = "bot" | "streamer";
-
-const CREATE_TOKEN_TABLE = `CREATE TABLE IF NOT EXISTS oauth_tokens (
-  token_type TEXT PRIMARY KEY,
-  access_token TEXT NOT NULL,
-  refresh_token TEXT NOT NULL,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-)`;
-
-const CREATE_STATS_TABLE = `CREATE TABLE IF NOT EXISTS stats (
-  id TEXT PRIMARY KEY,
-  username TEXT NOT NULL,
-  strength INTEGER DEFAULT 3,
-  intelligence INTEGER DEFAULT 3,
-  charisma INTEGER DEFAULT 3,
-  luck INTEGER DEFAULT 3,
-  dexterity INTEGER DEFAULT 3,
-  penis INTEGER DEFAULT 3
-)`;
-
-const CREATE_USER_COLLECTIONS_TABLE = `CREATE TABLE IF NOT EXISTS user_collections (
-  user_id TEXT NOT NULL,
-  username TEXT NOT NULL,
-  collection_type TEXT NOT NULL,
-  reward1 INTEGER DEFAULT 0,
-  reward2 INTEGER DEFAULT 0,
-  reward3 INTEGER DEFAULT 0,
-  reward4 INTEGER DEFAULT 0,
-  reward5 INTEGER DEFAULT 0,
-  reward6 INTEGER DEFAULT 0,
-  reward7 INTEGER DEFAULT 0,
-  reward8 INTEGER DEFAULT 0,
-  PRIMARY KEY (user_id, collection_type)
-)`;
+export type TokenType = 'bot' | 'streamer';
 
 const REWARD_COLUMNS = [
-  "reward1",
-  "reward2",
-  "reward3",
-  "reward4",
-  "reward5",
-  "reward6",
-  "reward7",
-  "reward8",
+  'reward1',
+  'reward2',
+  'reward3',
+  'reward4',
+  'reward5',
+  'reward6',
+  'reward7',
+  'reward8'
 ] as const;
 
-const ALL_COLUMNS = REWARD_COLUMNS.join(", ");
-
 export class Store {
-  public db: Database;
+  public db;
 
-  constructor(dbPath: string) {
-    this.db = new Database(dbPath, { strict: true });
+  constructor(dbInstance: Database) {
+    this.db = drizzle(dbInstance, { schema, casing: 'snake_case' });
+    migrate(this.db, { migrationsFolder: './drizzle' });
   }
 
   async init() {
-    this.db.run("PRAGMA journal_mode = WAL;");
-    this.db.run(CREATE_TOKEN_TABLE);
-    this.db.run(CREATE_STATS_TABLE);
-    this.db.run(CREATE_USER_COLLECTIONS_TABLE);
+    this.db.run('PRAGMA journal_mode = WAL;');
   }
 
-  getTokens(tokenType: TokenType): Tokens | null {
-    const query = this.db.query(
-      "SELECT access_token, refresh_token FROM oauth_tokens WHERE token_type = $tokenType"
-    );
-    const results = query.all({
-      tokenType: tokenType,
-    }) as any[];
+  async getTokens(tokenType: TokenType): Promise<Tokens | null> {
+    const [tokens] = await this.db
+      .select()
+      .from(tokensTable)
+      .where(eq(tokensTable.tokenType, tokenType));
 
-    if (results.length === 0) {
+    if (!tokens) {
       return null;
     }
 
     return {
-      access_token: String(results[0].access_token),
-      refresh_token: String(results[0].refresh_token),
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken
     };
   }
 
-  saveTokens(tokenType: TokenType, access: string, refresh: string) {
-    const query = this.db.query(
-      `INSERT INTO oauth_tokens (token_type, access_token, refresh_token, updated_at)
-      VALUES ($tokenType, $access, $refresh, CURRENT_TIMESTAMP)
-      ON CONFLICT(token_type) DO UPDATE SET access_token = excluded.access_token, refresh_token = excluded.refresh_token, updated_at = CURRENT_TIMESTAMP`
-    );
-    query.run({
-      tokenType: tokenType,
-      access: access,
-      refresh: refresh,
-    });
+  async saveTokens(tokenType: TokenType, accessToken: string, refreshToken: string): Promise<void> {
+    await this.db
+      .insert(tokensTable)
+      .values({
+        tokenType,
+        accessToken,
+        refreshToken,
+        updatedAt: sql`CURRENT_TIMESTAMP`
+      })
+      .onConflictDoUpdate({
+        target: tokensTable.tokenType,
+        set: {
+          accessToken,
+          refreshToken,
+          updatedAt: sql`CURRENT_TIMESTAMP`
+        }
+      });
   }
 
-  getStats(userId: string, username: string): Stats {
-    const query = this.db.query(
-      "INSERT INTO stats (id, username) VALUES ($userId, $username) ON CONFLICT(id) DO UPDATE SET username=excluded.username"
-    );
-    query.run({
-      userId: userId,
-      username: username,
-    });
+  async getStats(userId: string, username: string): Promise<Stats> {
+    await this.db
+      .insert(statsTable)
+      .values({
+        id: userId,
+        username
+      })
+      .onConflictDoUpdate({ target: statsTable.id, set: { username } });
 
-    const statsQuery = this.db.query(
-      "SELECT id, username, strength, intelligence, charisma, luck, dexterity, penis FROM stats WHERE id = $id"
-    );
-    const result = statsQuery.get({
-      id: userId,
-    }) as Stats;
+    const [stats] = await this.db.select().from(statsTable).where(eq(statsTable.id, userId));
 
-    return {
-      id: String(result.id),
-      username: String(result.username),
-      strength: Number(result.strength),
-      intelligence: Number(result.intelligence),
-      charisma: Number(result.charisma),
-      luck: Number(result.luck),
-      dexterity: Number(result.dexterity),
-      penis: Number(result.penis),
-    };
+    return stats;
   }
 
-  modifyStat(userId: string, username: string, column: string, delta: number) {
-    const valid = [
-      "strength",
-      "intelligence",
-      "charisma",
-      "luck",
-      "dexterity",
-      "penis",
-    ];
+  async modifyStat(userId: string, username: string, column: string, delta: number): Promise<void> {
+    const valid = ['strength', 'intelligence', 'charisma', 'luck', 'dexterity', 'penis'];
 
     if (!valid.includes(column)) {
       throw new Error(`invalid stat column: ${column}`);
     }
 
-    const insertQuery = this.db.query(
-      "INSERT INTO stats (id, username) VALUES ($userId, $username) ON CONFLICT(id) DO NOTHING"
-    );
-    insertQuery.run({
-      userId: userId,
-      username: username,
-    });
+    await this.db
+      .insert(statsTable)
+      .values({
+        id: userId,
+        username
+      })
+      .onConflictDoNothing({ target: statsTable.id });
 
-    const updateQuery = this.db.query(
-      `UPDATE stats SET ${column} = ${column} + $delta WHERE id = $userId`
-    );
-    updateQuery.run({
-      delta: delta,
-      userId: userId,
-    });
+    await this.db
+      .update(statsTable)
+      .set({
+        [column]: sql`${sql.identifier(column)} + ${delta}`
+      })
+      .where(eq(statsTable.id, userId));
   }
 
-  getUserCollections(
+  async getUserCollections(
     userId: string,
     collectionType: CollectionType
-  ): string[] | undefined {
+  ): Promise<string[] | undefined> {
     try {
-      const query = this.db.query(
-        `SELECT ${ALL_COLUMNS} FROM user_collections WHERE user_id = $userId AND collection_type = $collectionType`
-      );
-      const result = query.get({
-        userId: userId,
-        collectionType: collectionType,
-      }) as any;
+      const [result] = await this.db
+        .select({
+          reward1: userCollectionsTable.reward1,
+          reward2: userCollectionsTable.reward2,
+          reward3: userCollectionsTable.reward3,
+          reward4: userCollectionsTable.reward4,
+          reward5: userCollectionsTable.reward5,
+          reward6: userCollectionsTable.reward6,
+          reward7: userCollectionsTable.reward7,
+          reward8: userCollectionsTable.reward8
+        })
+        .from(userCollectionsTable)
+        .where(
+          and(
+            eq(userCollectionsTable.userId, userId),
+            eq(userCollectionsTable.collectionType, collectionType)
+          )
+        );
 
       const collection: string[] = [];
       if (result) {
@@ -196,62 +157,74 @@ export class Store {
       log.info(`getUserCollection - Success: ${collection.length} items found`);
       return collection;
     } catch (error) {
-      log.error({ error }, "getUserCollection");
+      log.error({ error }, 'getUserCollection');
     }
   }
 
-  addPlushieToCollection(
+  async addPlushieToCollection(
     userId: string,
     username: string,
     collectionType: CollectionType,
     rewardColumn: RewardColumn
-  ): { collection: string[]; isNew: boolean } | undefined {
+  ): Promise<{ collection: string[]; isNew: boolean } | undefined> {
     log.info(
       `addPlushieToCollection - userId: ${userId}, username: ${username}, collectionType: ${collectionType}, rewardColumn: ${rewardColumn}`
     );
 
     try {
       // Check if user already has this reward
-      const existingQuery = this.db.query(
-        `SELECT ${rewardColumn} FROM user_collections WHERE user_id = $userId AND collection_type = $collectionType`
-      );
-      const existingResult = existingQuery.get({
-        userId: userId,
-        collectionType: collectionType,
-      }) as any;
+      const [existingResult] = await this.db
+        .select()
+        .from(userCollectionsTable)
+        .where(
+          and(
+            eq(userCollectionsTable.userId, userId),
+            eq(userCollectionsTable.collectionType, collectionType)
+          )
+        );
 
-      const alreadyHas = existingResult && existingResult[rewardColumn] === 1;
+      const alreadyHas =
+        existingResult && existingResult[rewardColumn as keyof typeof existingResult] === 1;
 
       if (!alreadyHas) {
-        log.info(
-          `addPlushieToCollection - Adding new plushie: ${rewardColumn}`
-        );
+        log.info(`addPlushieToCollection - Adding new plushie: ${rewardColumn}`);
 
         // Insert or update the user's collection
-        const insertQuery = this.db.query(
-          `INSERT INTO user_collections (user_id, username, collection_type, ${rewardColumn})
-              VALUES ($userId, $username, $collectionType, 1)
-              ON CONFLICT(user_id, collection_type) DO UPDATE SET ${rewardColumn} = 1, username = $username`
-        );
-        insertQuery.run({
-          userId: userId,
-          username: username,
-          collectionType: collectionType,
-        });
+        await this.db
+          .insert(userCollectionsTable)
+          .values({
+            userId,
+            username,
+            collectionType,
+            [rewardColumn]: 1
+          })
+          .onConflictDoUpdate({
+            target: [userCollectionsTable.userId, userCollectionsTable.collectionType],
+            set: { [rewardColumn]: 1, username }
+          });
       } else {
-        log.info(
-          `addPlushieToCollection - Plushie already exists: ${rewardColumn}`
-        );
+        log.info(`addPlushieToCollection - Plushie already exists: ${rewardColumn}`);
       }
 
       // Get updated collection
-      const query = this.db.query(
-        `SELECT ${ALL_COLUMNS} FROM user_collections WHERE user_id = $userId AND collection_type = $collectionType`
-      );
-      const updatedResult = query.get({
-        userId: userId,
-        collectionType: collectionType,
-      }) as any;
+      const [updatedResult] = await this.db
+        .select({
+          reward1: userCollectionsTable.reward1,
+          reward2: userCollectionsTable.reward2,
+          reward3: userCollectionsTable.reward3,
+          reward4: userCollectionsTable.reward4,
+          reward5: userCollectionsTable.reward5,
+          reward6: userCollectionsTable.reward6,
+          reward7: userCollectionsTable.reward7,
+          reward8: userCollectionsTable.reward8
+        })
+        .from(userCollectionsTable)
+        .where(
+          and(
+            eq(userCollectionsTable.userId, userId),
+            eq(userCollectionsTable.collectionType, collectionType)
+          )
+        );
 
       const collection: string[] = [];
       if (updatedResult) {
@@ -263,14 +236,12 @@ export class Store {
       }
 
       log.info(
-        `addPlushieToCollection - Success: ${
-          collection.length
-        } items, isNew: ${!alreadyHas}`
+        `addPlushieToCollection - Success: ${collection.length} items, isNew: ${!alreadyHas}`
       );
 
       return { collection, isNew: !alreadyHas };
     } catch (error) {
-      log.error({ error }, "addPlushieToCollection");
+      log.error({ error }, 'addPlushieToCollection');
     }
   }
 }
@@ -285,10 +256,10 @@ export interface Stat {
 }
 
 export const statList: Stat[] = [
-  { display: "Strength", column: "strength" },
-  { display: "Intelligence", column: "intelligence" },
-  { display: "Charisma", column: "charisma" },
-  { display: "Luck", column: "luck" },
-  { display: "Dexterity", column: "dexterity" },
-  { display: "Penis", column: "penis" },
+  { display: 'Strength', column: 'strength' },
+  { display: 'Intelligence', column: 'intelligence' },
+  { display: 'Charisma', column: 'charisma' },
+  { display: 'Luck', column: 'luck' },
+  { display: 'Dexterity', column: 'dexterity' },
+  { display: 'Penis', column: 'penis' }
 ];

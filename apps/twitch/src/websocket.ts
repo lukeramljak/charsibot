@@ -1,6 +1,6 @@
-import type { ServerWebSocket } from "bun";
-import { log } from "./logger";
-import type { OverlayEvent } from "./types";
+import type { ServerWebSocket } from 'bun';
+import { log } from './logger';
+import type { OverlayEvent } from './types';
 
 export class WebSocketServer {
   private clients: Set<ServerWebSocket<unknown>> = new Set();
@@ -9,81 +9,79 @@ export class WebSocketServer {
   constructor(private port: number) {}
 
   start() {
-    const allowedOrigin = "charsibel.com";
+    const allowedOrigin = 'charsibel.com';
 
     this.server = Bun.serve({
       port: this.port,
       fetch: (req, server) => {
         const url = new URL(req.url);
 
-        if (url.pathname === "/ws") {
-          const origin =
-            req.headers.get("Origin") || req.headers.get("Referer") || "";
-          const isAllowed =
-            origin.includes(allowedOrigin) || origin.includes("localhost");
+        if (url.pathname === '/ws') {
+          const origin = req.headers.get('Origin') || req.headers.get('Referer') || '';
+          const isAllowed = origin.includes(allowedOrigin) || origin.includes('localhost');
 
           if (!isAllowed) {
-            log.warn({ origin }, "unauthorized websocket connection attempt");
-            return new Response("Forbidden", { status: 403 });
+            log.warn({ origin }, 'unauthorized websocket connection attempt');
+            return new Response('Forbidden', { status: 403 });
           }
 
           const upgraded = server.upgrade(req, { data: {} });
           if (upgraded) {
             return undefined;
           }
-          return new Response("WebSocket upgrade failed", { status: 400 });
+          return new Response('WebSocket upgrade failed', { status: 400 });
         }
 
-        if (url.pathname === "/health") {
+        if (url.pathname === '/health') {
           return new Response(
             JSON.stringify({
-              status: "ok",
+              status: 'ok',
               clients: this.clients.size,
-              timestamp: new Date().toISOString(),
+              timestamp: new Date().toISOString()
             }),
             {
-              headers: { "Content-Type": "application/json" },
+              headers: { 'Content-Type': 'application/json' }
             }
           );
         }
 
-        return new Response("Not Found", { status: 404 });
+        return new Response('Not Found', { status: 404 });
       },
       websocket: {
-        open: (ws) => {
+        open: ws => {
           this.clients.add(ws);
-          log.info({ clientCount: this.clients.size }, "overlay connected");
+          log.info({ clientCount: this.clients.size }, 'overlay connected');
 
           // Send initial connection confirmation
           ws.send(
             JSON.stringify({
-              type: "connected",
-              timestamp: new Date().toISOString(),
+              type: 'connected',
+              timestamp: new Date().toISOString()
             })
           );
         },
         message: (ws, message) => {
-          log.debug({ message: message.toString() }, "message from overlay");
+          log.debug({ message: message.toString() }, 'message from overlay');
 
           // Send pong response to keep connection alive
           try {
-            ws.send(JSON.stringify({ type: "pong" }));
+            ws.send(JSON.stringify({ type: 'pong' }));
           } catch (err) {
-            log.error({ err }, "failed to send pong");
+            log.error({ err }, 'failed to send pong');
           }
         },
-        close: (ws) => {
+        close: ws => {
           this.clients.delete(ws);
-          log.info({ clientCount: this.clients.size }, "overlay disconnected");
+          log.info({ clientCount: this.clients.size }, 'overlay disconnected');
         },
         // Increase timeouts to prevent premature disconnections
         idleTimeout: 120, // 2 minutes
         maxPayloadLength: 16 * 1024 * 1024, // 16MB
-        closeOnBackpressureLimit: false,
-      },
+        closeOnBackpressureLimit: false
+      }
     });
 
-    log.info({ port: this.port }, "websocket server started");
+    log.info({ port: this.port }, 'websocket server started');
   }
 
   broadcast(event: OverlayEvent) {
@@ -93,7 +91,7 @@ export class WebSocketServer {
 
     log.info(
       { type: event.type, totalClients: this.clients.size },
-      "broadcasting event to overlays"
+      'broadcasting event to overlays'
     );
 
     for (const client of this.clients) {
@@ -102,17 +100,14 @@ export class WebSocketServer {
         successCount++;
       } catch (err) {
         errorCount++;
-        log.error({ err }, "failed to send message to client");
+        log.error({ err }, 'failed to send message to client');
       }
     }
 
-    log.info(
-      { type: event.type, successCount, errorCount },
-      "broadcast completed"
-    );
+    log.info({ type: event.type, successCount, errorCount }, 'broadcast completed');
 
     if (errorCount > 0) {
-      log.warn({ errorCount }, "failed to send to some clients");
+      log.warn({ errorCount }, 'failed to send to some clients');
     }
   }
 
@@ -123,7 +118,7 @@ export class WebSocketServer {
   stop() {
     if (this.server) {
       this.server.stop();
-      log.info("websocket server stopped");
+      log.info('websocket server stopped');
     }
   }
 }

@@ -7,29 +7,26 @@ export interface ModifyStatParseResult {
 }
 
 /** Parse commands: !addstat @user stat amount OR !rmstat @user stat amount */
-export const parseModifyStatCommand = (
-  text: string,
-  isRemove: boolean
-): ModifyStatParseResult => {
+export const parseModifyStatCommand = (text: string, isRemove: boolean): ModifyStatParseResult => {
   const parts = text.trim().split(/\s+/);
   if (parts.length < 4) {
     return {
-      mentionedLogin: "",
-      statColumn: "",
+      mentionedLogin: '',
+      statColumn: '',
       amount: 0,
       remove: isRemove,
-      error: "Expected format: !addstat @user stat amount",
+      error: 'Expected format: !addstat @user stat amount'
     };
   }
 
-  const mention = parts.find((p) => p.startsWith("@"));
+  const mention = parts.find(p => p.startsWith('@'));
   if (!mention) {
     return {
-      mentionedLogin: "",
-      statColumn: "",
+      mentionedLogin: '',
+      statColumn: '',
       amount: 0,
       remove: isRemove,
-      error: "No user mention found",
+      error: 'No user mention found'
     };
   }
 
@@ -40,10 +37,10 @@ export const parseModifyStatCommand = (
   if (!statColumn || !amountStr) {
     return {
       mentionedLogin,
-      statColumn: "",
+      statColumn: '',
       amount: 0,
       remove: isRemove,
-      error: "Expected 'stat amount'",
+      error: "Expected 'stat amount'"
     };
   }
 
@@ -54,7 +51,7 @@ export const parseModifyStatCommand = (
       statColumn,
       amount: 0,
       remove: isRemove,
-      error: "Invalid number",
+      error: 'Invalid number'
     };
   }
 
@@ -62,6 +59,6 @@ export const parseModifyStatCommand = (
     mentionedLogin,
     statColumn,
     amount,
-    remove: isRemove,
+    remove: isRemove
   };
 };

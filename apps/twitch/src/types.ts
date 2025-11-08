@@ -1,14 +1,14 @@
-export type CollectionType = "coobubu" | "olliepops";
+export type CollectionType = 'coobubu' | 'olliepops';
 
 export type RewardColumn =
-  | "reward1"
-  | "reward2"
-  | "reward3"
-  | "reward4"
-  | "reward5"
-  | "reward6"
-  | "reward7"
-  | "reward8";
+  | 'reward1'
+  | 'reward2'
+  | 'reward3'
+  | 'reward4'
+  | 'reward5'
+  | 'reward6'
+  | 'reward7'
+  | 'reward8';
 
 export type OverlayEvent =
   | ChatCommandEvent
@@ -17,17 +17,17 @@ export type OverlayEvent =
   | BlindBoxRedemptionEvent;
 
 export interface ChatCommandEvent {
-  type: "chat_command";
+  type: 'chat_command';
   message: string;
 }
 
 export interface RedemptionEvent {
-  type: "redemption";
+  type: 'redemption';
   message: string;
 }
 
 export interface CollectionDisplayEvent {
-  type: "collection_display";
+  type: 'collection_display';
   data: {
     userId: string;
     username: string;
@@ -38,7 +38,7 @@ export interface CollectionDisplayEvent {
 }
 
 export interface BlindBoxRedemptionEvent {
-  type: "blindbox_redemption";
+  type: 'blindbox_redemption';
   data: {
     userId: string;
     username: string;

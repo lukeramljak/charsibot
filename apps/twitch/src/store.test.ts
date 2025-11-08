@@ -1,58 +1,57 @@
-import { describe, expect, it, beforeEach, afterEach } from "bun:test";
-import { Store, formatStats } from "./store";
+import { describe, expect, it, beforeEach } from 'bun:test';
+import { Store, formatStats } from './store';
+import { Database } from 'bun:sqlite';
 
-describe("Store", () => {
+describe('Store', () => {
   let store: Store;
+  let sqlite: Database;
 
   beforeEach(async () => {
-    store = new Store(":memory:");
+    sqlite = new Database(':memory:');
+    store = new Store(sqlite);
     await store.init();
   });
 
-  afterEach(async () => {
-    store.db.close();
-  });
-
-  describe("tokens", () => {
-    it("saves and retrieves streamer tokens", () => {
-      store.saveTokens("streamer", "access123", "refresh456");
-      const tokens = store.getTokens("streamer");
+  describe('tokens', () => {
+    it('saves and retrieves streamer tokens', async () => {
+      store.saveTokens('streamer', 'access123', 'refresh456');
+      const tokens = await store.getTokens('streamer');
 
       expect(tokens).not.toBeNull();
-      expect(tokens?.access_token).toBe("access123");
-      expect(tokens?.refresh_token).toBe("refresh456");
+      expect(tokens?.accessToken).toBe('access123');
+      expect(tokens?.refreshToken).toBe('refresh456');
     });
 
-    it("saves and retrieves bot tokens", () => {
-      store.saveTokens("bot", "bot_access", "bot_refresh");
-      const tokens = store.getTokens("bot");
+    it('saves and retrieves bot tokens', async () => {
+      await store.saveTokens('bot', 'bot_access', 'bot_refresh');
+      const tokens = await store.getTokens('bot');
 
       expect(tokens).not.toBeNull();
-      expect(tokens?.access_token).toBe("bot_access");
-      expect(tokens?.refresh_token).toBe("bot_refresh");
+      expect(tokens?.accessToken).toBe('bot_access');
+      expect(tokens?.refreshToken).toBe('bot_refresh');
     });
 
-    it("updates existing tokens", () => {
-      store.saveTokens("streamer", "old_access", "old_refresh");
-      store.saveTokens("streamer", "new_access", "new_refresh");
-      const tokens = store.getTokens("streamer");
+    it('updates existing tokens', async () => {
+      await store.saveTokens('streamer', 'old_access', 'old_refresh');
+      await store.saveTokens('streamer', 'new_access', 'new_refresh');
+      const tokens = await store.getTokens('streamer');
 
-      expect(tokens?.access_token).toBe("new_access");
-      expect(tokens?.refresh_token).toBe("new_refresh");
+      expect(tokens?.accessToken).toBe('new_access');
+      expect(tokens?.refreshToken).toBe('new_refresh');
     });
 
-    it("returns null for non-existent token type", () => {
-      const tokens = store.getTokens("streamer");
+    it('returns null for non-existent token type', async () => {
+      const tokens = await store.getTokens('streamer');
       expect(tokens).toBeNull();
     });
   });
 
-  describe("stats", () => {
-    it("creates new user stats with defaults", () => {
-      const stats = store.getStats("user123", "testuser");
+  describe('stats', () => {
+    it('creates new user stats with defaults', async () => {
+      const stats = await store.getStats('user123', 'testuser');
 
-      expect(stats.id).toBe("user123");
-      expect(stats.username).toBe("testuser");
+      expect(stats.id).toBe('user123');
+      expect(stats.username).toBe('testuser');
       expect(stats.strength).toBe(3);
       expect(stats.intelligence).toBe(3);
       expect(stats.charisma).toBe(3);
@@ -61,84 +60,84 @@ describe("Store", () => {
       expect(stats.penis).toBe(3);
     });
 
-    it("retrieves existing user stats", () => {
-      store.getStats("user123", "testuser");
-      const stats = store.getStats("user123", "testuser");
+    it('retrieves existing user stats', async () => {
+      await store.getStats('user123', 'testuser');
+      const stats = await store.getStats('user123', 'testuser');
 
-      expect(stats.id).toBe("user123");
-      expect(stats.username).toBe("testuser");
+      expect(stats.id).toBe('user123');
+      expect(stats.username).toBe('testuser');
     });
 
-    it("modifies strength stat", () => {
-      store.modifyStat("user123", "testuser", "strength", 5);
-      const stats = store.getStats("user123", "testuser");
+    it('modifies strength stat', async () => {
+      await store.modifyStat('user123', 'testuser', 'strength', 5);
+      const stats = await store.getStats('user123', 'testuser');
 
       expect(stats.strength).toBe(8);
       expect(stats.intelligence).toBe(3);
     });
 
-    it("modifies intelligence stat", () => {
-      store.modifyStat("user123", "testuser", "intelligence", 3);
-      const stats = store.getStats("user123", "testuser");
+    it('modifies intelligence stat', async () => {
+      await store.modifyStat('user123', 'testuser', 'intelligence', 3);
+      const stats = await store.getStats('user123', 'testuser');
 
       expect(stats.intelligence).toBe(6);
     });
 
-    it("accumulates stat modifications", () => {
-      store.modifyStat("user123", "testuser", "luck", 2);
-      store.modifyStat("user123", "testuser", "luck", 3);
-      const stats = store.getStats("user123", "testuser");
+    it('accumulates stat modifications', async () => {
+      await store.modifyStat('user123', 'testuser', 'luck', 2);
+      await store.modifyStat('user123', 'testuser', 'luck', 3);
+      const stats = await store.getStats('user123', 'testuser');
 
       expect(stats.luck).toBe(8);
     });
 
-    it("handles negative stat modifications", () => {
-      store.modifyStat("user123", "testuser", "charisma", 10);
-      store.modifyStat("user123", "testuser", "charisma", -3);
-      const stats = store.getStats("user123", "testuser");
+    it('handles negative stat modifications', async () => {
+      await store.modifyStat('user123', 'testuser', 'charisma', 10);
+      await store.modifyStat('user123', 'testuser', 'charisma', -3);
+      const stats = await store.getStats('user123', 'testuser');
 
       expect(stats.charisma).toBe(10);
     });
 
-    it("allows stats to go negative", () => {
-      store.modifyStat("user123", "testuser", "dexterity", -5);
-      const stats = store.getStats("user123", "testuser");
+    it('allows stats to go negative', async () => {
+      await store.modifyStat('user123', 'testuser', 'dexterity', -5);
+      const stats = await store.getStats('user123', 'testuser');
 
       expect(stats.dexterity).toBe(-2);
     });
 
-    it("tracks multiple users independently", () => {
-      store.modifyStat("user1", "alice", "strength", 10);
-      store.modifyStat("user2", "bob", "strength", 20);
+    it('tracks multiple users independently', async () => {
+      await store.modifyStat('user1', 'alice', 'strength', 10);
+      await store.modifyStat('user2', 'bob', 'strength', 20);
 
-      const aliceStats = store.getStats("user1", "alice");
-      const bobStats = store.getStats("user2", "bob");
+      const aliceStats = await store.getStats('user1', 'alice');
+      const bobStats = await store.getStats('user2', 'bob');
 
       expect(aliceStats.strength).toBe(13);
       expect(bobStats.strength).toBe(23);
     });
   });
 
-  describe("formatStats", () => {
-    it("formats stats with positive values", () => {
-      store.modifyStat("user123", "testuser", "strength", 5);
-      store.modifyStat("user123", "testuser", "intelligence", 3);
+  describe('formatStats', () => {
+    it('formats stats with positive values', async () => {
+      await store.modifyStat('user123', 'testuser', 'strength', 5);
+      await store.modifyStat('user123', 'testuser', 'intelligence', 3);
 
-      const stats = store.getStats("user123", "testuser");
-      const formatted = formatStats("testuser", stats);
+      const stats = await store.getStats('user123', 'testuser');
+      const formatted = formatStats('testuser', stats);
 
-      expect(formatted).toContain("testuser");
-      expect(formatted).toContain("STR: 8");
-      expect(formatted).toContain("INT: 6");
+      expect(formatted).toContain('testuser');
+      expect(formatted).toContain('STR: 8');
+      expect(formatted).toContain('INT: 6');
     });
 
-    it("formats stats with negative values", () => {
-      store.modifyStat("user123", "testuser", "luck", -2);
+    it('formats stats with negative values', async () => {
+      await store.modifyStat('user123', 'testuser', 'luck', -2);
 
-      const stats = store.getStats("user123", "testuser");
-      const formatted = formatStats("testuser", stats);
+      const stats = await store.getStats('user123', 'testuser');
+      const formatted = formatStats('testuser', stats);
 
-      expect(formatted).toContain("LUCK: 1");
+      expect(formatted).toContain('LUCK: 1');
     });
   });
 });
