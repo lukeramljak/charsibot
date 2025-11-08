@@ -1,4 +1,4 @@
-CREATE TABLE `stats` (
+CREATE TABLE IF NOT EXISTS `stats` (
 	`id` text PRIMARY KEY NOT NULL,
 	`username` text NOT NULL,
 	`strength` integer DEFAULT 3 NOT NULL,
@@ -9,14 +9,14 @@ CREATE TABLE `stats` (
 	`penis` integer DEFAULT 3 NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE `oauth_tokens` (
+CREATE TABLE IF NOT EXISTS `oauth_tokens` (
 	`token_type` text PRIMARY KEY NOT NULL,
 	`access_token` text NOT NULL,
 	`refresh_token` text NOT NULL,
 	`updated_at` numeric DEFAULT CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
-CREATE TABLE `user_collections` (
+CREATE TABLE IF NOT EXISTS `user_collections` (
 	`user_id` text,
 	`username` text NOT NULL,
 	`collection_type` text,
