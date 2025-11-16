@@ -15,6 +15,7 @@ FROM base AS prerelease
 COPY --from=install /temp/dev/node_modules node_modules
 COPY --from=install /temp/dev/drizzle drizzle
 COPY . .
+COPY ../../tsconfig.json ./tsconfig.json
 
 ENV NODE_ENV=production
 
@@ -23,6 +24,7 @@ COPY --from=install /temp/prod/node_modules node_modules
 COPY --from=prerelease /app/src ./src
 COPY --from=prerelease /app/package.json .
 COPY --from=prerelease /app/drizzle ./drizzle
+COPY --from=prerelease /app/tsconfig.json ./tsconfig.json
 
 RUN mkdir -p /data && chown -R bun:bun /data
 
