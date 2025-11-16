@@ -5,7 +5,7 @@ export const tokensTable = sqliteTable('oauth_tokens', {
   tokenType: text().primaryKey(),
   accessToken: text().notNull(),
   refreshToken: text().notNull(),
-  updatedAt: numeric().default(sql`CURRENT_TIMESTAMP`)
+  updatedAt: numeric().default(sql`CURRENT_TIMESTAMP`),
 });
 
 export const statsTable = sqliteTable('stats', {
@@ -16,7 +16,7 @@ export const statsTable = sqliteTable('stats', {
   charisma: int().notNull().default(3),
   luck: int().notNull().default(3),
   dexterity: int().notNull().default(3),
-  penis: int().notNull().default(3)
+  penis: int().notNull().default(3),
 });
 
 export const userCollectionsTable = sqliteTable(
@@ -32,12 +32,12 @@ export const userCollectionsTable = sqliteTable(
     reward5: int().default(0),
     reward6: int().default(0),
     reward7: int().default(0),
-    reward8: int().default(0)
+    reward8: int().default(0),
   },
-  table => [
+  (table) => [
     primaryKey({
       name: 'user_collections_user_id_collection_type_pk',
-      columns: [table.userId, table.collectionType]
-    })
-  ]
+      columns: [table.userId, table.collectionType],
+    }),
+  ],
 );

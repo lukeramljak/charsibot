@@ -11,8 +11,8 @@ export const log = pino(
     formatters: {
       level(label: string) {
         return { level: label };
-      }
-    }
+      },
+    },
   },
-  isDev ? pino.transport({ target: 'pino-pretty', options: { colorize: true } }) : undefined
+  isDev ? pino.transport({ target: 'pino-pretty', options: { colorize: true } }) : undefined,
 );

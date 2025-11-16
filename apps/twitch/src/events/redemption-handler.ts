@@ -7,7 +7,7 @@ export class RedemptionHandler {
   constructor(private redemptions: Redemption[]) {}
 
   public async process(bot: Bot, event: EventSubChannelRedemptionAddEvent): Promise<void> {
-    const redemptions = this.redemptions.filter(redemption => {
+    const redemptions = this.redemptions.filter((redemption) => {
       if (!redemption.shouldTrigger(event)) {
         return false;
       }

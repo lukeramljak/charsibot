@@ -59,14 +59,14 @@
       activeTimers.push(
         setTimeout(() => {
           plushieVisible = true;
-        }, 1200) as unknown as number
+        }, 1200) as unknown as number,
       );
 
       // Show display text (1500ms)
       activeTimers.push(
         setTimeout(() => {
           displayTextVisible = true;
-        }, 1500) as unknown as number
+        }, 1500) as unknown as number,
       );
 
       // Hide effects and display text (5000ms)
@@ -74,7 +74,7 @@
         setTimeout(() => {
           showEffects = false;
           displayTextVisible = false;
-        }, 5000) as unknown as number
+        }, 5000) as unknown as number,
       );
 
       // Hide everything and complete (6500ms)
@@ -85,7 +85,7 @@
           isAnimating = false;
           clearTimers();
           resolve();
-        }, 6500) as unknown as number
+        }, 6500) as unknown as number,
       );
     });
   };
@@ -108,7 +108,7 @@
           displayTextVisible = false;
           isShowingCollection = false;
           boxVisible = false;
-        }, 5000) as unknown as number
+        }, 5000) as unknown as number,
       );
 
       // Complete (5500ms)
@@ -116,7 +116,7 @@
         setTimeout(() => {
           clearTimers();
           resolve();
-        }, 5500) as unknown as number
+        }, 5500) as unknown as number,
       );
     });
   };
@@ -176,7 +176,7 @@
         const plushie: PlushieData = {
           key: event.data.plushie.key,
           name: event.data.plushie.name,
-          image: config.plushies.find((p) => p.key === event.data.plushie.key)?.image || ''
+          image: config.plushies.find((p) => p.key === event.data.plushie.key)?.image || '',
         };
 
         userCollection = event.data.collection;

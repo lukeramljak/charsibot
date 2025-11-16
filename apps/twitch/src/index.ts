@@ -29,13 +29,13 @@ const main = async () => {
     new RedeemBlindBoxCommand('olliepop'),
     new ShowBlindBoxCollectionCommand('coobubu'),
     new ShowBlindBoxCollectionCommand('olliepop'),
-    new StatsCommand()
+    new StatsCommand(),
   ];
   const redemptions: Redemption[] = [
     new BlindBoxRedemption('Cooper Series Blind Box'),
     new BlindBoxRedemption('Ollie Series Blind Box'),
     new TemptDiceRedemption(),
-    new PotionRedemption()
+    new PotionRedemption(),
   ];
   const triggers: Trigger[] = [new ComeTrigger()];
 
@@ -49,12 +49,12 @@ const main = async () => {
     store,
     commandHandler,
     messageHandler,
-    redemptionHandler
+    redemptionHandler,
   });
   await bot.init();
 };
 
-main().catch(err => {
+main().catch((err) => {
   console.error('Fatal error', err);
   process.exit(1);
 });

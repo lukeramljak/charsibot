@@ -7,10 +7,10 @@ import {
   MessageFlags,
   type PartialGuildMember,
   TextChannel,
-} from "discord.js";
-import { CustomClient } from "./client";
-import type { Command } from "./commands/command";
-import { MessageHandler } from "./events/message-handler";
+} from 'discord.js';
+import { CustomClient } from './client';
+import type { Command } from './commands/command';
+import { MessageHandler } from './events/message-handler';
 
 export class Bot {
   private ready = false;
@@ -19,7 +19,7 @@ export class Bot {
     private token: string,
     private client: CustomClient,
     private commands: Command[],
-    private messageHandler: MessageHandler
+    private messageHandler: MessageHandler,
   ) {}
 
   public async start(): Promise<void> {
@@ -30,16 +30,12 @@ export class Bot {
 
   private registerListeners(): void {
     this.client.on(Events.ClientReady, () => this.onReady());
-    this.client.on(
-      Events.GuildMemberRemove,
-      (member: GuildMember | PartialGuildMember) =>
-        this.onGuildMemberRemove(member)
+    this.client.on(Events.GuildMemberRemove, (member: GuildMember | PartialGuildMember) =>
+      this.onGuildMemberRemove(member),
     );
-    this.client.on(Events.MessageCreate, (message: Message) =>
-      this.onMessage(message)
-    );
+    this.client.on(Events.MessageCreate, (message: Message) => this.onMessage(message));
     this.client.on(Events.InteractionCreate, (interaction: Interaction) =>
-      this.onInteraction(interaction)
+      this.onInteraction(interaction),
     );
   }
 
@@ -53,7 +49,7 @@ export class Bot {
     try {
       await this.client.login(token);
     } catch (error) {
-      console.error("Failed to login:", error);
+      console.error('Failed to login:', error);
     }
   }
 
@@ -61,7 +57,7 @@ export class Bot {
     const userTag = this.client.user?.tag;
     this.ready = true;
     this.client.user?.setActivity({
-      name: "Big Chungus",
+      name: 'Big Chungus',
       type: ActivityType.Listening,
     });
     console.log(`Ready! Logged in as ${userTag}`);
@@ -75,7 +71,7 @@ export class Bot {
     try {
       await this.messageHandler.process(message);
     } catch (error) {
-      console.error("Error processing message:", error);
+      console.error('Error processing message:', error);
     }
   }
 
@@ -100,28 +96,22 @@ export class Bot {
       console.error(error);
       if (interaction.replied || interaction.deferred) {
         await interaction.followUp({
-          content: "There was an error while executing this command",
+          content: 'There was an error while executing this command',
           flags: MessageFlags.Ephemeral,
         });
       } else {
         await interaction.reply({
-          content: "There was an error while executing this command",
+          content: 'There was an error while executing this command',
           flags: MessageFlags.Ephemeral,
         });
       }
     }
   }
 
-  private async onGuildMemberRemove(
-    member: GuildMember | PartialGuildMember
-  ): Promise<void> {
-    const channel = this.client.channels.cache.get(
-      "1018070065423335437"
-    ) as TextChannel;
+  private async onGuildMemberRemove(member: GuildMember | PartialGuildMember): Promise<void> {
+    const channel = this.client.channels.cache.get('1018070065423335437') as TextChannel;
     if (channel?.isTextBased()) {
-      await channel.send(
-        `${member.user.tag} has left the server. <:periodt:1302882591552307240>`
-      );
+      await channel.send(`${member.user.tag} has left the server. <:periodt:1302882591552307240>`);
     }
   }
 }

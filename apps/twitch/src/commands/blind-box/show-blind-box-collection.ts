@@ -22,8 +22,8 @@ export class ShowBlindBoxCollectionCommand implements Command {
         username,
         collectionType: this.type,
         collection: collection || [],
-        collectionSize: collection?.length || 0
-      }
+        collectionSize: collection?.length || 0,
+      },
     });
   }
 }

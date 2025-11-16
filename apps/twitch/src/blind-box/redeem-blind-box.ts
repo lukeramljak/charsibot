@@ -21,10 +21,10 @@ export const redeemBlindBox = async (bot: Bot, data: RedemptionData) => {
     data.userId,
     data.username,
     data.type,
-    plushieKey
+    plushieKey,
   );
 
-  const plushieData = plushieWeights.find(p => p.key === plushieKey);
+  const plushieData = plushieWeights.find((p) => p.key === plushieKey);
 
   bot.wsServer.broadcast({
     type: 'blindbox_redemption',
@@ -36,12 +36,12 @@ export const redeemBlindBox = async (bot: Bot, data: RedemptionData) => {
       plushie: {
         key: plushieKey,
         name: plushieData?.name || 'Unknown',
-        weight: plushieData?.weight || 0
+        weight: plushieData?.weight || 0,
       },
       isNew: result?.isNew || false,
       collectionSize: result?.collection.length || 0,
-      collection: result?.collection || []
-    }
+      collection: result?.collection || [],
+    },
   });
 
   log.info(
@@ -51,8 +51,8 @@ export const redeemBlindBox = async (bot: Bot, data: RedemptionData) => {
       collectionType: data.type,
       reward: plushieKey,
       isNew: result?.isNew,
-      collectionSize: result?.collection.length || 0
+      collectionSize: result?.collection.length || 0,
     },
-    'blind box redeem'
+    'blind box redeem',
   );
 };

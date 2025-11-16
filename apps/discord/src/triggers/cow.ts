@@ -1,9 +1,9 @@
-import { Message } from "discord.js";
-import type { Trigger } from "./trigger";
+import { Message } from 'discord.js';
+import type { Trigger } from './trigger';
 
 export class CowTrigger implements Trigger {
   shouldTrigger(message: Message): boolean {
-    return message.content.toLowerCase().includes("cow");
+    return message.content.toLowerCase().includes('cow');
   }
 
   async execute(message: Message): Promise<void> {

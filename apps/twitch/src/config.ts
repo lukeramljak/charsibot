@@ -21,7 +21,7 @@ const REQUIRED_VARS = [
   'TWITCH_BOT_OAUTH_TOKEN',
   'TWITCH_BOT_REFRESH_TOKEN',
   'TWITCH_BOT_USER_ID',
-  'TWITCH_CHANNEL_USER_ID'
+  'TWITCH_CHANNEL_USER_ID',
 ];
 
 export const loadConfig = (): Config => {
@@ -42,6 +42,6 @@ export const loadConfig = (): Config => {
     channelUserId: process.env.TWITCH_CHANNEL_USER_ID!,
     dbPath: process.env.DB_PATH || 'charsibot.db',
     useMockServer: process.env.USE_MOCK_SERVER === 'true',
-    wsPort: process.env.WS_PORT ? parseInt(process.env.WS_PORT, 10) : 8081
+    wsPort: process.env.WS_PORT ? parseInt(process.env.WS_PORT, 10) : 8081,
   };
 };

@@ -22,6 +22,6 @@ export const olliepopsConfig: BlindBoxOverlayConfig = {
     { key: 'reward5', name: 'Crunchy', image: '/olliepops/crunchy.png' },
     { key: 'reward6', name: 'Caramel', image: '/olliepops/caramel.png' },
     { key: 'reward7', name: 'Grape', image: '/olliepops/grape.png' },
-    { key: 'reward8', name: 'Secret', image: '/olliepops/secret.png' }
-  ]
+    { key: 'reward8', name: 'Secret', image: '/olliepops/secret.png' },
+  ],
 };

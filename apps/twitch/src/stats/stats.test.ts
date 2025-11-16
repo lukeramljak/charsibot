@@ -12,12 +12,12 @@ describe('formatStats', () => {
       charisma: 3,
       luck: 3,
       dexterity: 3,
-      penis: 3
+      penis: 3,
     };
 
     const formatted = formatStats('testuser', stats);
     expect(formatted).toEqual(
-      "testuser's stats: STR: 5 | INT: 5 | CHA: 3 | LUCK: 3 | DEX: 3 | PENIS: 3"
+      "testuser's stats: STR: 5 | INT: 5 | CHA: 3 | LUCK: 3 | DEX: 3 | PENIS: 3",
     );
   });
 
@@ -30,12 +30,12 @@ describe('formatStats', () => {
       charisma: 9,
       luck: -2,
       dexterity: 3,
-      penis: 3
+      penis: 3,
     };
 
     const formatted = formatStats('testuser', stats);
     expect(formatted).toBe(
-      "testuser's stats: STR: 3 | INT: 3 | CHA: 9 | LUCK: -2 | DEX: 3 | PENIS: 3"
+      "testuser's stats: STR: 3 | INT: 3 | CHA: 9 | LUCK: -2 | DEX: 3 | PENIS: 3",
     );
   });
 });

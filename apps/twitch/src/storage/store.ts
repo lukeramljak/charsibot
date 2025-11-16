@@ -23,7 +23,7 @@ const REWARD_COLUMNS = [
   'reward5',
   'reward6',
   'reward7',
-  'reward8'
+  'reward8',
 ] as const;
 
 export class Store {
@@ -50,7 +50,7 @@ export class Store {
 
     return {
       accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken
+      refreshToken: tokens.refreshToken,
     };
   }
 
@@ -61,15 +61,15 @@ export class Store {
         tokenType,
         accessToken,
         refreshToken,
-        updatedAt: sql`CURRENT_TIMESTAMP`
+        updatedAt: sql`CURRENT_TIMESTAMP`,
       })
       .onConflictDoUpdate({
         target: tokensTable.tokenType,
         set: {
           accessToken,
           refreshToken,
-          updatedAt: sql`CURRENT_TIMESTAMP`
-        }
+          updatedAt: sql`CURRENT_TIMESTAMP`,
+        },
       });
   }
 
@@ -78,7 +78,7 @@ export class Store {
       .insert(statsTable)
       .values({
         id: userId,
-        username
+        username,
       })
       .onConflictDoUpdate({ target: statsTable.id, set: { username } });
 
@@ -98,21 +98,21 @@ export class Store {
       .insert(statsTable)
       .values({
         id: userId,
-        username
+        username,
       })
       .onConflictDoNothing({ target: statsTable.id });
 
     await this.db
       .update(statsTable)
       .set({
-        [column]: sql`${sql.identifier(column)} + ${delta}`
+        [column]: sql`${sql.identifier(column)} + ${delta}`,
       })
       .where(eq(statsTable.id, userId));
   }
 
   async getUserCollections(
     userId: string,
-    collectionType: CollectionType
+    collectionType: CollectionType,
   ): Promise<string[] | undefined> {
     try {
       const [result] = await this.db
@@ -124,14 +124,14 @@ export class Store {
           reward5: userCollectionsTable.reward5,
           reward6: userCollectionsTable.reward6,
           reward7: userCollectionsTable.reward7,
-          reward8: userCollectionsTable.reward8
+          reward8: userCollectionsTable.reward8,
         })
         .from(userCollectionsTable)
         .where(
           and(
             eq(userCollectionsTable.userId, userId),
-            eq(userCollectionsTable.collectionType, collectionType)
-          )
+            eq(userCollectionsTable.collectionType, collectionType),
+          ),
         );
 
       const collection: string[] = [];
@@ -155,10 +155,10 @@ export class Store {
     userId: string,
     username: string,
     collectionType: CollectionType,
-    rewardColumn: RewardColumn
+    rewardColumn: RewardColumn,
   ): Promise<{ collection: string[]; isNew: boolean } | undefined> {
     log.info(
-      `addPlushieToCollection - userId: ${userId}, username: ${username}, collectionType: ${collectionType}, rewardColumn: ${rewardColumn}`
+      `addPlushieToCollection - userId: ${userId}, username: ${username}, collectionType: ${collectionType}, rewardColumn: ${rewardColumn}`,
     );
 
     try {
@@ -169,8 +169,8 @@ export class Store {
         .where(
           and(
             eq(userCollectionsTable.userId, userId),
-            eq(userCollectionsTable.collectionType, collectionType)
-          )
+            eq(userCollectionsTable.collectionType, collectionType),
+          ),
         );
 
       const alreadyHas =
@@ -186,11 +186,11 @@ export class Store {
             userId,
             username,
             collectionType,
-            [rewardColumn]: 1
+            [rewardColumn]: 1,
           })
           .onConflictDoUpdate({
             target: [userCollectionsTable.userId, userCollectionsTable.collectionType],
-            set: { [rewardColumn]: 1, username }
+            set: { [rewardColumn]: 1, username },
           });
       } else {
         log.info(`addPlushieToCollection - Plushie already exists: ${rewardColumn}`);
@@ -206,14 +206,14 @@ export class Store {
           reward5: userCollectionsTable.reward5,
           reward6: userCollectionsTable.reward6,
           reward7: userCollectionsTable.reward7,
-          reward8: userCollectionsTable.reward8
+          reward8: userCollectionsTable.reward8,
         })
         .from(userCollectionsTable)
         .where(
           and(
             eq(userCollectionsTable.userId, userId),
-            eq(userCollectionsTable.collectionType, collectionType)
-          )
+            eq(userCollectionsTable.collectionType, collectionType),
+          ),
         );
 
       const collection: string[] = [];
@@ -226,7 +226,7 @@ export class Store {
       }
 
       log.info(
-        `addPlushieToCollection - Success: ${collection.length} items, isNew: ${!alreadyHas}`
+        `addPlushieToCollection - Success: ${collection.length} items, isNew: ${!alreadyHas}`,
       );
 
       return { collection, isNew: !alreadyHas };

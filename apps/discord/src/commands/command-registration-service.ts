@@ -1,9 +1,6 @@
-import { REST } from "@discordjs/rest";
-import {
-  type RESTPostAPIApplicationCommandsJSONBody,
-  Routes,
-} from "discord.js";
-import { type Command } from "../commands/command";
+import { REST } from '@discordjs/rest';
+import { type RESTPostAPIApplicationCommandsJSONBody, Routes } from 'discord.js';
+import { type Command } from '../commands/command';
 
 export class CommandRegistrationService {
   constructor(private rest: REST) {}
@@ -12,14 +9,12 @@ export class CommandRegistrationService {
     clientId: string,
     guildId: string,
     commands: Command[],
-    args: string[]
+    args: string[],
   ): Promise<void> {
     switch (args[3]) {
-      case "register": {
+      case 'register': {
         if (commands.length > 0) {
-          console.log(
-            `Started refreshing ${commands.length} application (/) commands.`
-          );
+          console.log(`Started refreshing ${commands.length} application (/) commands.`);
 
           const cmdsToRegister: RESTPostAPIApplicationCommandsJSONBody[] = [];
 
@@ -28,27 +23,19 @@ export class CommandRegistrationService {
           }
 
           try {
-            await this.rest.put(
-              Routes.applicationGuildCommands(clientId, guildId),
-              {
-                body: cmdsToRegister,
-              }
-            );
-            console.log(
-              `Successfully registered ${commands.length} application (/) commands`
-            );
+            await this.rest.put(Routes.applicationGuildCommands(clientId, guildId), {
+              body: cmdsToRegister,
+            });
+            console.log(`Successfully registered ${commands.length} application (/) commands`);
           } catch (error) {
-            console.error("Failed to register commands:", error);
+            console.error('Failed to register commands:', error);
           }
 
           return;
         }
       }
-      case "clear": {
-        await this.rest.put(
-          Routes.applicationGuildCommands(clientId, guildId),
-          { body: [] }
-        );
+      case 'clear': {
+        await this.rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: [] });
         console.log(`Successfully cleared ${commands.length} (/) commands`);
         return;
       }

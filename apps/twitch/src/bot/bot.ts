@@ -2,7 +2,7 @@ import { ApiClient } from '@twurple/api';
 import { RefreshingAuthProvider } from '@twurple/auth';
 import type {
   EventSubChannelChatMessageEvent,
-  EventSubChannelRedemptionAddEvent
+  EventSubChannelRedemptionAddEvent,
 } from '@twurple/eventsub-base';
 import { EventSubWsListener } from '@twurple/eventsub-ws';
 import type { Config } from '../config';
@@ -43,7 +43,7 @@ export class Bot {
     this.wsServer = new WebSocketServer(config.wsPort);
     this.authProvider = new RefreshingAuthProvider({
       clientId: config.clientId,
-      clientSecret: config.clientSecret
+      clientSecret: config.clientSecret,
     });
 
     this.authProvider.onRefresh(async (userId, tokenData) => {
@@ -64,7 +64,7 @@ export class Bot {
       accessToken: config.streamerAccessToken,
       refreshToken: config.streamerRefreshToken,
       expiresIn: 0,
-      obtainmentTimestamp: 0
+      obtainmentTimestamp: 0,
     });
 
     if (config.botUserId !== config.channelUserId) {
@@ -72,7 +72,7 @@ export class Bot {
         accessToken: config.botAccessToken,
         refreshToken: config.botRefreshToken,
         expiresIn: 0,
-        obtainmentTimestamp: 0
+        obtainmentTimestamp: 0,
       });
     }
 
@@ -93,9 +93,9 @@ export class Bot {
     if (this.config.useMockServer) {
       this.mockListener = new MockEventSubListener({
         url: 'ws://127.0.0.1:8080/ws',
-        onRedemption: async event => {
+        onRedemption: async (event) => {
           await this.onChannelPointRedemption(event);
-        }
+        },
       });
       this.mockListener.start();
       log.info('mock eventsub started');
@@ -103,12 +103,12 @@ export class Bot {
       this.listener.onChannelChatMessage(
         this.config.channelUserId,
         this.config.channelUserId,
-        async event => {
+        async (event) => {
           return this.onMessage(event);
-        }
+        },
       );
 
-      this.listener.onChannelRedemptionAdd(this.config.channelUserId, async event => {
+      this.listener.onChannelRedemptionAdd(this.config.channelUserId, async (event) => {
         return this.onChannelPointRedemption(event);
       });
 
@@ -150,8 +150,8 @@ export class Bot {
       userIds.push(this.config.botUserId);
     }
 
-    const promises = userIds.map(userId => {
-      return new Promise<void>(resolve => {
+    const promises = userIds.map((userId) => {
+      return new Promise<void>((resolve) => {
         const checkToken = async () => {
           const token = await this.authProvider.getAccessTokenForUser(userId);
           if (token) {
@@ -168,9 +168,9 @@ export class Bot {
   }
 
   async sendMessage(message: string, replyParentMessageId?: string) {
-    await this.api.asUser(this.config.botUserId, async ctx => {
+    await this.api.asUser(this.config.botUserId, async (ctx) => {
       await ctx.chat.sendChatMessage(this.config.channelUserId, message, {
-        replyParentMessageId
+        replyParentMessageId,
       });
     });
     log.debug({ message }, 'message sent');

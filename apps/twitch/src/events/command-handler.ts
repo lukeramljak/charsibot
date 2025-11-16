@@ -14,12 +14,12 @@ export class CommandHandler {
       {
         command: cmd,
         user: event.chatterDisplayName,
-        message: event.messageText
+        message: event.messageText,
       },
-      'chat command received'
+      'chat command received',
     );
 
-    const commands = this.commands.filter(command => {
+    const commands = this.commands.filter((command) => {
       if (!command.shouldTrigger(cmd)) {
         return false;
       }
@@ -36,7 +36,7 @@ export class CommandHandler {
       if (command.moderatorOnly && !isMod) {
         log.warn(
           { user: event.chatterDisplayName, command: event.messageText },
-          'non-moderator attempted to use mod command'
+          'non-moderator attempted to use mod command',
         );
 
         await bot.sendMessage('You must be a moderator to use this command');
@@ -46,7 +46,7 @@ export class CommandHandler {
       await command.execute(bot, event);
       log.info(
         { command: cmd, userId: event.chatterId, username: event.chatterDisplayName },
-        'chat command executed'
+        'chat command executed',
       );
     }
   }

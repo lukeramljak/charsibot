@@ -19,7 +19,7 @@ export class MockEventSubListener {
       log.info('Mock WebSocket connected');
     });
 
-    this.ws.addEventListener('message', event => {
+    this.ws.addEventListener('message', (event) => {
       const message = JSON.parse(event.data as string);
       log.debug({ message }, 'Mock WebSocket message received');
 
@@ -48,7 +48,7 @@ export class MockEventSubListener {
             userId: event.user_id,
             userDisplayName: event.user_name,
             userName: event.user_name,
-            status: event.status
+            status: event.status,
           } as EventSubChannelRedemptionAddEvent);
         }
       }
@@ -58,7 +58,7 @@ export class MockEventSubListener {
       }
     });
 
-    this.ws.addEventListener('error', event => {
+    this.ws.addEventListener('error', (event) => {
       log.error({ error: event }, 'Mock WebSocket error');
     });
 

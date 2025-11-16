@@ -10,7 +10,7 @@ export const statList: StatListItem[] = [
   { display: 'Charisma', column: 'charisma' },
   { display: 'Luck', column: 'luck' },
   { display: 'Dexterity', column: 'dexterity' },
-  { display: 'Penis', column: 'penis' }
+  { display: 'Penis', column: 'penis' },
 ];
 
 export const getRandomStat = (): StatListItem => {
@@ -38,18 +38,18 @@ export const parseModifyStatCommand = (text: string, isRemove: boolean): ModifyS
       statColumn: '',
       amount: 0,
       remove: isRemove,
-      error: `Expected format: !addstat/!rmstat @user stat amount`
+      error: `Expected format: !addstat/!rmstat @user stat amount`,
     };
   }
 
-  const mention = parts.find(p => p.startsWith('@'));
+  const mention = parts.find((p) => p.startsWith('@'));
   if (!mention) {
     return {
       mentionedLogin: '',
       statColumn: '',
       amount: 0,
       remove: isRemove,
-      error: 'No user mention found'
+      error: 'No user mention found',
     };
   }
 
@@ -63,7 +63,7 @@ export const parseModifyStatCommand = (text: string, isRemove: boolean): ModifyS
       statColumn: '',
       amount: 0,
       remove: isRemove,
-      error: "Expected 'stat amount'"
+      error: "Expected 'stat amount'",
     };
   }
 
@@ -74,7 +74,7 @@ export const parseModifyStatCommand = (text: string, isRemove: boolean): ModifyS
       statColumn,
       amount: 0,
       remove: isRemove,
-      error: 'Invalid number'
+      error: 'Invalid number',
     };
   }
 
@@ -82,6 +82,6 @@ export const parseModifyStatCommand = (text: string, isRemove: boolean): ModifyS
     mentionedLogin,
     statColumn,
     amount,
-    remove: isRemove
+    remove: isRemove,
   };
 };

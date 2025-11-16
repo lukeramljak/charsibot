@@ -26,7 +26,7 @@ export class BlindBoxRedemption implements Redemption {
     await redeemBlindBox(bot, {
       type,
       userId,
-      username
+      username,
     });
   }
 }

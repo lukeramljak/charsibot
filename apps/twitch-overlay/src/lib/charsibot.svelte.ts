@@ -78,7 +78,7 @@ class CharsibotWebSocket {
         this.reconnectAttempts++;
         const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts - 1), 10000);
         console.log(
-          `Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})...`
+          `Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})...`,
         );
 
         this.reconnectTimeout = setTimeout(() => this.connect(), delay);

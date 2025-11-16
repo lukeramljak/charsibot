@@ -6,7 +6,7 @@ export class TriggerHandler {
   constructor(private triggers: Trigger[]) {}
 
   public async process(bot: Bot, event: EventSubChannelChatMessageEvent): Promise<void> {
-    const triggers = this.triggers.filter(trigger => {
+    const triggers = this.triggers.filter((trigger) => {
       if (!trigger.shouldTrigger(event)) {
         return false;
       }

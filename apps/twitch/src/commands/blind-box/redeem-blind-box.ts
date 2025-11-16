@@ -20,7 +20,7 @@ export class RedeemBlindBoxCommand implements Command {
     await redeemBlindBox(bot, {
       type: this.type,
       userId,
-      username
+      username,
     });
   }
 }

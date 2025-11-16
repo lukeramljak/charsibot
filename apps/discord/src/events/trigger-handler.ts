@@ -1,6 +1,6 @@
-import { RateLimiter } from "discord.js-rate-limiter";
-import { Message } from "discord.js";
-import type { Trigger } from "../triggers/trigger";
+import { RateLimiter } from 'discord.js-rate-limiter';
+import { Message } from 'discord.js';
+import type { Trigger } from '../triggers/trigger';
 
 export class TriggerHandler {
   private rateLimiter = new RateLimiter(1, 5000);

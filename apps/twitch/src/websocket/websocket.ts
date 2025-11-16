@@ -37,18 +37,18 @@ export class WebSocketServer {
             JSON.stringify({
               status: 'ok',
               clients: this.clients.size,
-              timestamp: new Date().toISOString()
+              timestamp: new Date().toISOString(),
             }),
             {
-              headers: { 'Content-Type': 'application/json' }
-            }
+              headers: { 'Content-Type': 'application/json' },
+            },
           );
         }
 
         return new Response('Not Found', { status: 404 });
       },
       websocket: {
-        open: ws => {
+        open: (ws) => {
           this.clients.add(ws);
           log.info({ clientCount: this.clients.size }, 'overlay connected');
 
@@ -56,8 +56,8 @@ export class WebSocketServer {
           ws.send(
             JSON.stringify({
               type: 'connected',
-              timestamp: new Date().toISOString()
-            })
+              timestamp: new Date().toISOString(),
+            }),
           );
         },
         message: (ws, message) => {
@@ -70,15 +70,15 @@ export class WebSocketServer {
             log.error({ err }, 'failed to send pong');
           }
         },
-        close: ws => {
+        close: (ws) => {
           this.clients.delete(ws);
           log.info({ clientCount: this.clients.size }, 'overlay disconnected');
         },
         // Increase timeouts to prevent premature disconnections
         idleTimeout: 120, // 2 minutes
         maxPayloadLength: 16 * 1024 * 1024, // 16MB
-        closeOnBackpressureLimit: false
-      }
+        closeOnBackpressureLimit: false,
+      },
     });
 
     log.info({ port: this.port }, 'websocket server started');
@@ -91,7 +91,7 @@ export class WebSocketServer {
 
     log.info(
       { type: event.type, totalClients: this.clients.size },
-      'broadcasting event to overlays'
+      'broadcasting event to overlays',
     );
 
     for (const client of this.clients) {

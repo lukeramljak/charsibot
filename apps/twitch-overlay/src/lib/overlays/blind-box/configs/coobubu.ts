@@ -22,6 +22,6 @@ export const coobubuConfig: BlindBoxOverlayConfig = {
     { key: 'reward5', name: 'Pinky', image: '/coobubu/pinky.png' },
     { key: 'reward6', name: 'Minty', image: '/coobubu/minty.png' },
     { key: 'reward7', name: 'Cherry', image: '/coobubu/cherry.png' },
-    { key: 'reward8', name: 'Secret', image: '/coobubu/secret.png' }
-  ]
+    { key: 'reward8', name: 'Secret', image: '/coobubu/secret.png' },
+  ],
 };

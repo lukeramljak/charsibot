@@ -2,7 +2,7 @@ import type { BlindBoxRedemptionTitle, CollectionType, PlushieData, RewardColumn
 
 export const redemptionToCollectionType: Record<BlindBoxRedemptionTitle, CollectionType> = {
   'Cooper Series Blind Box': 'coobubu',
-  'Ollie Series Blind Box': 'olliepop'
+  'Ollie Series Blind Box': 'olliepop',
 } as const;
 
 /**
@@ -13,7 +13,7 @@ export const getWeightedRandomPlushie = (plushies: PlushieData[]): RewardColumn 
   const weightedList: RewardColumn[] = [];
 
   // Build weighted list by repeating items based on their weight
-  plushies.forEach(plushie => {
+  plushies.forEach((plushie) => {
     for (let i = 0; i < plushie.weight; i++) {
       weightedList.push(plushie.key);
     }

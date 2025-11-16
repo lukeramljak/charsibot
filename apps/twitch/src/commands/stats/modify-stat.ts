@@ -19,7 +19,7 @@ export class ModifyStatCommand implements Command {
     if (parsed.error) {
       log.warn(
         { command, error: parsed.error, msg: event.messageText },
-        'invalid modify stat command'
+        'invalid modify stat command',
       );
       await bot.sendMessage(parsed.error);
       return;
@@ -31,7 +31,7 @@ export class ModifyStatCommand implements Command {
       event.chatterId,
       mentionedLogin,
       statColumn,
-      isRemove ? -amount : amount
+      isRemove ? -amount : amount,
     );
 
     const stats = await bot.store.getStats(event.chatterId, mentionedLogin);
