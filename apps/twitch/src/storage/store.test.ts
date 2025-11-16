@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach } from 'bun:test';
-import { Store } from './store';
+import { Store } from '@/storage/store';
 import { Database } from 'bun:sqlite';
 
 describe('Store', () => {

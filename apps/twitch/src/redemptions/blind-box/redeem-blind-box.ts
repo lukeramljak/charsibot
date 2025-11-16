@@ -1,10 +1,10 @@
 import type { EventSubChannelRedemptionAddEvent } from '@twurple/eventsub-base';
-import type { Redemption } from '../redemption';
-import type { Bot } from '../../bot/bot';
-import { log } from '../../logger';
-import { redeemBlindBox } from '../../blind-box/redeem-blind-box';
-import { redemptionToCollectionType } from '../../blind-box/blind-box';
-import { type BlindBoxRedemptionTitle } from '../../blind-box/types';
+import type { Redemption } from '@/redemptions/redemption';
+import type { Bot } from '@/bot/bot';
+import { log } from '@/logger';
+import { redeemBlindBox } from '@/blind-box/redeem-blind-box';
+import { redemptionToCollectionType } from '@/blind-box/blind-box';
+import { type BlindBoxRedemptionTitle } from '@/blind-box/types';
 
 export class BlindBoxRedemption implements Redemption {
   constructor(private name: BlindBoxRedemptionTitle) {}

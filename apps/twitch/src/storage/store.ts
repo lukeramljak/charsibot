@@ -1,12 +1,12 @@
-import { log } from '../logger';
+import { log } from '@/logger';
 import { drizzle } from 'drizzle-orm/bun-sqlite';
-import { userCollectionsTable, statsTable, tokensTable } from './schema';
+import { userCollectionsTable, statsTable, tokensTable } from '@/storage/schema';
 import { and, sql, eq } from 'drizzle-orm';
-import * as schema from './schema';
+import * as schema from '@/storage/schema';
 import type { Database } from 'bun:sqlite';
 import { migrate } from 'drizzle-orm/bun-sqlite/migrator';
-import type { CollectionType, RewardColumn } from '../blind-box/types';
-import type { Stats } from '../stats/types';
+import type { CollectionType, RewardColumn } from '@/blind-box/types';
+import type { Stats } from '@/stats/types';
 
 interface Tokens {
   accessToken: string;

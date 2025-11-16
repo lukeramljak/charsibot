@@ -1,6 +1,6 @@
 import { REST } from '@discordjs/rest';
 import { type RESTPostAPIApplicationCommandsJSONBody, Routes } from 'discord.js';
-import { type Command } from '../commands/command';
+import { type Command } from '@/commands/command';
 
 export class CommandRegistrationService {
   constructor(private rest: REST) {}

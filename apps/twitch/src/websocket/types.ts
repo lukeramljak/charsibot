@@ -1,4 +1,4 @@
-import type { CollectionType } from '../blind-box/types';
+import type { CollectionType } from '@/blind-box/types';
 
 export type OverlayEvent =
   | ChatCommandEvent

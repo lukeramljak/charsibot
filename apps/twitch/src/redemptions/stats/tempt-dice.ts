@@ -1,7 +1,7 @@
 import type { EventSubChannelRedemptionAddEvent } from '@twurple/eventsub-base';
-import type { Redemption } from '../redemption';
-import type { Bot } from '../../bot/bot';
-import { formatStats } from '../../stats/stats';
+import type { Redemption } from '@/redemptions/redemption';
+import type { Bot } from '@/bot/bot';
+import { formatStats } from '@/stats/stats';
 
 export class TemptDiceRedemption implements Redemption {
   shouldTrigger(event: EventSubChannelRedemptionAddEvent) {

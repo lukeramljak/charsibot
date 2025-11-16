@@ -1,4 +1,4 @@
-import type { BlindBoxConfig, CollectionType, RewardColumn } from './types';
+import type { BlindBoxConfig, CollectionType, RewardColumn } from '@/blind-box/types';
 
 export const coobubuConfig: BlindBoxConfig = {
   collectionType: 'coobubu',

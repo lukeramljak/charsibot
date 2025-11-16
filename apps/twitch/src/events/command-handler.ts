@@ -1,7 +1,7 @@
-import type { Bot } from '../bot/bot';
-import type { Command } from '../commands/command';
+import type { Bot } from '@/bot/bot';
+import type { Command } from '@/commands/command';
 import type { EventSubChannelChatMessageEvent } from '@twurple/eventsub-base';
-import { log } from '../logger';
+import { log } from '@/logger';
 
 export class CommandHandler {
   constructor(private commands: Command[]) {}

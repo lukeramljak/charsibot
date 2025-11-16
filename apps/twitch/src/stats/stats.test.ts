@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'bun:test';
-import { formatStats, parseModifyStatCommand } from './stats';
-import type { Stats } from './types';
+import { formatStats, parseModifyStatCommand } from '@/stats/stats';
+import type { Stats } from '@/stats/types';
 
 describe('formatStats', () => {
   it('formats stats with positive values', async () => {

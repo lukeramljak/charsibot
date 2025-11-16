@@ -1,5 +1,5 @@
 import { ChatInputCommandInteraction, SlashCommandBuilder } from 'discord.js';
-import type { Command } from '../command';
+import type { Command } from '@/commands/command';
 
 export class ViewDateJoinedCommand implements Command {
   data = new SlashCommandBuilder()

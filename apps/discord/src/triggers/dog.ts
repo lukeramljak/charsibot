@@ -1,5 +1,5 @@
 import { Message } from 'discord.js';
-import type { Trigger } from './trigger';
+import type { Trigger } from '@/triggers/trigger';
 
 export class DogTrigger implements Trigger {
   triggerChance = 20;

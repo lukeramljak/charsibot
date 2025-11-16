@@ -1,4 +1,4 @@
-import type { StatListItem, Stats } from './types';
+import type { StatListItem, Stats } from '@/stats/types';
 
 export const formatStats = (username: string, s: Stats): string => {
   return `${username}'s stats: STR: ${s.strength} | INT: ${s.intelligence} | CHA: ${s.charisma} | LUCK: ${s.luck} | DEX: ${s.dexterity} | PENIS: ${s.penis}`;

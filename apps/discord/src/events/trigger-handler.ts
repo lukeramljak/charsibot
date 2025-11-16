@@ -1,6 +1,6 @@
 import { RateLimiter } from 'discord.js-rate-limiter';
 import { Message } from 'discord.js';
-import type { Trigger } from '../triggers/trigger';
+import type { Trigger } from '@/triggers/trigger';
 
 export class TriggerHandler {
   private rateLimiter = new RateLimiter(1, 5000);
@@ -14,7 +14,6 @@ export class TriggerHandler {
       return;
     }
 
-    // Find triggers caused by this message
     const triggers = this.triggers.filter((trigger) => {
       if (!trigger.shouldTrigger(message)) {
         return false;
@@ -23,12 +22,10 @@ export class TriggerHandler {
       return true;
     });
 
-    // If this message causes no triggers then return
     if (triggers.length === 0) {
       return;
     }
 
-    // Execute triggers
     for (const trigger of triggers) {
       if (trigger.triggerChance) {
         const roll = Math.random() * 100;

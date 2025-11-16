@@ -1,6 +1,6 @@
-import type { Bot } from '../bot/bot';
-import type { EventHandler } from './event-handler';
-import { TriggerHandler } from './trigger-handler';
+import type { Bot } from '@/bot/bot';
+import type { EventHandler } from '@/events/event-handler';
+import { TriggerHandler } from '@/events/trigger-handler';
 import type { EventSubChannelChatMessageEvent } from '@twurple/eventsub-base';
 
 export class MessageHandler implements EventHandler {

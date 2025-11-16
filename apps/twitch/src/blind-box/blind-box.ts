@@ -1,4 +1,9 @@
-import type { BlindBoxRedemptionTitle, CollectionType, PlushieData, RewardColumn } from './types';
+import type {
+  BlindBoxRedemptionTitle,
+  CollectionType,
+  PlushieData,
+  RewardColumn,
+} from '@/blind-box/types';
 
 export const redemptionToCollectionType: Record<BlindBoxRedemptionTitle, CollectionType> = {
   'Cooper Series Blind Box': 'coobubu',

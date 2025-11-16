@@ -1,5 +1,5 @@
 import type { EventSubChannelChatMessageEvent } from '@twurple/eventsub-base';
-import type { Bot } from '../bot/bot';
+import type { Bot } from '@/bot/bot';
 
 export interface Command {
   moderatorOnly?: boolean;

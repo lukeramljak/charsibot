@@ -1,6 +1,6 @@
-import type { Bot } from '../bot/bot';
-import { log } from '../logger';
-import type { Redemption } from '../redemptions/redemption';
+import type { Bot } from '@/bot/bot';
+import { log } from '@/logger';
+import type { Redemption } from '@/redemptions/redemption';
 import type { EventSubChannelRedemptionAddEvent } from '@twurple/eventsub-base';
 
 export class RedemptionHandler {
