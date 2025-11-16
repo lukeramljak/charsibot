@@ -1,4 +1,5 @@
-export type CollectionType = 'coobubu' | 'olliepops';
+export type CollectionType = 'coobubu' | 'olliepop';
+export type BlindBoxRedemptionTitle = 'Cooper Series Blind Box' | 'Ollie Series Blind Box';
 
 export type RewardColumn =
   | 'reward1'
@@ -23,11 +24,7 @@ export interface BlindBoxConfig {
   /** Collection type identifier for database storage */
   collectionType: CollectionType;
   /** Channel point reward name in Twitch */
-  rewardTitle: string;
-  /** Moderator-only chat command trigger (e.g. "!blindbox") */
-  moderatorCommand: string;
-  /** Chat command to display collection (e.g. "!collection") */
-  collectionCommand: string;
+  rewardTitle: BlindBoxRedemptionTitle;
   /** Array of plushies available in this blind box */
   plushies: PlushieData[];
 }

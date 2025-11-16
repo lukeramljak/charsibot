@@ -1,31 +1,24 @@
 import type { EventSubChannelChatMessageEvent } from '@twurple/eventsub-base';
 import type { Bot } from '../../bot/bot';
 import type { Command } from '../command';
-import { log } from '../../logger';
 import { redeemBlindBox } from '../../blind-box/redeem-blind-box';
-import { commandToCollectionType } from '../../blind-box/blind-box';
+import type { CollectionType } from '../../blind-box/types';
 
 export class RedeemBlindBoxCommand implements Command {
   moderatorOnly = true;
 
+  constructor(private type: CollectionType) {}
+
   shouldTrigger(command: string) {
-    const triggers = ['coobubu-redeem', 'olliepop-redeem'];
-    return triggers.includes(command);
+    return command === `${this.type}-redeem`;
   }
 
   async execute(bot: Bot, event: EventSubChannelChatMessageEvent) {
-    const [command] = event.messageText.toLowerCase().split('-');
     const userId = event.chatterId;
     const username = event.chatterDisplayName;
 
-    const type = commandToCollectionType[command];
-    if (!type) {
-      log.error({ command, type }, 'Invalid blind box type');
-      return;
-    }
-
     await redeemBlindBox(bot, {
-      type,
+      type: this.type,
       userId,
       username
     });

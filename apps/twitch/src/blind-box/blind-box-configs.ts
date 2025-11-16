@@ -1,10 +1,8 @@
-import type { BlindBoxConfig, RewardColumn } from './types';
+import type { BlindBoxConfig, CollectionType, RewardColumn } from './types';
 
 export const coobubuConfig: BlindBoxConfig = {
   collectionType: 'coobubu',
   rewardTitle: 'Cooper Series Blind Box',
-  moderatorCommand: '!coobubu-redeem',
-  collectionCommand: '!coobubu',
   plushies: [
     {
       key: 'reward1',
@@ -50,10 +48,8 @@ export const coobubuConfig: BlindBoxConfig = {
 };
 
 export const olliepopsConfig: BlindBoxConfig = {
-  collectionType: 'olliepops',
+  collectionType: 'olliepop',
   rewardTitle: 'Ollie Series Blind Box',
-  moderatorCommand: '!olliepop-redeem',
-  collectionCommand: '!olliepop',
   plushies: [
     {
       key: 'reward1',
@@ -98,9 +94,9 @@ export const olliepopsConfig: BlindBoxConfig = {
   ]
 };
 
-export const blindBoxConfigs = {
+export const blindBoxConfigs: Record<CollectionType, BlindBoxConfig> = {
   coobubu: coobubuConfig,
-  olliepops: olliepopsConfig
+  olliepop: olliepopsConfig
 } as const;
 
 /**

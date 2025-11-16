@@ -25,12 +25,15 @@ const main = async () => {
 
   const commands: Command[] = [
     new ModifyStatCommand(),
-    new RedeemBlindBoxCommand(),
-    new ShowBlindBoxCollectionCommand(),
+    new RedeemBlindBoxCommand('coobubu'),
+    new RedeemBlindBoxCommand('olliepop'),
+    new ShowBlindBoxCollectionCommand('coobubu'),
+    new ShowBlindBoxCollectionCommand('olliepop'),
     new StatsCommand()
   ];
   const redemptions: Redemption[] = [
-    new BlindBoxRedemption(),
+    new BlindBoxRedemption('Cooper Series Blind Box'),
+    new BlindBoxRedemption('Ollie Series Blind Box'),
     new TemptDiceRedemption(),
     new PotionRedemption()
   ];

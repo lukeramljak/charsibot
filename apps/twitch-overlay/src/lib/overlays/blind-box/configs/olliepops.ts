@@ -1,7 +1,7 @@
 import type { BlindBoxOverlayConfig } from '../types';
 
 export const olliepopsConfig: BlindBoxOverlayConfig = {
-  collectionType: 'olliepops',
+  collectionType: 'olliepop',
   collectionName: 'Olliepops',
 
   boxFrontFace: '/olliepops/box-front.png',

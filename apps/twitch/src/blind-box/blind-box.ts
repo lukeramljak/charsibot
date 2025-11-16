@@ -1,14 +1,9 @@
-import type { CollectionType, PlushieData, RewardColumn } from './types';
+import type { BlindBoxRedemptionTitle, CollectionType, PlushieData, RewardColumn } from './types';
 
-export const commandToCollectionType: Record<string, CollectionType> = {
-  '!coobubu': 'coobubu',
-  '!olliepop': 'olliepops'
-};
-
-export const redemptionToCollectionType: Record<string, CollectionType> = {
+export const redemptionToCollectionType: Record<BlindBoxRedemptionTitle, CollectionType> = {
   'Cooper Series Blind Box': 'coobubu',
-  'Ollie Series Blind Box': 'olliepops'
-};
+  'Ollie Series Blind Box': 'olliepop'
+} as const;
 
 /**
  * Selects a random plushie based on weighted probabilities

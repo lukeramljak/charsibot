@@ -24,7 +24,6 @@ export const redeemBlindBox = async (bot: Bot, data: RedemptionData) => {
     plushieKey
   );
 
-  // Find the plushie data for the redeemed item
   const plushieData = plushieWeights.find(p => p.key === plushieKey);
 
   bot.wsServer.broadcast({
