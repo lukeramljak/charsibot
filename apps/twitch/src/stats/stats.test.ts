@@ -1,5 +1,44 @@
-import { describe, expect, it } from 'bun:test';
-import { parseModifyStatCommand } from './command-parser';
+import { describe, it, expect } from 'bun:test';
+import { formatStats, parseModifyStatCommand } from './stats';
+import type { Stats } from './types';
+
+describe('formatStats', () => {
+  it('formats stats with positive values', async () => {
+    const stats: Stats = {
+      id: 'user123',
+      username: 'testuser',
+      strength: 5,
+      intelligence: 5,
+      charisma: 3,
+      luck: 3,
+      dexterity: 3,
+      penis: 3
+    };
+
+    const formatted = formatStats('testuser', stats);
+    expect(formatted).toEqual(
+      "testuser's stats: STR: 5 | INT: 5 | CHA: 3 | LUCK: 3 | DEX: 3 | PENIS: 3"
+    );
+  });
+
+  it('formats stats with negative values', async () => {
+    const stats: Stats = {
+      id: 'user123',
+      username: 'testuser',
+      strength: 3,
+      intelligence: 3,
+      charisma: 9,
+      luck: -2,
+      dexterity: 3,
+      penis: 3
+    };
+
+    const formatted = formatStats('testuser', stats);
+    expect(formatted).toBe(
+      "testuser's stats: STR: 3 | INT: 3 | CHA: 9 | LUCK: -2 | DEX: 3 | PENIS: 3"
+    );
+  });
+});
 
 describe('parseModifyStatCommand', () => {
   it('parses addstat command', () => {

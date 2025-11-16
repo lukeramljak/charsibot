@@ -1,29 +1,19 @@
-import { log } from './logger';
-import type { CollectionType, RewardColumn } from './types';
+import { log } from '../logger';
 import { drizzle } from 'drizzle-orm/bun-sqlite';
 import { userCollectionsTable, statsTable, tokensTable } from './schema';
 import { and, sql, eq } from 'drizzle-orm';
 import * as schema from './schema';
 import type { Database } from 'bun:sqlite';
 import { migrate } from 'drizzle-orm/bun-sqlite/migrator';
+import type { CollectionType, RewardColumn } from '../blind-box/types';
+import type { Stats } from '../stats/types';
 
-export interface Tokens {
+interface Tokens {
   accessToken: string;
   refreshToken: string;
 }
 
-export interface Stats {
-  id: string;
-  username: string;
-  strength: number;
-  intelligence: number;
-  charisma: number;
-  luck: number;
-  dexterity: number;
-  penis: number;
-}
-
-export type TokenType = 'bot' | 'streamer';
+type TokenType = 'bot' | 'streamer';
 
 const REWARD_COLUMNS = [
   'reward1',
@@ -245,21 +235,3 @@ export class Store {
     }
   }
 }
-
-export const formatStats = (username: string, s: Stats): string => {
-  return `${username}'s stats: STR: ${s.strength} | INT: ${s.intelligence} | CHA: ${s.charisma} | LUCK: ${s.luck} | DEX: ${s.dexterity} | PENIS: ${s.penis}`;
-};
-
-export interface Stat {
-  display: string;
-  column: string;
-}
-
-export const statList: Stat[] = [
-  { display: 'Strength', column: 'strength' },
-  { display: 'Intelligence', column: 'intelligence' },
-  { display: 'Charisma', column: 'charisma' },
-  { display: 'Luck', column: 'luck' },
-  { display: 'Dexterity', column: 'dexterity' },
-  { display: 'Penis', column: 'penis' }
-];

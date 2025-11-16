@@ -1,8 +1,9 @@
-import { log } from './logger';
+import type { EventSubChannelRedemptionAddEvent } from '@twurple/eventsub-base';
+import { log } from '../logger';
 
 interface MockEventSubConfig {
   url: string;
-  onRedemption: (data: { userId: string; userName: string; rewardTitle: string }) => void;
+  onRedemption: (event: EventSubChannelRedemptionAddEvent) => void;
 }
 
 export class MockEventSubListener {
@@ -35,10 +36,20 @@ export class MockEventSubListener {
 
         if (subscriptionType === 'channel.channel_points_custom_reward_redemption.add') {
           this.config.onRedemption({
+            broadcasterDisplayName: event.broadcaster_user_name,
+            broadcasterId: event.broadcaster_user_id,
+            id: event.user_id,
+            input: event.user_input,
+            redemptionDate: event.redeemed_at,
+            rewardCost: event.reward.cost,
+            rewardId: event.reward.id,
+            rewardPrompt: event.reward.prompt,
+            rewardTitle: event.reward.title,
             userId: event.user_id,
+            userDisplayName: event.user_name,
             userName: event.user_name,
-            rewardTitle: event.reward?.title || ''
-          });
+            status: event.status
+          } as EventSubChannelRedemptionAddEvent);
         }
       }
 

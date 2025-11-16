@@ -1,5 +1,5 @@
 import type { ServerWebSocket } from 'bun';
-import { log } from './logger';
+import { log } from '../logger';
 import type { OverlayEvent } from './types';
 
 export class WebSocketServer {

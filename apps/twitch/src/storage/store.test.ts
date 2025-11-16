@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach } from 'bun:test';
-import { Store, formatStats } from './store';
+import { Store } from './store';
 import { Database } from 'bun:sqlite';
 
 describe('Store', () => {
@@ -115,29 +115,6 @@ describe('Store', () => {
 
       expect(aliceStats.strength).toBe(13);
       expect(bobStats.strength).toBe(23);
-    });
-  });
-
-  describe('formatStats', () => {
-    it('formats stats with positive values', async () => {
-      await store.modifyStat('user123', 'testuser', 'strength', 5);
-      await store.modifyStat('user123', 'testuser', 'intelligence', 3);
-
-      const stats = await store.getStats('user123', 'testuser');
-      const formatted = formatStats('testuser', stats);
-
-      expect(formatted).toContain('testuser');
-      expect(formatted).toContain('STR: 8');
-      expect(formatted).toContain('INT: 6');
-    });
-
-    it('formats stats with negative values', async () => {
-      await store.modifyStat('user123', 'testuser', 'luck', -2);
-
-      const stats = await store.getStats('user123', 'testuser');
-      const formatted = formatStats('testuser', stats);
-
-      expect(formatted).toContain('LUCK: 1');
     });
   });
 });
