@@ -25,7 +25,7 @@ export class TriggerHandler {
           continue;
         }
       }
-      await trigger.execute(bot);
+      await trigger.execute(bot, event);
     }
   }
 }

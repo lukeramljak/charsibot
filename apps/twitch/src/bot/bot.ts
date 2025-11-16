@@ -167,9 +167,11 @@ export class Bot {
     await Promise.all(promises);
   }
 
-  async sendMessage(message: string) {
+  async sendMessage(message: string, replyParentMessageId?: string) {
     await this.api.asUser(this.config.botUserId, async ctx => {
-      await ctx.chat.sendChatMessage(this.config.channelUserId, message);
+      await ctx.chat.sendChatMessage(this.config.channelUserId, message, {
+        replyParentMessageId
+      });
     });
     log.debug({ message }, 'message sent');
   }

@@ -14,6 +14,6 @@ export class StatsCommand implements Command {
     const stats = await bot.store.getStats(id, username);
     const message = formatStats(username, stats);
 
-    await bot.sendMessage(message);
+    await bot.sendMessage(message, event.messageId);
   }
 }
