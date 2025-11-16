@@ -1,5 +1,5 @@
-import { Message } from 'discord.js';
 import type { Trigger } from '@/triggers/trigger';
+import { Message } from 'discord.js';
 
 export class EggTrigger implements Trigger {
   shouldTrigger(message: Message): boolean {

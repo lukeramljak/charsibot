@@ -1,5 +1,5 @@
-import type { OverlayEvent } from '$lib/types';
 import { env } from '$env/dynamic/public';
+import type { OverlayEvent } from '$lib/types';
 
 type WebSocketEvent = OverlayEvent | { type: 'connected'; timestamp: string } | { type: 'pong' };
 

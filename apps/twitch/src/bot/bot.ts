@@ -1,3 +1,11 @@
+import { MockEventSubListener } from '@/bot/mock-eventsub';
+import type { Config } from '@/config';
+import type { CommandHandler } from '@/events/command-handler';
+import type { MessageHandler } from '@/events/message-handler';
+import type { RedemptionHandler } from '@/events/redemption-handler';
+import { log } from '@/logger';
+import { Store } from '@/storage/store';
+import { WebSocketServer } from '@/websocket/websocket';
 import { ApiClient } from '@twurple/api';
 import { RefreshingAuthProvider } from '@twurple/auth';
 import type {
@@ -5,14 +13,6 @@ import type {
   EventSubChannelRedemptionAddEvent,
 } from '@twurple/eventsub-base';
 import { EventSubWsListener } from '@twurple/eventsub-ws';
-import type { Config } from '@/config';
-import { log } from '@/logger';
-import { MockEventSubListener } from '@/bot/mock-eventsub';
-import { Store } from '@/storage/store';
-import { WebSocketServer } from '@/websocket/websocket';
-import type { MessageHandler } from '@/events/message-handler';
-import type { CommandHandler } from '@/events/command-handler';
-import type { RedemptionHandler } from '@/events/redemption-handler';
 
 interface BotConfig {
   config: Config;

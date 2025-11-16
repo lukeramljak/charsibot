@@ -1,8 +1,8 @@
 import { getWeightedRandomPlushie } from '@/blind-box/blind-box';
 import { blindBoxConfigs } from '@/blind-box/blind-box-configs';
+import type { CollectionType } from '@/blind-box/types';
 import type { Bot } from '@/bot/bot';
 import { log } from '@/logger';
-import type { CollectionType } from '@/blind-box/types';
 
 interface RedemptionData {
   type: CollectionType;

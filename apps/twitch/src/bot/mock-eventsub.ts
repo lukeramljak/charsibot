@@ -1,5 +1,5 @@
-import type { EventSubChannelRedemptionAddEvent } from '@twurple/eventsub-base';
 import { log } from '@/logger';
+import type { EventSubChannelRedemptionAddEvent } from '@twurple/eventsub-base';
 
 interface MockEventSubConfig {
   url: string;

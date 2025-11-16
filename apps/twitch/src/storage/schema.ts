@@ -1,5 +1,5 @@
-import { int, numeric, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
+import { int, numeric, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
 export const tokensTable = sqliteTable('oauth_tokens', {
   tokenType: text().primaryKey(),

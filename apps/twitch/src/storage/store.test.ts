@@ -1,6 +1,6 @@
-import { describe, expect, it, beforeEach } from 'bun:test';
 import { Store } from '@/storage/store';
 import { Database } from 'bun:sqlite';
+import { beforeEach, describe, expect, it } from 'bun:test';
 
 describe('Store', () => {
   let store: Store;

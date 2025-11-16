@@ -1,3 +1,6 @@
+import { CustomClient } from '@/client';
+import type { Command } from '@/commands/command';
+import { MessageHandler } from '@/events/message-handler';
 import {
   ActivityType,
   Events,
@@ -8,9 +11,6 @@ import {
   type PartialGuildMember,
   TextChannel,
 } from 'discord.js';
-import { CustomClient } from '@/client';
-import type { Command } from '@/commands/command';
-import { MessageHandler } from '@/events/message-handler';
 
 export class Bot {
   private ready = false;

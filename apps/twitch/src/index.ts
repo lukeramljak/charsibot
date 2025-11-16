@@ -1,22 +1,22 @@
-import { loadConfig } from '@/config';
-import { Store } from '@/storage/store';
 import { Bot } from '@/bot/bot';
-import { Database } from 'bun:sqlite';
-import type { Trigger } from '@/triggers/trigger';
-import { ComeTrigger } from '@/triggers/come';
-import { TriggerHandler } from '@/events/trigger-handler';
-import { MessageHandler } from '@/events/message-handler';
-import { CommandHandler } from '@/events/command-handler';
-import type { Command } from '@/commands/command';
-import { StatsCommand } from '@/commands/stats/stats';
-import { ModifyStatCommand } from '@/commands/stats/modify-stat';
-import { ShowBlindBoxCollectionCommand } from '@/commands/blind-box/show-blind-box-collection';
 import { RedeemBlindBoxCommand } from '@/commands/blind-box/redeem-blind-box';
-import type { Redemption } from '@/redemptions/redemption';
+import { ShowBlindBoxCollectionCommand } from '@/commands/blind-box/show-blind-box-collection';
+import type { Command } from '@/commands/command';
+import { ModifyStatCommand } from '@/commands/stats/modify-stat';
+import { StatsCommand } from '@/commands/stats/stats';
+import { loadConfig } from '@/config';
+import { CommandHandler } from '@/events/command-handler';
+import { MessageHandler } from '@/events/message-handler';
 import { RedemptionHandler } from '@/events/redemption-handler';
+import { TriggerHandler } from '@/events/trigger-handler';
+import { BlindBoxRedemption } from '@/redemptions/blind-box/redeem-blind-box';
+import type { Redemption } from '@/redemptions/redemption';
 import { PotionRedemption } from '@/redemptions/stats/potion';
 import { TemptDiceRedemption } from '@/redemptions/stats/tempt-dice';
-import { BlindBoxRedemption } from '@/redemptions/blind-box/redeem-blind-box';
+import { Store } from '@/storage/store';
+import { ComeTrigger } from '@/triggers/come';
+import type { Trigger } from '@/triggers/trigger';
+import { Database } from 'bun:sqlite';
 
 const main = async () => {
   const config = loadConfig();

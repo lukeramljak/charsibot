@@ -1,7 +1,7 @@
-import type { EventSubChannelChatMessageEvent } from '@twurple/eventsub-base';
+import type { CollectionType } from '@/blind-box/types';
 import type { Bot } from '@/bot/bot';
 import type { Command } from '@/commands/command';
-import type { CollectionType } from '@/blind-box/types';
+import type { EventSubChannelChatMessageEvent } from '@twurple/eventsub-base';
 
 export class ShowBlindBoxCollectionCommand implements Command {
   constructor(private type: CollectionType) {}

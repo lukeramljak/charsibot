@@ -1,8 +1,8 @@
-import type { EventSubChannelChatMessageEvent } from '@twurple/eventsub-base';
-import type { Command } from '@/commands/command';
 import type { Bot } from '@/bot/bot';
+import type { Command } from '@/commands/command';
 import { log } from '@/logger';
 import { formatStats, parseModifyStatCommand } from '@/stats/stats';
+import type { EventSubChannelChatMessageEvent } from '@twurple/eventsub-base';
 
 export class ModifyStatCommand implements Command {
   moderatorOnly = true;

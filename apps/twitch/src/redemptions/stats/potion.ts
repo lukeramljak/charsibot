@@ -1,7 +1,7 @@
-import type { EventSubChannelRedemptionAddEvent } from '@twurple/eventsub-base';
-import type { Redemption } from '@/redemptions/redemption';
 import type { Bot } from '@/bot/bot';
-import { formatStats, getRandomStatDelta, getRandomStat } from '@/stats/stats';
+import type { Redemption } from '@/redemptions/redemption';
+import { formatStats, getRandomStat, getRandomStatDelta } from '@/stats/stats';
+import type { EventSubChannelRedemptionAddEvent } from '@twurple/eventsub-base';
 
 export class PotionRedemption implements Redemption {
   shouldTrigger(event: EventSubChannelRedemptionAddEvent) {

@@ -1,5 +1,5 @@
-import { Message, MessageType } from 'discord.js';
 import type { Trigger } from '@/triggers/trigger';
+import { Message, MessageType } from 'discord.js';
 
 export class UserJoinTrigger implements Trigger {
   shouldTrigger(message: Message): boolean {

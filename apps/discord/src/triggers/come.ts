@@ -1,5 +1,5 @@
-import { Message, type TextBasedChannel } from 'discord.js';
 import type { Trigger } from '@/triggers/trigger';
+import { Message } from 'discord.js';
 
 export class ComeTrigger implements Trigger {
   triggerChance = 20;

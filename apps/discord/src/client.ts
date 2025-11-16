@@ -1,5 +1,5 @@
-import { Client, type ClientOptions, Collection } from 'discord.js';
 import type { Command } from '@/commands/command';
+import { Client, type ClientOptions, Collection } from 'discord.js';
 
 export class CustomClient extends Client {
   public commands: Collection<string, Command>;
