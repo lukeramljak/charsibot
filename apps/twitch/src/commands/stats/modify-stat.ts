@@ -7,11 +7,11 @@ import { formatStats, parseModifyStatCommand } from '../../stats/stats';
 export class ModifyStatCommand implements Command {
   moderatorOnly = true;
 
-  shouldTrigger(command: string) {
+  shouldTrigger(command: string): boolean {
     return command === 'addstat' || command === 'rmstat';
   }
 
-  async execute(bot: Bot, event: EventSubChannelChatMessageEvent) {
+  async execute(bot: Bot, event: EventSubChannelChatMessageEvent): Promise<void> {
     const [command] = event.messageText.toLowerCase().split(' ');
     const isRemove = command === '!rmstat';
 

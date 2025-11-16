@@ -9,11 +9,11 @@ export class RedeemBlindBoxCommand implements Command {
 
   constructor(private type: CollectionType) {}
 
-  shouldTrigger(command: string) {
+  shouldTrigger(command: string): boolean {
     return command === `${this.type}-redeem`;
   }
 
-  async execute(bot: Bot, event: EventSubChannelChatMessageEvent) {
+  async execute(bot: Bot, event: EventSubChannelChatMessageEvent): Promise<void> {
     const userId = event.chatterId;
     const username = event.chatterDisplayName;
 

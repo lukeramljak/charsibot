@@ -6,11 +6,11 @@ import type { CollectionType } from '../../blind-box/types';
 export class ShowBlindBoxCollectionCommand implements Command {
   constructor(private type: CollectionType) {}
 
-  shouldTrigger(command: string) {
+  shouldTrigger(command: string): boolean {
     return command === this.type;
   }
 
-  async execute(bot: Bot, event: EventSubChannelChatMessageEvent) {
+  async execute(bot: Bot, event: EventSubChannelChatMessageEvent): Promise<void> {
     const userId = event.chatterId;
     const username = event.chatterDisplayName;
     const collection = await bot.store.getUserCollections(userId, this.type);
