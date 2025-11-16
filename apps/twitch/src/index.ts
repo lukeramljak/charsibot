@@ -44,7 +44,13 @@ const main = async () => {
   const messageHandler = new MessageHandler(triggerHandler);
   const redemptionHandler = new RedemptionHandler(redemptions);
 
-  const bot = new Bot(config, store, commandHandler, messageHandler, redemptionHandler);
+  const bot = new Bot({
+    config,
+    store,
+    commandHandler,
+    messageHandler,
+    redemptionHandler
+  });
   await bot.init();
 };
 

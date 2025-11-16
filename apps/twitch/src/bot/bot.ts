@@ -14,22 +14,33 @@ import type { MessageHandler } from '../events/message-handler';
 import type { CommandHandler } from '../events/command-handler';
 import type { RedemptionHandler } from '../events/redemption-handler';
 
+interface BotConfig {
+  config: Config;
+  store: Store;
+  commandHandler: CommandHandler;
+  messageHandler: MessageHandler;
+  redemptionHandler: RedemptionHandler;
+}
+
 export class Bot {
+  private config: Config;
+  public store: Store;
+  private commandHandler: CommandHandler;
+  private messageHandler: MessageHandler;
+  private redemptionHandler: RedemptionHandler;
   private api: ApiClient;
   private listener: EventSubWsListener;
   private mockListener?: MockEventSubListener;
   private authProvider: RefreshingAuthProvider;
   public wsServer: WebSocketServer;
 
-  constructor(
-    private config: Config,
-    public store: Store,
-    private commandHandler: CommandHandler,
-    private messageHandler: MessageHandler,
-    private redemptionHandler: RedemptionHandler
-  ) {
+  constructor({ config, store, commandHandler, messageHandler, redemptionHandler }: BotConfig) {
+    this.config = config;
+    this.store = store;
+    this.commandHandler = commandHandler;
+    this.messageHandler = messageHandler;
+    this.redemptionHandler = redemptionHandler;
     this.wsServer = new WebSocketServer(config.wsPort);
-
     this.authProvider = new RefreshingAuthProvider({
       clientId: config.clientId,
       clientSecret: config.clientSecret
