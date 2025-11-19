@@ -105,6 +105,7 @@ export class Store {
     await this.db
       .update(statsTable)
       .set({
+        username,
         [column]: sql`${sql.identifier(column)} + ${delta}`,
       })
       .where(eq(statsTable.id, userId));

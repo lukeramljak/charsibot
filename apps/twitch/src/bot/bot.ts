@@ -28,7 +28,7 @@ export class Bot {
   private commandHandler: CommandHandler;
   private messageHandler: MessageHandler;
   private redemptionHandler: RedemptionHandler;
-  private api: ApiClient;
+  public api: ApiClient;
   private listener: EventSubWsListener;
   private mockListener?: MockEventSubListener;
   private authProvider: RefreshingAuthProvider;

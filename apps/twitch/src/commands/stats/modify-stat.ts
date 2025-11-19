@@ -27,14 +27,21 @@ export class ModifyStatCommand implements Command {
 
     const { mentionedLogin, statColumn, amount } = parsed;
 
+    const mentionedUser = await bot.api.users.getUserByName(mentionedLogin);
+    if (!mentionedUser) {
+      log.warn({ mentionedLogin }, 'failed to find user via helix api');
+      await bot.sendMessage('Failed to find user');
+      return;
+    }
+
     await bot.store.modifyStat(
-      event.chatterId,
+      mentionedUser.id,
       mentionedLogin,
       statColumn,
       isRemove ? -amount : amount,
     );
 
-    const stats = await bot.store.getStats(event.chatterId, mentionedLogin);
+    const stats = await bot.store.getStats(mentionedUser.id, mentionedLogin);
     await bot.sendMessage(formatStats(mentionedLogin, stats));
   }
 }
