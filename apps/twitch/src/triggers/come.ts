@@ -3,6 +3,8 @@ import type { Trigger } from '@/triggers/trigger';
 import type { EventSubChannelChatMessageEvent } from '@twurple/eventsub-base';
 
 export class ComeTrigger implements Trigger {
+  triggerChance = 20;
+
   shouldTrigger(event: EventSubChannelChatMessageEvent): boolean {
     const triggers = ['come', 'coming', 'cum', 'came'];
     return triggers.some((trigger) => event.messageText.toLowerCase().includes(trigger));
