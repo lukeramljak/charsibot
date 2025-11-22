@@ -1,5 +1,4 @@
 export type CollectionType = 'coobubu' | 'olliepop';
-export type BlindBoxRedemptionTitle = 'Cooper Series Blind Box' | 'Ollie Series Blind Box';
 
 export type RewardColumn =
   | 'reward1'
@@ -20,11 +19,19 @@ export interface PlushieData {
   weight: number;
 }
 
+export type PlushiesMap = {
+  [K in RewardColumn]: PlushieData & { key: K };
+};
+
 export interface BlindBoxConfig {
+  enabled: boolean;
   /** Collection type identifier for database storage */
   collectionType: CollectionType;
   /** Channel point reward name in Twitch */
-  rewardTitle: BlindBoxRedemptionTitle;
-  /** Array of plushies available in this blind box */
-  plushies: PlushieData[];
+  rewardTitle: string;
+  /** Moderator-only chat command trigger (e.g. "blindbox") */
+  moderatorCommand: `${string}-redeem`;
+  /** Chat command to display collection (e.g. "collection") */
+  collectionDisplayCommand: string;
+  plushies: PlushiesMap;
 }

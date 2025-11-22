@@ -1,5 +1,5 @@
 import { redeemBlindBox } from '@/blind-box/redeem-blind-box';
-import type { CollectionType } from '@/blind-box/types';
+import type { BlindBoxConfig } from '@/blind-box/types';
 import type { Bot } from '@/bot/bot';
 import type { Command } from '@/commands/command';
 import type { EventSubChannelChatMessageEvent } from '@twurple/eventsub-base';
@@ -7,10 +7,10 @@ import type { EventSubChannelChatMessageEvent } from '@twurple/eventsub-base';
 export class RedeemBlindBoxCommand implements Command {
   moderatorOnly = true;
 
-  constructor(private type: CollectionType) {}
+  constructor(private config: BlindBoxConfig) {}
 
   shouldTrigger(command: string): boolean {
-    return command === `${this.type}-redeem`;
+    return command === this.config.moderatorCommand;
   }
 
   async execute(bot: Bot, event: EventSubChannelChatMessageEvent): Promise<void> {
@@ -18,7 +18,7 @@ export class RedeemBlindBoxCommand implements Command {
     const username = event.chatterDisplayName;
 
     await redeemBlindBox(bot, {
-      type: this.type,
+      config: this.config,
       userId,
       username,
     });

@@ -4,11 +4,11 @@ import { formatStats, getRandomStat, getRandomStatDelta } from '@/stats/stats';
 import type { EventSubChannelRedemptionAddEvent } from '@twurple/eventsub-base';
 
 export class PotionRedemption implements Redemption {
-  shouldTrigger(event: EventSubChannelRedemptionAddEvent) {
+  shouldTrigger(event: EventSubChannelRedemptionAddEvent): boolean {
     return event.rewardTitle === 'Drink a Potion';
   }
 
-  async execute(bot: Bot, event: EventSubChannelRedemptionAddEvent) {
+  async execute(bot: Bot, event: EventSubChannelRedemptionAddEvent): Promise<void> {
     const stat = getRandomStat();
     const delta = getRandomStatDelta();
     const outcome = delta < 0 ? 'lost' : 'gained';

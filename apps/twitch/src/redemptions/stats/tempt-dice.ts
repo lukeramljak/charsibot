@@ -4,11 +4,11 @@ import { formatStats } from '@/stats/stats';
 import type { EventSubChannelRedemptionAddEvent } from '@twurple/eventsub-base';
 
 export class TemptDiceRedemption implements Redemption {
-  shouldTrigger(event: EventSubChannelRedemptionAddEvent) {
+  shouldTrigger(event: EventSubChannelRedemptionAddEvent): boolean {
     return event.rewardTitle === 'Tempt the Dice';
   }
 
-  async execute(bot: Bot, event: EventSubChannelRedemptionAddEvent) {
+  async execute(bot: Bot, event: EventSubChannelRedemptionAddEvent): Promise<void> {
     const userId = event.userId;
     const username = event.userDisplayName;
 

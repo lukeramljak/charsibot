@@ -1,3 +1,4 @@
+import { blindBoxConfigs } from '@/blind-box/configs';
 import { Bot } from '@/bot/bot';
 import { RedeemBlindBoxCommand } from '@/commands/blind-box/redeem-blind-box';
 import { ShowBlindBoxCollectionCommand } from '@/commands/blind-box/show-blind-box-collection';
@@ -18,22 +19,42 @@ import { ComeTrigger } from '@/triggers/come';
 import type { Trigger } from '@/triggers/trigger';
 import { Database } from 'bun:sqlite';
 
+const createBlindBoxCommands = (): Command[] => {
+  const commands: Command[] = [];
+
+  for (const config of blindBoxConfigs) {
+    if (config.enabled) {
+      commands.push(new RedeemBlindBoxCommand(config), new ShowBlindBoxCollectionCommand(config));
+    }
+  }
+
+  return commands;
+};
+
+const createBlindBoxRedemptions = (): Redemption[] => {
+  const redemptions: Redemption[] = [];
+
+  for (const config of blindBoxConfigs) {
+    if (config.enabled) {
+      redemptions.push(new BlindBoxRedemption(config));
+    }
+  }
+
+  return redemptions;
+};
+
 const main = async () => {
   const config = loadConfig();
   const sqlite = new Database(config.dbPath);
   const store = new Store(sqlite);
 
   const commands: Command[] = [
+    ...createBlindBoxCommands(),
     new ModifyStatCommand(),
-    new RedeemBlindBoxCommand('coobubu'),
-    new RedeemBlindBoxCommand('olliepop'),
-    new ShowBlindBoxCollectionCommand('coobubu'),
-    new ShowBlindBoxCollectionCommand('olliepop'),
     new StatsCommand(),
   ];
   const redemptions: Redemption[] = [
-    new BlindBoxRedemption('Cooper Series Blind Box'),
-    new BlindBoxRedemption('Ollie Series Blind Box'),
+    ...createBlindBoxRedemptions(),
     new TemptDiceRedemption(),
     new PotionRedemption(),
   ];

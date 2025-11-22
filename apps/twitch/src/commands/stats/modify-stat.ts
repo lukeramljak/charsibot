@@ -29,7 +29,7 @@ export class ModifyStatCommand implements Command {
 
     const mentionedUser = await bot.api.users.getUserByName(mentionedLogin);
     if (!mentionedUser) {
-      log.warn({ mentionedLogin }, 'failed to find user via helix api');
+      log.error({ mentionedLogin }, 'failed to find user via helix api');
       await bot.sendMessage('Failed to find user');
       return;
     }

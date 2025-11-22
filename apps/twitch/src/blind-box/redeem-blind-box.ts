@@ -1,58 +1,46 @@
 import { getWeightedRandomPlushie } from '@/blind-box/blind-box';
-import { blindBoxConfigs } from '@/blind-box/blind-box-configs';
-import type { CollectionType } from '@/blind-box/types';
+import type { BlindBoxConfig } from '@/blind-box/types';
 import type { Bot } from '@/bot/bot';
 import { log } from '@/logger';
+import type { OverlayEvent } from '@/websocket/types';
 
 interface RedemptionData {
-  type: CollectionType;
+  config: BlindBoxConfig;
   userId: string;
   username: string;
 }
 
 export const redeemBlindBox = async (bot: Bot, data: RedemptionData) => {
-  const seriesConfig = blindBoxConfigs[data.type];
-  const plushieWeights = seriesConfig.plushies;
-  const seriesName = seriesConfig.rewardTitle;
-
-  const plushieKey = getWeightedRandomPlushie(plushieWeights);
+  const { plushies } = data.config;
+  const plushieKey = getWeightedRandomPlushie(plushies);
 
   const result = await bot.store.addPlushieToCollection(
     data.userId,
     data.username,
-    data.type,
+    data.config.collectionType,
     plushieKey,
   );
 
-  const plushieData = plushieWeights.find((p) => p.key === plushieKey);
+  const plushieData = plushies[plushieKey];
 
-  bot.wsServer.broadcast({
+  const redemptionData: OverlayEvent = {
     type: 'blindbox_redemption',
     data: {
       userId: data.userId,
       username: data.username,
-      collectionType: data.type,
-      seriesName,
+      collectionType: data.config.collectionType,
+      seriesName: data.config.rewardTitle,
       plushie: {
         key: plushieKey,
-        name: plushieData?.name || 'Unknown',
-        weight: plushieData?.weight || 0,
+        name: plushieData.name,
+        weight: plushieData.weight,
       },
       isNew: result?.isNew || false,
       collectionSize: result?.collection.length || 0,
       collection: result?.collection || [],
     },
-  });
+  };
 
-  log.info(
-    {
-      userId: data.userId,
-      username: data.username,
-      collectionType: data.type,
-      reward: plushieKey,
-      isNew: result?.isNew,
-      collectionSize: result?.collection.length || 0,
-    },
-    'blind box redeem',
-  );
+  bot.wsServer.broadcast(redemptionData);
+  log.info(redemptionData, 'blind box redeem');
 };
