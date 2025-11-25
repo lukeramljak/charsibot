@@ -3,12 +3,12 @@ import type { OverlayEvent } from '$lib/types';
 
 type WebSocketEvent = OverlayEvent | { type: 'connected'; timestamp: string } | { type: 'pong' };
 
-class CharsibotWebSocket {
+export class CharsibotWebSocket {
   private ws: WebSocket | null = null;
   private url: string;
-  public connected = $state(false);
-  public lastMessage = $state<WebSocketEvent | null>(null);
-  public error = $state<string | null>(null);
+  #connected = $state(false);
+  #lastMessage = $state<WebSocketEvent | null>(null);
+  #error = $state<string | null>(null);
   private pingInterval: ReturnType<typeof setInterval> | null = null;
   private reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
   private reconnectAttempts = 0;
@@ -16,7 +16,19 @@ class CharsibotWebSocket {
 
   constructor() {
     this.url = env.PUBLIC_TWITCH_WEBSOCKET_URL || 'ws://localhost:8081/ws';
-    console.log('WebSocket URL:', this.url);
+    console.debug('WebSocket URL:', this.url);
+  }
+
+  get connected() {
+    return this.#connected;
+  }
+
+  get lastMessage() {
+    return this.#lastMessage;
+  }
+
+  get error() {
+    return this.#error;
   }
 
   /**
@@ -27,17 +39,18 @@ class CharsibotWebSocket {
       this.ws &&
       (this.ws.readyState === WebSocket.CONNECTING || this.ws.readyState === WebSocket.OPEN)
     ) {
+      console.log('WebSocket already connected or connecting');
       return;
     }
 
-    console.log('Connecting to Charsibot WebSocket...');
+    console.log('Connecting to Charsibot WebSocket...', this.url);
     this.ws = new WebSocket(this.url);
 
     this.ws.onopen = () => {
       console.log('Connected to Charsibot');
       this.reconnectAttempts = 0;
-      this.connected = true;
-      this.error = null;
+      this.#connected = true;
+      this.#error = null;
 
       if (this.pingInterval) clearInterval(this.pingInterval);
 
@@ -52,22 +65,22 @@ class CharsibotWebSocket {
       const data = JSON.parse(event.data) as WebSocketEvent;
 
       if (data.type === 'pong') {
-        console.log('Pong received');
+        console.debug('Pong received');
         return;
       }
 
-      console.log('Message received:', data);
-      this.lastMessage = data;
+      console.debug('Message received:', data);
+      this.#lastMessage = data;
     };
 
     this.ws.onerror = (error) => {
       console.error('WebSocket error:', error);
-      this.error = 'Connection error';
+      this.#error = 'Connection error';
     };
 
     this.ws.onclose = (event) => {
       console.log(`Disconnected. Code: ${event.code}`);
-      this.connected = false;
+      this.#connected = false;
 
       if (this.pingInterval) {
         clearInterval(this.pingInterval);
@@ -77,13 +90,13 @@ class CharsibotWebSocket {
       if (this.reconnectAttempts < this.maxReconnectAttempts) {
         this.reconnectAttempts++;
         const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts - 1), 10000);
-        console.log(
+        console.debug(
           `Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})...`,
         );
 
         this.reconnectTimeout = setTimeout(() => this.connect(), delay);
       } else {
-        this.error = 'Max reconnect attempts reached';
+        this.#error = 'Max reconnect attempts reached';
         this.reconnectAttempts = 0;
       }
     };
@@ -108,9 +121,9 @@ class CharsibotWebSocket {
       this.ws = null;
     }
 
-    this.connected = false;
-    this.lastMessage = null;
-    this.error = null;
+    this.#connected = false;
+    this.#lastMessage = null;
+    this.#error = null;
   }
 
   /**
@@ -131,5 +144,3 @@ class CharsibotWebSocket {
     return this.ws?.readyState === WebSocket.OPEN;
   }
 }
-
-export const charsibotWebSocket = new CharsibotWebSocket();

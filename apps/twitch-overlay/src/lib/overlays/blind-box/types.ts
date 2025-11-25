@@ -19,13 +19,9 @@ export interface BlindBoxOverlayConfig {
   boxFrontFace: string;
   boxSideFace: string;
   emptyPlushieImage: string;
-  revealSound: string;
 
   displayColor: string;
   textColor: string;
-
-  /** Audio volume (0-100) */
-  audioVolume: number;
 
   /** Array of plushies available in this blind box */
   plushies: PlushieData[];

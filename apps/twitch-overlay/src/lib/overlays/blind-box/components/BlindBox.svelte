@@ -1,241 +1,202 @@
 <script lang="ts">
-  import { charsibotWebSocket } from '$lib/charsibot.svelte';
-  import type { BlindBoxRedemptionEvent, CollectionDisplayEvent } from '$lib/types';
+  import { type BlindBoxRedemptionEvent, type CollectionDisplayEvent } from '$lib/types';
   import type { BlindBoxOverlayConfig, PlushieData } from '../types';
   import Box3D from './Box3D.svelte';
   import PlushieReveal from './PlushieReveal.svelte';
   import DisplayBanner from './DisplayBanner.svelte';
   import CollectionDisplay from './CollectionDisplay.svelte';
   import BackgroundEffects from './BackgroundEffects.svelte';
+  import {
+    BlindBoxQueue,
+    type PlushieDisplayQueueItem,
+    type PlushieRedemptionQueueItem,
+  } from '../queue.svelte';
+  import { CharsibotWebSocket } from '$lib/charsibot.svelte';
 
   interface Props {
-    config: BlindBoxOverlayConfig;
+    configs: BlindBoxOverlayConfig[];
   }
 
-  let { config }: Props = $props();
+  let { configs }: Props = $props();
 
-  let isAnimating = $state(false);
-  let isShowingCollection = $state(false);
-  let showEffects = $state(false);
-  let boxVisible = $state(false);
-  let plushieVisible = $state(false);
-  let displayTextVisible = $state(false);
+  const charsibotWebSocket = new CharsibotWebSocket();
+  charsibotWebSocket.connect();
 
+  type AnimationMode = 'idle' | 'reveal' | 'collection';
+
+  let mode = $state<AnimationMode>('idle');
+  let animationKey = $state(0);
   let currentPlushie = $state<PlushieData | null>(null);
+  let currentConfig = $state<BlindBoxOverlayConfig>();
   let displayMessage = $state('');
   let userCollection = $state<string[]>([]);
-
-  let audioElement: HTMLAudioElement;
-
-  let activeTimers: number[] = [];
+  let audioElement: HTMLAudioElement | undefined = $state();
   let lastProcessedMessage: unknown = null;
 
-  const clearTimers = () => {
-    activeTimers.forEach((timer) => clearTimeout(timer));
-    activeTimers = [];
-  };
+  async function playAudio() {
+    if (!audioElement) return;
 
-  const playAudio = () => {
-    if (audioElement) {
+    try {
+      if (!audioElement.paused) {
+        audioElement.pause();
+      }
       audioElement.currentTime = 0;
-      audioElement.play().catch((error) => {
-        console.warn('Audio playback failed:', error);
-      });
+      await audioElement.play();
+    } catch (error) {
+      console.warn('Audio playback failed:', error);
     }
-  };
+  }
 
-  const playRevealAnimation = async (): Promise<void> => {
+  async function playAnimation(animationMode: AnimationMode): Promise<void> {
     return new Promise((resolve) => {
-      clearTimers();
+      animationKey++;
+      mode = animationMode;
 
-      // Initial state - box appears
-      boxVisible = true;
-      showEffects = true;
-      isAnimating = true;
-      plushieVisible = false;
-      displayTextVisible = false;
-
-      // Show plushie after box opens (1200ms)
-      activeTimers.push(
-        setTimeout(() => {
-          plushieVisible = true;
-        }, 1200) as unknown as number,
-      );
-
-      // Show display text (1500ms)
-      activeTimers.push(
-        setTimeout(() => {
-          displayTextVisible = true;
-        }, 1500) as unknown as number,
-      );
-
-      // Hide effects and display text (5000ms)
-      activeTimers.push(
-        setTimeout(() => {
-          showEffects = false;
-          displayTextVisible = false;
-        }, 5000) as unknown as number,
-      );
-
-      // Hide everything and complete (6500ms)
-      activeTimers.push(
-        setTimeout(() => {
-          boxVisible = false;
-          plushieVisible = false;
-          isAnimating = false;
-          clearTimers();
-          resolve();
-        }, 6500) as unknown as number,
-      );
+      setTimeout(() => {
+        mode = 'idle';
+        currentConfig = undefined;
+        currentPlushie = null;
+        resolve();
+      }, 6500);
     });
-  };
+  }
 
-  const playCollectionAnimation = async (): Promise<void> => {
-    return new Promise((resolve) => {
-      clearTimers();
-
-      // Show collection
-      boxVisible = true;
-      showEffects = true;
-      isShowingCollection = true;
-      displayTextVisible = true;
-      plushieVisible = false;
-
-      // Start hiding effects and text (5000ms)
-      activeTimers.push(
-        setTimeout(() => {
-          showEffects = false;
-          displayTextVisible = false;
-          isShowingCollection = false;
-          boxVisible = false;
-        }, 5000) as unknown as number,
-      );
-
-      // Complete (5500ms)
-      activeTimers.push(
-        setTimeout(() => {
-          clearTimers();
-          resolve();
-        }, 5500) as unknown as number,
-      );
-    });
-  };
-
-  const forceCancel = () => {
-    clearTimers();
-    isShowingCollection = false;
-    boxVisible = false;
-    showEffects = false;
-    displayTextVisible = false;
-    plushieVisible = false;
-    isAnimating = false;
-  };
-
-  const playReveal = async (username: string, plushie: PlushieData, isDuplicate: boolean) => {
-    currentPlushie = plushie;
-    displayMessage = `${username} just got <strong>${plushie.name}</strong>${
-      isDuplicate ? ' (duplicate)' : ''
+  async function playReveal(item: PlushieRedemptionQueueItem) {
+    currentConfig = item.config;
+    userCollection = item.collection;
+    currentPlushie = item.plushie;
+    displayMessage = `${item.username} just got <strong>${item.plushie.name}</strong>${
+      item.isDuplicate ? ' (duplicate)' : ''
     }`;
-    playAudio();
-    await playRevealAnimation();
-  };
+    await playAudio();
+    await playAnimation('reveal');
+  }
 
-  const playCollection = async (username: string) => {
-    displayMessage = `${username}'s ${config.collectionName}`;
+  async function playCollection(item: PlushieDisplayQueueItem) {
+    currentConfig = item.config;
+    userCollection = item.collection;
     currentPlushie = null;
-    await playCollectionAnimation();
+    displayMessage = `${item.username}'s ${item.config.collectionName}`;
+    await playAnimation('collection');
+  }
+
+  const handlers = {
+    onRedemption: async (item: PlushieRedemptionQueueItem) => {
+      await playReveal(item);
+    },
+    onDisplay: async (item: PlushieDisplayQueueItem) => {
+      await playCollection(item);
+    },
   };
 
-  // Listen for WebSocket messages
-  $effect(() => {
-    if (audioElement) {
-      audioElement.volume = config.audioVolume / 100;
+  const queue = new BlindBoxQueue(handlers);
+
+  function handleRedemptionEvent(event: BlindBoxRedemptionEvent) {
+    const config = configs.find((c) => c.collectionType === event.data.collectionType);
+    if (!config) {
+      console.warn('Config not found for collection type:', event.data.collectionType);
+      return;
     }
 
-    const lastMsg = charsibotWebSocket.lastMessage;
-    if (!lastMsg) return;
+    queue.addRedemption({
+      type: 'redemption',
+      username: event.data.username,
+      plushie: {
+        key: event.data.plushie.key,
+        name: event.data.plushie.name,
+        image:
+          config.plushies.find((p) => p.key === event.data.plushie.key)?.image ||
+          config.emptyPlushieImage,
+      },
+      isDuplicate: !event.data.isNew,
+      collection: event.data.collection,
+      config: config,
+    });
 
-    if (lastMsg === lastProcessedMessage) return;
+    queue.processNext();
+  }
+
+  function handleDisplayEvent(event: CollectionDisplayEvent) {
+    const config = configs.find((c) => c.collectionType === event.data.collectionType);
+    if (!config) {
+      console.warn('Config not found for collection type:', event.data.collectionType);
+      return;
+    }
+
+    queue.addDisplay({
+      type: 'display',
+      username: event.data.username,
+      collection: event.data.collection,
+      config: config,
+    });
+
+    queue.processNext();
+  }
+
+  $effect(() => {
+    const lastMsg = charsibotWebSocket.lastMessage;
+    if (!lastMsg || lastMsg === lastProcessedMessage) return;
+
+    lastProcessedMessage = lastMsg;
 
     if (lastMsg.type === 'blindbox_redemption') {
-      const event = lastMsg as BlindBoxRedemptionEvent;
-
-      // Only handle events for this collection type
-      if (event.data.collectionType !== config.collectionType) return;
-
-      // Don't interrupt another animation
-      if (isAnimating) return;
-
-      lastProcessedMessage = lastMsg;
-
-      // Force cancel any collection display
-      forceCancel();
-
-      // Wait for cleanup
-      setTimeout(async () => {
-        const plushie: PlushieData = {
-          key: event.data.plushie.key,
-          name: event.data.plushie.name,
-          image: config.plushies.find((p) => p.key === event.data.plushie.key)?.image || '',
-        };
-
-        userCollection = event.data.collection;
-        await playReveal(event.data.username, plushie, !event.data.isNew);
-      }, 500);
+      handleRedemptionEvent(lastMsg as BlindBoxRedemptionEvent);
+    } else if (lastMsg.type === 'collection_display') {
+      handleDisplayEvent(lastMsg as CollectionDisplayEvent);
     }
+  });
 
-    // Handle collection display events
-    if (lastMsg.type === 'collection_display') {
-      const event = lastMsg as CollectionDisplayEvent;
-
-      // Only handle events for this collection type
-      if (event.data.collectionType !== config.collectionType) return;
-
-      // Don't start if already animating or showing collection
-      if (isAnimating || isShowingCollection) return;
-
-      lastProcessedMessage = lastMsg;
-
-      userCollection = event.data.collection;
-      playCollection(event.data.username);
-    }
+  $effect(() => {
+    return () => {
+      queue.clear();
+      audioElement?.pause();
+      charsibotWebSocket.disconnect();
+    };
   });
 </script>
 
-<audio bind:this={audioElement} src={config.revealSound} preload="auto"></audio>
+{#if currentConfig}
+  <audio bind:this={audioElement} src="/blind-box-reveal.mp3" volume={0.5} preload="auto"></audio>
 
-<div class="scene">
-  <BackgroundEffects show={showEffects} />
+  {#key animationKey}
+    <div class="scene" class:reveal={mode === 'reveal'} class:collection={mode === 'collection'}>
+      <BackgroundEffects show={mode !== 'idle'} />
 
-  <div class="content-wrapper" class:with-plushie={currentPlushie !== null}>
-    <Box3D
-      boxFrontFace={config.boxFrontFace}
-      boxSideFace={config.boxSideFace}
-      {isAnimating}
-      visible={boxVisible}
-    >
-      <div class="plushie-container">
-        <PlushieReveal plushie={currentPlushie} {isAnimating} visible={plushieVisible} />
+      <div class="content-wrapper" class:with-plushie={currentPlushie !== null}>
+        <Box3D
+          boxFrontFace={currentConfig.boxFrontFace}
+          boxSideFace={currentConfig.boxSideFace}
+          isAnimating={mode === 'reveal'}
+          visible={mode !== 'idle'}
+        >
+          <div class="plushie-container">
+            <PlushieReveal
+              plushie={currentPlushie}
+              isAnimating={mode === 'reveal'}
+              visible={mode !== 'idle'}
+            />
+          </div>
+        </Box3D>
+
+        <div class="text-collection-container">
+          <DisplayBanner
+            message={displayMessage}
+            displayColor={currentConfig.displayColor}
+            textColor={currentConfig.textColor}
+            visible={mode !== 'idle'}
+          />
+
+          <CollectionDisplay
+            plushies={currentConfig.plushies}
+            {userCollection}
+            emptyPlushieImage={currentConfig.emptyPlushieImage}
+            visible={mode !== 'idle'}
+          />
+        </div>
       </div>
-    </Box3D>
-
-    <div class="text-collection-container" class:visible={displayTextVisible}>
-      <DisplayBanner
-        message={displayMessage}
-        displayColor={config.displayColor}
-        textColor={config.textColor}
-        visible={displayTextVisible}
-      />
-
-      <CollectionDisplay
-        plushies={config.plushies}
-        {userCollection}
-        emptyPlushieImage={config.emptyPlushieImage}
-        visible={isAnimating || isShowingCollection}
-      />
     </div>
-  </div>
-</div>
+  {/key}
+{/if}
 
 <style>
   :global(body) {
@@ -292,15 +253,32 @@
     gap: 10px;
     opacity: 0;
     transform: translateY(20px);
-    transition:
-      opacity 0.6s,
-      transform 0.6s;
     pointer-events: none;
   }
 
-  .text-collection-container:global(.visible) {
-    opacity: 1;
-    transform: translateY(0);
-    pointer-events: auto;
+  .scene.reveal .text-collection-container {
+    animation:
+      fadeInText 0.6s ease-out 1.5s forwards,
+      fadeOutText 0.6s ease-out 6s forwards;
+  }
+
+  .scene.collection .text-collection-container {
+    animation:
+      fadeInText 0.6s ease-out 0.05s forwards,
+      fadeOutText 0.6s ease-out 6s forwards;
+  }
+
+  @keyframes fadeInText {
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes fadeOutText {
+    to {
+      opacity: 0;
+      transform: translateY(20px);
+    }
   }
 </style>
