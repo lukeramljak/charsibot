@@ -23,9 +23,7 @@ const createBlindBoxCommands = (): Command[] => {
   const commands: Command[] = [];
 
   for (const config of blindBoxConfigs) {
-    if (config.enabled) {
-      commands.push(new RedeemBlindBoxCommand(config), new ShowBlindBoxCollectionCommand(config));
-    }
+    commands.push(new RedeemBlindBoxCommand(config), new ShowBlindBoxCollectionCommand(config));
   }
 
   return commands;
@@ -35,9 +33,7 @@ const createBlindBoxRedemptions = (): Redemption[] => {
   const redemptions: Redemption[] = [];
 
   for (const config of blindBoxConfigs) {
-    if (config.enabled) {
-      redemptions.push(new BlindBoxRedemption(config));
-    }
+    redemptions.push(new BlindBoxRedemption(config));
   }
 
   return redemptions;

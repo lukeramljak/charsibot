@@ -24,7 +24,6 @@ export type PlushiesMap = {
 };
 
 export interface BlindBoxConfig {
-  enabled: boolean;
   /** Collection type identifier for database storage */
   collectionType: CollectionType;
   /** Channel point reward name in Twitch */

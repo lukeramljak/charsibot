@@ -2,7 +2,6 @@ import type { BlindBoxConfig } from '@/blind-box/types';
 
 export const blindBoxConfigs: BlindBoxConfig[] = [
   {
-    enabled: true,
     collectionType: 'coobubu',
     moderatorCommand: 'coobubu-redeem',
     collectionDisplayCommand: 'coobubu',
@@ -19,7 +18,6 @@ export const blindBoxConfigs: BlindBoxConfig[] = [
     },
   },
   {
-    enabled: true,
     collectionType: 'olliepop',
     moderatorCommand: 'olliepop-redeem',
     collectionDisplayCommand: 'olliepop',
