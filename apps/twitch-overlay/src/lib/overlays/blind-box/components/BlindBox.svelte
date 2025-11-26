@@ -155,9 +155,9 @@
   });
 </script>
 
-{#if currentConfig}
-  <audio bind:this={audioElement} src="/blind-box-reveal.mp3" volume={0.5} preload="auto"></audio>
+<audio bind:this={audioElement} src="/blind-box-reveal.mp3" volume={0.5} preload="auto"></audio>
 
+{#if currentConfig}
   {#key animationKey}
     <div class="scene" class:reveal={mode === 'reveal'} class:collection={mode === 'collection'}>
       <BackgroundEffects show={mode !== 'idle'} />
