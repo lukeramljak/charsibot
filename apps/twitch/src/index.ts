@@ -5,6 +5,7 @@ import { RedeemBlindBoxCommand } from '@/commands/blind-box/redeem-blind-box';
 import { ShowBlindBoxCollectionCommand } from '@/commands/blind-box/show-blind-box-collection';
 import type { Command } from '@/commands/command';
 import { ModifyStatCommand } from '@/commands/stats/modify-stat';
+import { StatLeaderboardCommand } from '@/commands/stats/stat-leaderboard';
 import { StatsCommand } from '@/commands/stats/stats';
 import { loadConfig } from '@/config';
 import { CommandHandler } from '@/events/command-handler';
@@ -49,6 +50,7 @@ const main = async () => {
     ...createBlindBoxCommands(),
     new CompletedCollectionsCommand(),
     new ModifyStatCommand(),
+    new StatLeaderboardCommand(),
     new StatsCommand(),
   ];
   const redemptions: Redemption[] = [

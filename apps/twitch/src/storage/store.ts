@@ -263,4 +263,24 @@ export class Store {
       usernames: r.usernamesCsv?.split(',') ?? [],
     }));
   }
+
+  async getStatLeaderboard() {
+    return this.db
+      .select({
+        top_strength_username: sql<string>`(SELECT username FROM ${statsTable} ORDER BY strength DESC LIMIT 1)`,
+        top_strength_value: sql<number>`(SELECT strength FROM ${statsTable} ORDER BY strength DESC LIMIT 1)`,
+        top_intelligence_username: sql<string>`(SELECT username FROM ${statsTable} ORDER BY intelligence DESC LIMIT 1)`,
+        top_intelligence_value: sql<number>`(SELECT intelligence FROM ${statsTable} ORDER BY intelligence DESC LIMIT 1)`,
+        top_charisma_username: sql<string>`(SELECT username FROM ${statsTable} ORDER BY charisma DESC LIMIT 1)`,
+        top_charisma_value: sql<number>`(SELECT charisma FROM ${statsTable} ORDER BY charisma DESC LIMIT 1)`,
+        top_luck_username: sql<string>`(SELECT username FROM ${statsTable} ORDER BY luck DESC LIMIT 1)`,
+        top_luck_value: sql<number>`(SELECT luck FROM ${statsTable} ORDER BY luck DESC LIMIT 1)`,
+        top_dexterity_username: sql<string>`(SELECT username FROM ${statsTable} ORDER BY dexterity DESC LIMIT 1)`,
+        top_dexterity_value: sql<number>`(SELECT dexterity FROM ${statsTable} ORDER BY dexterity DESC LIMIT 1)`,
+        top_penis_username: sql<string>`(SELECT username FROM ${statsTable} ORDER BY penis DESC LIMIT 1)`,
+        top_penis_value: sql<number>`(SELECT penis FROM ${statsTable} ORDER BY penis DESC LIMIT 1)`,
+      })
+      .from(statsTable)
+      .limit(1);
+  }
 }
