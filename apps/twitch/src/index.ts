@@ -1,5 +1,6 @@
 import { blindBoxConfigs } from '@/blind-box/configs';
 import { Bot } from '@/bot/bot';
+import { CompletedCollectionsCommand } from '@/commands/blind-box/completed-collections';
 import { RedeemBlindBoxCommand } from '@/commands/blind-box/redeem-blind-box';
 import { ShowBlindBoxCollectionCommand } from '@/commands/blind-box/show-blind-box-collection';
 import type { Command } from '@/commands/command';
@@ -46,6 +47,7 @@ const main = async () => {
 
   const commands: Command[] = [
     ...createBlindBoxCommands(),
+    new CompletedCollectionsCommand(),
     new ModifyStatCommand(),
     new StatsCommand(),
   ];

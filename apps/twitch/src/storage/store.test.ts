@@ -117,4 +117,35 @@ describe('Store', () => {
       expect(bobStats.strength).toBe(23);
     });
   });
+
+  describe('collections', () => {
+    it('returns collectionType -> usernames[] only when all rewards are true', async () => {
+      sqlite
+        .query(
+          `
+      INSERT INTO user_collections
+        (username, collection_type,
+         reward1, reward2, reward3, reward4,
+         reward5, reward6, reward7, reward8)
+      VALUES
+        ('alice', 'coobubu',   1,1,1,1,1,1,1,1),
+        ('bob',   'coobubu',   1,1,1,1,1,1,1,1),
+        ('clown', 'coobubu',   1,1,1,1,1,1,1,0), -- fails last reward
+        ('xena',  'olliepop',  1,1,1,1,1,1,1,1),
+        ('yuri',  'olliepop',  1,1,0,1,1,1,1,1)  -- fails reward3
+    `,
+        )
+        .run();
+
+      const rows = await store.getCompletedCollections();
+
+      expect(rows.length).toBe(2);
+
+      const coobubu = rows.find((r) => r.collectionType === 'coobubu');
+      const olliepop = rows.find((r) => r.collectionType === 'olliepop');
+
+      expect(coobubu?.usernames.sort()).toEqual(['alice', 'bob']);
+      expect(olliepop?.usernames).toEqual(['xena']);
+    });
+  });
 });

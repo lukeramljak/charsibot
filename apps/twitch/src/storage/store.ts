@@ -235,4 +235,32 @@ export class Store {
       log.error({ error }, 'addPlushieToCollection');
     }
   }
+
+  async getCompletedCollections() {
+    const rows = await this.db
+      .select({
+        collectionType: userCollectionsTable.collectionType,
+        usernamesCsv: sql<string>`group_concat(${userCollectionsTable.username}, ',')`,
+      })
+      .from(userCollectionsTable)
+      .where(
+        sql`
+      (${userCollectionsTable.reward1},
+       ${userCollectionsTable.reward2},
+       ${userCollectionsTable.reward3},
+       ${userCollectionsTable.reward4},
+       ${userCollectionsTable.reward5},
+       ${userCollectionsTable.reward6},
+       ${userCollectionsTable.reward7},
+       ${userCollectionsTable.reward8})
+       = (1,1,1,1,1,1,1,1)
+    `,
+      )
+      .groupBy(userCollectionsTable.collectionType);
+
+    return rows.map((r) => ({
+      collectionType: r.collectionType,
+      usernames: r.usernamesCsv?.split(',') ?? [],
+    }));
+  }
 }
