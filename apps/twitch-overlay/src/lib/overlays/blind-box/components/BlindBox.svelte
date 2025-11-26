@@ -150,7 +150,6 @@
     return () => {
       queue.clear();
       audioElement?.pause();
-      charsibotWebSocket.disconnect();
     };
   });
 </script>
