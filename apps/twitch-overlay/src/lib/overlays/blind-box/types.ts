@@ -16,6 +16,8 @@ export interface BlindBoxOverlayConfig {
   /** Name of the blind box collection to be displayed (e.g. "Coobubus") */
   collectionName: string;
 
+  revealSound: string;
+
   boxFrontFace: string;
   boxSideFace: string;
   emptyPlushieImage: string;

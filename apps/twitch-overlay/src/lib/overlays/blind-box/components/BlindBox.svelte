@@ -33,10 +33,11 @@
   let audioElement: HTMLAudioElement | undefined = $state();
   let lastProcessedMessage: unknown = null;
 
-  async function playAudio() {
+  async function playAudio(sound: string) {
     if (!audioElement) return;
 
     try {
+      audioElement.src = sound;
       if (!audioElement.paused) {
         audioElement.pause();
       }
@@ -68,7 +69,7 @@
     displayMessage = `${item.username} just got <strong>${item.plushie.name}</strong>${
       item.isDuplicate ? ' (duplicate)' : ''
     }`;
-    await playAudio();
+    await playAudio(item.config.revealSound);
     await playAnimation('reveal');
   }
 
@@ -154,7 +155,7 @@
   });
 </script>
 
-<audio bind:this={audioElement} src="/blind-box-reveal.mp3" volume={0.5} preload="auto"></audio>
+<audio bind:this={audioElement}></audio>
 
 {#if currentConfig}
   {#key animationKey}
