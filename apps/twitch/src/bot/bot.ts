@@ -4,10 +4,10 @@ import type { CommandHandler } from '@/events/command-handler';
 import type { MessageHandler } from '@/events/message-handler';
 import type { RedemptionHandler } from '@/events/redemption-handler';
 import { log } from '@/logger';
-import { Store } from '@/storage/store';
+import { Store, type TokenType } from '@/storage/store';
 import { WebSocketServer } from '@/websocket/websocket';
 import { ApiClient } from '@twurple/api';
-import { RefreshingAuthProvider } from '@twurple/auth';
+import { RefreshingAuthProvider, type AccessToken } from '@twurple/auth';
 import type {
   EventSubChannelChatMessageEvent,
   EventSubChannelRedemptionAddEvent,
@@ -29,10 +29,11 @@ export class Bot {
   private messageHandler: MessageHandler;
   private redemptionHandler: RedemptionHandler;
   public api: ApiClient;
-  private listener: EventSubWsListener;
+  private listener?: EventSubWsListener;
   private mockListener?: MockEventSubListener;
   private authProvider: RefreshingAuthProvider;
   public wsServer: WebSocketServer;
+  private isRunning = false;
 
   constructor({ config, store, commandHandler, messageHandler, redemptionHandler }: BotConfig) {
     this.config = config;
@@ -41,90 +42,158 @@ export class Bot {
     this.messageHandler = messageHandler;
     this.redemptionHandler = redemptionHandler;
     this.wsServer = new WebSocketServer(config.wsPort);
-    this.authProvider = new RefreshingAuthProvider({
-      clientId: config.clientId,
-      clientSecret: config.clientSecret,
+    this.authProvider = this.createAuthProvider();
+    this.api = this.createApiClient();
+  }
+
+  async init(): Promise<void> {
+    if (this.isRunning) {
+      log.warn('bot already running');
+      return;
+    }
+
+    try {
+      await this.store.init();
+      await this.refreshTokens();
+      await this.initialiseEventSub();
+      this.wsServer.start();
+
+      this.isRunning = true;
+      log.info('bot ready');
+    } catch (error) {
+      log.error({ error }, 'bot initialisation failed');
+      await this.shutdown();
+      throw error;
+    }
+  }
+
+  async shutdown(): Promise<void> {
+    if (!this.isRunning) {
+      return;
+    }
+
+    log.info('shutting down bot');
+
+    try {
+      this.listener?.stop();
+      this.mockListener?.stop();
+      this.wsServer.stop();
+    } catch (error) {
+      log.error({ error }, 'shutdown error');
+    } finally {
+      this.isRunning = false;
+      log.info('bot stopped');
+    }
+  }
+
+  private async initialiseEventSub(): Promise<void> {
+    if (this.config.useMockServer) {
+      await this.startMockEventSub();
+    } else {
+      await this.startEventSub();
+    }
+  }
+
+  private createAuthProvider(): RefreshingAuthProvider {
+    const provider = new RefreshingAuthProvider({
+      clientId: this.config.clientId,
+      clientSecret: this.config.clientSecret,
     });
 
-    this.authProvider.onRefresh(async (userId, tokenData) => {
-      if (!tokenData.refreshToken) return;
-
-      if (userId === this.config.channelUserId) {
-        await this.store.saveTokens('streamer', tokenData.accessToken, tokenData.refreshToken);
-        log.info({ userId }, 'streamer tokens refreshed');
-      }
-
-      if (userId === this.config.botUserId) {
-        await this.store.saveTokens('bot', tokenData.accessToken, tokenData.refreshToken);
-        log.info({ userId }, 'bot tokens refreshed');
-      }
+    provider.onRefresh(async (userId, tokenData) => {
+      await this.handleTokenRefresh(userId, tokenData);
     });
 
-    this.authProvider.addUserForToken({
-      accessToken: config.streamerAccessToken,
-      refreshToken: config.streamerRefreshToken,
+    provider.addUser(this.config.channelUserId, {
+      accessToken: this.config.streamerAccessToken,
+      refreshToken: this.config.streamerRefreshToken,
       expiresIn: 0,
       obtainmentTimestamp: 0,
     });
 
-    if (config.botUserId !== config.channelUserId) {
-      this.authProvider.addUserForToken({
-        accessToken: config.botAccessToken,
-        refreshToken: config.botRefreshToken,
-        expiresIn: 0,
-        obtainmentTimestamp: 0,
-      });
-    }
+    provider.addUser(this.config.botUserId, {
+      accessToken: this.config.botAccessToken,
+      refreshToken: this.config.botRefreshToken,
+      expiresIn: 0,
+      obtainmentTimestamp: 0,
+    });
 
-    this.api = new ApiClient({ authProvider: this.authProvider });
-    this.listener = new EventSubWsListener({ apiClient: this.api });
+    return provider;
   }
 
-  async init() {
-    await this.store.init();
-    log.info('store ready');
+  private createApiClient(): ApiClient {
+    return new ApiClient({
+      authProvider: this.authProvider,
+      logger: {
+        custom: {
+          log: (_, message) => log.info(message),
+          debug: (message) => log.debug(message),
+          info: (message) => log.info(message),
+          warn: (message) => log.warn(message),
+          error: (message) => log.error(message),
+        },
+      },
+    });
+  }
 
-    this.wsServer.start();
-    log.info('websocket server ready');
+  private async handleTokenRefresh(userId: string, tokenData: AccessToken): Promise<void> {
+    if (!tokenData.refreshToken) {
+      log.warn({ userId }, 'no refresh token provided');
+      return;
+    }
 
-    await this.refreshTokens();
+    const tokenType: TokenType = userId === this.config.channelUserId ? 'streamer' : 'bot';
+    await this.store.saveTokens(tokenType, tokenData.accessToken, tokenData.refreshToken);
+    log.info({ userId }, `${tokenType} tokens refreshed`);
+  }
+
+  private async refreshTokens(): Promise<void> {
+    Promise.all([
+      await this.authProvider.getAccessTokenForUser(this.config.channelUserId),
+      await this.authProvider.getAccessTokenForUser(this.config.botUserId),
+    ]);
     log.info('tokens initialised');
-
-    if (this.config.useMockServer) {
-      this.mockListener = new MockEventSubListener({
-        url: 'ws://127.0.0.1:8080/ws',
-        onRedemption: async (event) => {
-          await this.onChannelPointRedemption(event);
-        },
-      });
-      this.mockListener.start();
-      log.info('mock eventsub started');
-    } else {
-      this.listener.onChannelChatMessage(
-        this.config.channelUserId,
-        this.config.channelUserId,
-        async (event) => {
-          return this.onMessage(event);
-        },
-      );
-
-      this.listener.onChannelRedemptionAdd(this.config.channelUserId, async (event) => {
-        return this.onChannelPointRedemption(event);
-      });
-
-      try {
-        this.listener.start();
-        log.info('eventsub started');
-      } catch (err) {
-        log.error({ err }, 'eventsub start failed');
-      }
-    }
-
-    log.info('bot ready');
   }
 
-  public getId(): string {
-    return this.config.botUserId;
+  private async startMockEventSub(): Promise<void> {
+    this.mockListener = new MockEventSubListener({
+      url: 'ws://127.0.0.1:8080/ws',
+      onRedemption: async (event) => {
+        await this.onChannelPointRedemption(event);
+      },
+    });
+
+    this.mockListener.start();
+    log.info('mock eventsub started');
+  }
+
+  private async startEventSub(): Promise<void> {
+    this.listener = new EventSubWsListener({
+      apiClient: this.api,
+      logger: {
+        custom: {
+          log: (_, message) => log.info(message),
+          debug: (message) => log.debug(message),
+          info: (message) => log.info(message),
+          warn: (message) => log.warn(message),
+          error: (message) => log.error(message),
+        },
+      },
+    });
+
+    this.listener.onChannelChatMessage(
+      this.config.channelUserId,
+      this.config.channelUserId,
+      async (event) => {
+        await this.onMessage(event);
+      },
+    );
+
+    this.listener.onChannelRedemptionAdd(this.config.channelUserId, async (event) => {
+      await this.onChannelPointRedemption(event);
+    });
+
+    this.listener.start();
   }
 
   private async onMessage(event: EventSubChannelChatMessageEvent): Promise<void> {
@@ -144,35 +213,21 @@ export class Bot {
     }
   }
 
-  private async refreshTokens() {
-    const userIds = [this.config.channelUserId];
-    if (this.config.botUserId !== this.config.channelUserId) {
-      userIds.push(this.config.botUserId);
-    }
-
-    const promises = userIds.map((userId) => {
-      return new Promise<void>((resolve) => {
-        const checkToken = async () => {
-          const token = await this.authProvider.getAccessTokenForUser(userId);
-          if (token) {
-            resolve();
-          } else {
-            setTimeout(checkToken, 100);
-          }
-        };
-        checkToken();
-      });
-    });
-
-    await Promise.all(promises);
+  public getId(): string {
+    return this.config.botUserId;
   }
 
-  async sendMessage(message: string, replyParentMessageId?: string) {
+  async sendMessage(message: string, replyParentMessageId?: string): Promise<void> {
+    if (!this.isRunning) {
+      throw new Error('bot not running');
+    }
+
     await this.api.asUser(this.config.botUserId, async (ctx) => {
       await ctx.chat.sendChatMessage(this.config.channelUserId, message, {
         replyParentMessageId,
       });
     });
+
     log.debug({ message }, 'message sent');
   }
 }

@@ -13,7 +13,7 @@ interface Tokens {
   refreshToken: string;
 }
 
-type TokenType = 'bot' | 'streamer';
+export type TokenType = 'bot' | 'streamer';
 
 const REWARD_COLUMNS = [
   'reward1',
@@ -36,6 +36,7 @@ export class Store {
 
   async init() {
     this.db.run('PRAGMA journal_mode = WAL;');
+    log.info('storage ready');
   }
 
   async getTokens(tokenType: TokenType): Promise<Tokens | null> {
