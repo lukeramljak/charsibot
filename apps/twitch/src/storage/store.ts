@@ -112,45 +112,24 @@ export class Store {
       .where(eq(statsTable.id, userId));
   }
 
-  async getUserCollections(
-    userId: string,
-    collectionType: CollectionType,
-  ): Promise<string[] | undefined> {
-    try {
-      const [result] = await this.db
-        .select({
-          reward1: userCollectionsTable.reward1,
-          reward2: userCollectionsTable.reward2,
-          reward3: userCollectionsTable.reward3,
-          reward4: userCollectionsTable.reward4,
-          reward5: userCollectionsTable.reward5,
-          reward6: userCollectionsTable.reward6,
-          reward7: userCollectionsTable.reward7,
-          reward8: userCollectionsTable.reward8,
-        })
-        .from(userCollectionsTable)
-        .where(
-          and(
-            eq(userCollectionsTable.userId, userId),
-            eq(userCollectionsTable.collectionType, collectionType),
-          ),
-        );
+  async getUserCollections(userId: string, collectionType: CollectionType): Promise<string[]> {
+    const [result] = await this.db
+      .select()
+      .from(userCollectionsTable)
+      .where(
+        and(
+          eq(userCollectionsTable.userId, userId),
+          eq(userCollectionsTable.collectionType, collectionType),
+        ),
+      );
 
-      const collection: string[] = [];
-      if (result) {
-        // Convert boolean columns to array of reward keys
-        for (const column of REWARD_COLUMNS) {
-          if (result[column]) {
-            collection.push(column);
-          }
-        }
-      }
+    if (!result) return [];
 
-      log.info(`getUserCollection - Success: ${collection.length} items found`);
-      return collection;
-    } catch (error) {
-      log.error({ error }, 'getUserCollection');
-    }
+    const collection = REWARD_COLUMNS.filter((col) => result[col] === 1);
+
+    log.info(`getUserCollection - Success: ${collection.length} items found`);
+
+    return collection;
   }
 
   async addPlushieToCollection(
@@ -163,93 +142,55 @@ export class Store {
       `addPlushieToCollection - userId: ${userId}, username: ${username}, collectionType: ${collectionType}, rewardColumn: ${rewardColumn}`,
     );
 
-    try {
-      // Check if user already has this reward
-      const [existingResult] = await this.db
-        .select()
-        .from(userCollectionsTable)
-        .where(
-          and(
-            eq(userCollectionsTable.userId, userId),
-            eq(userCollectionsTable.collectionType, collectionType),
-          ),
-        );
-
-      const alreadyHas =
-        existingResult && existingResult[rewardColumn as keyof typeof existingResult] === 1;
-
-      if (!alreadyHas) {
-        log.info(`addPlushieToCollection - Adding new plushie: ${rewardColumn}`);
-
-        // Insert or update the user's collection
-        await this.db
-          .insert(userCollectionsTable)
-          .values({
-            userId,
-            username,
-            collectionType,
-            [rewardColumn]: 1,
-          })
-          .onConflictDoUpdate({
-            target: [userCollectionsTable.userId, userCollectionsTable.collectionType],
-            set: { [rewardColumn]: 1, username },
-          });
-      } else {
-        log.info(`addPlushieToCollection - Plushie already exists: ${rewardColumn}`);
-      }
-
-      // Get updated collection
-      const [updatedResult] = await this.db
-        .select({
-          reward1: userCollectionsTable.reward1,
-          reward2: userCollectionsTable.reward2,
-          reward3: userCollectionsTable.reward3,
-          reward4: userCollectionsTable.reward4,
-          reward5: userCollectionsTable.reward5,
-          reward6: userCollectionsTable.reward6,
-          reward7: userCollectionsTable.reward7,
-          reward8: userCollectionsTable.reward8,
-        })
-        .from(userCollectionsTable)
-        .where(
-          and(
-            eq(userCollectionsTable.userId, userId),
-            eq(userCollectionsTable.collectionType, collectionType),
-          ),
-        );
-
-      const collection: string[] = [];
-      if (updatedResult) {
-        for (const column of REWARD_COLUMNS) {
-          if (updatedResult[column]) {
-            collection.push(column);
-          }
-        }
-      }
-
-      log.info(
-        `addPlushieToCollection - Success: ${collection.length} items, isNew: ${!alreadyHas}`,
+    const [existing] = await this.db
+      .select()
+      .from(userCollectionsTable)
+      .where(
+        and(
+          eq(userCollectionsTable.userId, userId),
+          eq(userCollectionsTable.collectionType, collectionType),
+        ),
       );
 
-      return { collection, isNew: !alreadyHas };
-    } catch (error) {
-      log.error({ error }, 'addPlushieToCollection');
+    const alreadyHas = existing?.[rewardColumn] === 1;
+
+    if (!alreadyHas) {
+      log.info(`addPlushieToCollection - Adding new plushie: ${rewardColumn}`);
+
+      await this.db
+        .insert(userCollectionsTable)
+        .values({
+          userId,
+          username,
+          collectionType,
+          [rewardColumn]: 1,
+        })
+        .onConflictDoUpdate({
+          target: [userCollectionsTable.userId, userCollectionsTable.collectionType],
+          set: { [rewardColumn]: 1, username },
+        });
+    } else {
+      log.info(`addPlushieToCollection - Plushie already exists: ${rewardColumn}`);
     }
+
+    let collection: string[];
+    if (alreadyHas && existing) {
+      collection = REWARD_COLUMNS.filter((col) => existing[col] === 1);
+    } else {
+      collection = await this.getUserCollections(userId, collectionType);
+    }
+
+    log.info(`addPlushieToCollection - Success: ${collection.length} items, isNew: ${!alreadyHas}`);
+
+    return { collection, isNew: !alreadyHas };
   }
 
   async resetUserCollection(userId: string, collectionType: CollectionType) {
+    const resetValues = Object.fromEntries(REWARD_COLUMNS.map((col) => [col, 0]));
+
     return this.db
       .update(userCollectionsTable)
-      .set({
-        reward1: 0,
-        reward2: 0,
-        reward3: 0,
-        reward4: 0,
-        reward5: 0,
-        reward6: 0,
-        reward7: 0,
-        reward8: 0,
-      })
+      .set(resetValues)
       .where(
         and(
           eq(userCollectionsTable.userId, userId),

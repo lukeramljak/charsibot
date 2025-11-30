@@ -1,3 +1,4 @@
+import { userCollectionsTable } from '@/storage/schema';
 import { Store } from '@/storage/store';
 import { Database } from 'bun:sqlite';
 import { beforeEach, describe, expect, it } from 'bun:test';
@@ -120,48 +121,106 @@ describe('Store', () => {
 
   describe('collections', () => {
     it('returns collectionType -> usernames[] only when all rewards are true', async () => {
-      sqlite
-        .query(
-          `
-      INSERT INTO user_collections
-        (username, collection_type,
-         reward1, reward2, reward3, reward4,
-         reward5, reward6, reward7, reward8)
-      VALUES
-        ('alice', 'coobubu',   1,1,1,1,1,1,1,1),
-        ('bob',   'coobubu',   1,1,1,1,1,1,1,1),
-        ('clown', 'coobubu',   1,1,1,1,1,1,1,0), -- fails last reward
-        ('xena',  'olliepop',  1,1,1,1,1,1,1,1),
-        ('yuri',  'olliepop',  1,1,0,1,1,1,1,1)  -- fails reward3
-    `,
-        )
-        .run();
+      await store.db.insert(userCollectionsTable).values([
+        {
+          username: 'alice',
+          collectionType: 'coobubu',
+          reward1: 1,
+          reward2: 1,
+          reward3: 1,
+          reward4: 1,
+          reward5: 1,
+          reward6: 1,
+          reward7: 1,
+          reward8: 1,
+        },
+        {
+          username: 'bob',
+          collectionType: 'coobubu',
+          reward1: 1,
+          reward2: 1,
+          reward3: 1,
+          reward4: 1,
+          reward5: 1,
+          reward6: 1,
+          reward7: 1,
+          reward8: 1,
+        },
+        {
+          username: 'clown',
+          collectionType: 'coobubu',
+          reward1: 1,
+          reward2: 1,
+          reward3: 1,
+          reward4: 1,
+          reward5: 1,
+          reward6: 1,
+          reward7: 1,
+          reward8: 0,
+        }, // fails last reward
+        {
+          username: 'xena',
+          collectionType: 'olliepop',
+          reward1: 1,
+          reward2: 1,
+          reward3: 1,
+          reward4: 1,
+          reward5: 1,
+          reward6: 1,
+          reward7: 1,
+          reward8: 1,
+        },
+        {
+          username: 'yuri',
+          collectionType: 'olliepop',
+          reward1: 1,
+          reward2: 1,
+          reward3: 0,
+          reward4: 1,
+          reward5: 1,
+          reward6: 1,
+          reward7: 1,
+          reward8: 1,
+        }, // fails reward3
+      ]);
 
       const rows = await store.getCompletedCollections();
-
       expect(rows.length).toBe(2);
-
       const coobubu = rows.find((r) => r.collectionType === 'coobubu');
       const olliepop = rows.find((r) => r.collectionType === 'olliepop');
-
       expect(coobubu?.usernames.sort()).toEqual(['alice', 'bob']);
       expect(olliepop?.usernames).toEqual(['xena']);
     });
 
     it('resets user collections', async () => {
-      sqlite
-        .query(
-          `
-      INSERT INTO user_collections
-        (user_id, username, collection_type,
-         reward1, reward2, reward3, reward4,
-         reward5, reward6, reward7, reward8)
-      VALUES
-        ('1', 'alice', 'coobubu', 1,1,1,1,1,1,1,1),
-        ('2', 'bob',   'coobubu', 1,1,1,1,1,1,1,1);
-    `,
-        )
-        .run();
+      await store.db.insert(userCollectionsTable).values([
+        {
+          userId: '1',
+          username: 'alice',
+          collectionType: 'coobubu',
+          reward1: 1,
+          reward2: 1,
+          reward3: 1,
+          reward4: 1,
+          reward5: 1,
+          reward6: 1,
+          reward7: 1,
+          reward8: 1,
+        },
+        {
+          userId: '2',
+          username: 'bob',
+          collectionType: 'coobubu',
+          reward1: 1,
+          reward2: 1,
+          reward3: 1,
+          reward4: 1,
+          reward5: 1,
+          reward6: 1,
+          reward7: 1,
+          reward8: 1,
+        },
+      ]);
 
       const collectionBefore = await store.getUserCollections('1', 'coobubu');
       expect(collectionBefore).toEqual([
@@ -179,6 +238,82 @@ describe('Store', () => {
 
       const collectionAfter = await store.getUserCollections('1', 'coobubu');
       expect(collectionAfter).toEqual([]);
+    });
+
+    it('adds plushie to collection - new reward', async () => {
+      await store.db.insert(userCollectionsTable).values({
+        userId: '1',
+        username: 'alice',
+        collectionType: 'coobubu',
+        reward1: 1,
+        reward2: 0,
+        reward3: 0,
+        reward4: 0,
+        reward5: 0,
+        reward6: 0,
+        reward7: 0,
+        reward8: 0,
+      });
+
+      const result = await store.addPlushieToCollection('1', 'alice', 'coobubu', 'reward2');
+
+      expect(result).toBeDefined();
+      expect(result?.isNew).toBe(true);
+      expect(result?.collection).toEqual(['reward1', 'reward2']);
+    });
+
+    it('adds plushie to collection - existing reward', async () => {
+      await store.db.insert(userCollectionsTable).values({
+        userId: '1',
+        username: 'alice',
+        collectionType: 'coobubu',
+        reward1: 1,
+        reward2: 1,
+        reward3: 0,
+        reward4: 0,
+        reward5: 0,
+        reward6: 0,
+        reward7: 0,
+        reward8: 0,
+      });
+
+      const result = await store.addPlushieToCollection('1', 'alice', 'coobubu', 'reward1');
+
+      expect(result).toBeDefined();
+      expect(result?.isNew).toBe(false);
+      expect(result?.collection).toEqual(['reward1', 'reward2']);
+    });
+
+    it('adds plushie to collection - first reward for user', async () => {
+      const result = await store.addPlushieToCollection('999', 'newuser', 'coobubu', 'reward3');
+
+      expect(result).toBeDefined();
+      expect(result?.isNew).toBe(true);
+      expect(result?.collection).toEqual(['reward3']);
+    });
+
+    it('gets user collections - existing user', async () => {
+      await store.db.insert(userCollectionsTable).values({
+        userId: '1',
+        username: 'alice',
+        collectionType: 'coobubu',
+        reward1: 1,
+        reward2: 0,
+        reward3: 1,
+        reward4: 0,
+        reward5: 1,
+        reward6: 0,
+        reward7: 0,
+        reward8: 0,
+      });
+
+      const collection = await store.getUserCollections('1', 'coobubu');
+      expect(collection).toEqual(['reward1', 'reward3', 'reward5']);
+    });
+
+    it('gets user collections - non-existent user', async () => {
+      const collection = await store.getUserCollections('999', 'coobubu');
+      expect(collection).toEqual([]);
     });
   });
 });
