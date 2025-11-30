@@ -5,6 +5,7 @@ export const blindBoxConfigs: BlindBoxConfig[] = [
     collectionType: 'coobubu',
     moderatorCommand: 'coobubu-redeem',
     collectionDisplayCommand: 'coobubu',
+    resetCommand: 'coobubu-reset',
     rewardTitle: 'Cooper Series Blind Box',
     plushies: {
       reward1: { key: 'reward1', weight: 12 },
@@ -21,6 +22,7 @@ export const blindBoxConfigs: BlindBoxConfig[] = [
     collectionType: 'olliepop',
     moderatorCommand: 'olliepop-redeem',
     collectionDisplayCommand: 'olliepop',
+    resetCommand: 'olliepop-reset',
     rewardTitle: 'Ollie Series Blind Box',
     plushies: {
       reward1: { key: 'reward1', weight: 12 },
@@ -37,6 +39,7 @@ export const blindBoxConfigs: BlindBoxConfig[] = [
     collectionType: 'christmas',
     moderatorCommand: 'xmas-redeem',
     collectionDisplayCommand: 'xmas',
+    resetCommand: 'xmas-reset',
     rewardTitle: 'Christmas Series Blind Box',
     plushies: {
       reward1: { key: 'reward1', weight: 3 },

@@ -30,5 +30,7 @@ export interface BlindBoxConfig {
   moderatorCommand: `${string}-redeem`;
   /** Chat command to display collection (e.g. "collection") */
   collectionDisplayCommand: string;
+  /** Moderator-only chat command to reset collection */
+  resetCommand: `${string}-reset`;
   plushies: PlushiesMap;
 }

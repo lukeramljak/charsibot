@@ -2,6 +2,7 @@ import { blindBoxConfigs } from '@/blind-box/configs';
 import { Bot } from '@/bot/bot';
 import { CompletedCollectionsCommand } from '@/commands/blind-box/completed-collections';
 import { RedeemBlindBoxCommand } from '@/commands/blind-box/redeem-blind-box';
+import { ResetCollectionCommand } from '@/commands/blind-box/reset-collection';
 import { ShowBlindBoxCollectionCommand } from '@/commands/blind-box/show-blind-box-collection';
 import type { Command } from '@/commands/command';
 import { ModifyStatCommand } from '@/commands/stats/modify-stat';
@@ -25,7 +26,11 @@ const createBlindBoxCommands = (): Command[] => {
   const commands: Command[] = [];
 
   for (const config of blindBoxConfigs) {
-    commands.push(new RedeemBlindBoxCommand(config), new ShowBlindBoxCollectionCommand(config));
+    commands.push(
+      new RedeemBlindBoxCommand(config),
+      new ResetCollectionCommand(config),
+      new ShowBlindBoxCollectionCommand(config),
+    );
   }
 
   return commands;

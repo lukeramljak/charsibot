@@ -236,6 +236,27 @@ export class Store {
     }
   }
 
+  async resetUserCollection(userId: string, collectionType: CollectionType) {
+    return this.db
+      .update(userCollectionsTable)
+      .set({
+        reward1: 0,
+        reward2: 0,
+        reward3: 0,
+        reward4: 0,
+        reward5: 0,
+        reward6: 0,
+        reward7: 0,
+        reward8: 0,
+      })
+      .where(
+        and(
+          eq(userCollectionsTable.userId, userId),
+          eq(userCollectionsTable.collectionType, collectionType),
+        ),
+      );
+  }
+
   async getCompletedCollections() {
     const rows = await this.db
       .select({

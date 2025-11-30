@@ -147,5 +147,38 @@ describe('Store', () => {
       expect(coobubu?.usernames.sort()).toEqual(['alice', 'bob']);
       expect(olliepop?.usernames).toEqual(['xena']);
     });
+
+    it('resets user collections', async () => {
+      sqlite
+        .query(
+          `
+      INSERT INTO user_collections
+        (user_id, username, collection_type,
+         reward1, reward2, reward3, reward4,
+         reward5, reward6, reward7, reward8)
+      VALUES
+        ('1', 'alice', 'coobubu', 1,1,1,1,1,1,1,1),
+        ('2', 'bob',   'coobubu', 1,1,1,1,1,1,1,1);
+    `,
+        )
+        .run();
+
+      const collectionBefore = await store.getUserCollections('1', 'coobubu');
+      expect(collectionBefore).toEqual([
+        'reward1',
+        'reward2',
+        'reward3',
+        'reward4',
+        'reward5',
+        'reward6',
+        'reward7',
+        'reward8',
+      ]);
+
+      await store.resetUserCollection('1', 'coobubu');
+
+      const collectionAfter = await store.getUserCollections('1', 'coobubu');
+      expect(collectionAfter).toEqual([]);
+    });
   });
 });
