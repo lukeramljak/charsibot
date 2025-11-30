@@ -99,16 +99,16 @@
       return;
     }
 
+    const plushie = config.plushies.find((p) => p.key === event.data.plushie);
+    if (!plushie) {
+      console.warn('Plushie not found for reward key:', event.data.plushie);
+      return;
+    }
+
     queue.addRedemption({
       type: 'redemption',
       username: event.data.username,
-      plushie: {
-        key: event.data.plushie.key,
-        name: event.data.plushie.name,
-        image:
-          config.plushies.find((p) => p.key === event.data.plushie.key)?.image ||
-          config.emptyPlushieImage,
-      },
+      plushie,
       isDuplicate: !event.data.isNew,
       collection: event.data.collection,
       config: config,
@@ -189,7 +189,6 @@
           <CollectionDisplay
             plushies={currentConfig.plushies}
             {userCollection}
-            emptyPlushieImage={currentConfig.emptyPlushieImage}
             visible={mode !== 'idle'}
           />
         </div>

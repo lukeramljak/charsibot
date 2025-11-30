@@ -34,11 +34,7 @@ export interface BlindBoxRedemptionEvent {
     username: string;
     collectionType: CollectionType;
     seriesName: string;
-    plushie: {
-      key: string;
-      name: string;
-      weight: number;
-    };
+    plushie: string;
     isNew: boolean;
     collectionSize: number;
     collection: string[];

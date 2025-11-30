@@ -8,7 +8,7 @@ export class ShowBlindBoxCollectionCommand implements Command {
   constructor(private config: BlindBoxConfig) {}
 
   shouldTrigger(command: string): boolean {
-    return command === this.config.collectionType;
+    return command === this.config.collectionDisplayCommand;
   }
 
   async execute(bot: Bot, event: EventSubChannelChatMessageEvent): Promise<void> {

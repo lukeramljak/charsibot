@@ -1,4 +1,4 @@
-export type CollectionType = 'coobubu' | 'olliepop';
+export type CollectionType = 'coobubu' | 'olliepop' | 'christmas';
 
 export type RewardColumn =
   | 'reward1'
@@ -13,8 +13,6 @@ export type RewardColumn =
 export interface PlushieData {
   /** Unique identifier for the plushie */
   key: RewardColumn;
-  /** Display name of the plushie */
-  name: string;
   /** Rarity weight (higher = more common) */
   weight: number;
 }

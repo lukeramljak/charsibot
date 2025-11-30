@@ -5,14 +5,14 @@ import { describe, expect, it } from 'bun:test';
 describe('buildWeightedPlushieList', () => {
   it('builds a list based on plushie weight', () => {
     const plushies: PlushiesMap = {
-      reward1: { key: 'reward1', name: 'Reward 1', weight: 10 },
-      reward2: { key: 'reward2', name: 'Reward 2', weight: 8 },
-      reward3: { key: 'reward3', name: 'Reward 1', weight: 9 },
-      reward4: { key: 'reward4', name: 'Reward 4', weight: 14 },
-      reward5: { key: 'reward5', name: 'Reward 5', weight: 1 },
-      reward6: { key: 'reward6', name: 'Reward 6', weight: 7 },
-      reward7: { key: 'reward7', name: 'Reward 7', weight: 2 },
-      reward8: { key: 'reward8', name: 'Reward 8', weight: 10 },
+      reward1: { key: 'reward1', weight: 10 },
+      reward2: { key: 'reward2', weight: 8 },
+      reward3: { key: 'reward3', weight: 9 },
+      reward4: { key: 'reward4', weight: 14 },
+      reward5: { key: 'reward5', weight: 1 },
+      reward6: { key: 'reward6', weight: 7 },
+      reward7: { key: 'reward7', weight: 2 },
+      reward8: { key: 'reward8', weight: 10 },
     };
 
     const weighted = buildWeightedPlushieList(plushies);

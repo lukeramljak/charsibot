@@ -4,11 +4,10 @@
   interface Props {
     plushies: PlushieData[];
     userCollection: string[];
-    emptyPlushieImage: string;
     visible: boolean;
   }
 
-  let { plushies, userCollection, emptyPlushieImage, visible }: Props = $props();
+  let { plushies, userCollection, visible }: Props = $props();
 </script>
 
 {#if visible}
@@ -16,7 +15,7 @@
     <div class="collection-items">
       {#each plushies as plushie (plushie.key)}
         <img
-          src={userCollection.includes(plushie.key) ? plushie.image : emptyPlushieImage}
+          src={userCollection.includes(plushie.key) ? plushie.image : plushie.emptyImage}
           alt={plushie.name}
           title={plushie.name}
           class:collected={userCollection.includes(plushie.key)}

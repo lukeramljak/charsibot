@@ -1,4 +1,4 @@
-export type CollectionType = 'coobubu' | 'olliepop';
+export type CollectionType = 'coobubu' | 'olliepop' | 'christmas';
 
 export type OverlayEvent =
   | ChatCommandEvent
@@ -34,11 +34,7 @@ export interface BlindBoxRedemptionEvent {
     username: string;
     collectionType: CollectionType;
     seriesName: string;
-    plushie: {
-      key: string;
-      name: string;
-      weight: number;
-    };
+    plushie: string;
     isNew: boolean;
     collectionSize: number;
     collection: string[];

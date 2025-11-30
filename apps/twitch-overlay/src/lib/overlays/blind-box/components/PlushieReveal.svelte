@@ -15,7 +15,6 @@
     class="plushie"
     class:animate-plushie={isAnimating}
     src={plushie.image}
-    alt={plushie.name}
     style="opacity: {visible ? 1 : 0}"
   />
 {/if}

@@ -3,10 +3,10 @@ import type { CollectionType } from '$lib/types';
 export interface PlushieData {
   /** Unique identifier for the plushie */
   key: string;
-  /** Display name of the plushie */
   name: string;
   /** Path to the plushie image asset */
   image: string;
+  emptyImage: string;
 }
 
 export interface BlindBoxOverlayConfig {
@@ -20,7 +20,6 @@ export interface BlindBoxOverlayConfig {
 
   boxFrontFace: string;
   boxSideFace: string;
-  emptyPlushieImage: string;
 
   displayColor: string;
   textColor: string;

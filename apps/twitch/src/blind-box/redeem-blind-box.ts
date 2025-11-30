@@ -21,8 +21,6 @@ export const redeemBlindBox = async (bot: Bot, data: RedemptionData) => {
     plushieKey,
   );
 
-  const plushieData = plushies[plushieKey];
-
   const redemptionData: OverlayEvent = {
     type: 'blindbox_redemption',
     data: {
@@ -30,11 +28,7 @@ export const redeemBlindBox = async (bot: Bot, data: RedemptionData) => {
       username: data.username,
       collectionType: data.config.collectionType,
       seriesName: data.config.rewardTitle,
-      plushie: {
-        key: plushieKey,
-        name: plushieData.name,
-        weight: plushieData.weight,
-      },
+      plushie: plushieKey,
       isNew: result?.isNew || false,
       collectionSize: result?.collection.length || 0,
       collection: result?.collection || [],
