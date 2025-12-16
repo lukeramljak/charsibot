@@ -9,22 +9,12 @@ export class WebSocketServer {
   constructor(private port: number) {}
 
   start() {
-    const allowedOrigin = 'charsibel.com';
-
     this.server = Bun.serve({
       port: this.port,
       fetch: (req, server) => {
         const url = new URL(req.url);
 
         if (url.pathname === '/ws') {
-          const origin = req.headers.get('Origin') || req.headers.get('Referer') || '';
-          const isAllowed = origin.includes(allowedOrigin) || origin.includes('localhost');
-
-          if (!isAllowed) {
-            log.warn({ origin }, 'unauthorized websocket connection attempt');
-            return new Response('Forbidden', { status: 403 });
-          }
-
           const upgraded = server.upgrade(req, { data: {} });
           if (upgraded) {
             return undefined;
