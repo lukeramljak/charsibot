@@ -6,7 +6,8 @@ export class ComeTrigger implements Trigger {
 
   shouldTrigger(message: Message): boolean {
     const triggers = ['come', 'coming', 'cum', 'came'];
-    return triggers.some((trigger) => message.content.toLowerCase().includes(trigger));
+    const words = message.content.toLowerCase().split(/\W+/).filter(Boolean);
+    return words.some((word) => triggers.includes(word));
   }
 
   async execute(message: Message): Promise<void> {

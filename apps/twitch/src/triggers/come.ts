@@ -7,7 +7,8 @@ export class ComeTrigger implements Trigger {
 
   shouldTrigger(event: EventSubChannelChatMessageEvent): boolean {
     const triggers = ['come', 'coming', 'cum', 'came'];
-    return triggers.some((trigger) => event.messageText.toLowerCase().includes(trigger));
+    const words = event.messageText.toLowerCase().split(/\W+/).filter(Boolean)
+    return words.some((word) => triggers.includes(word))
   }
 
   async execute(bot: Bot, event: EventSubChannelChatMessageEvent): Promise<void> {
