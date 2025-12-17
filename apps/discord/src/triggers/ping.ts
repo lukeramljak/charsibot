@@ -3,7 +3,7 @@ import { Message } from 'discord.js';
 
 export class PingTrigger implements Trigger {
   shouldTrigger(message: Message): boolean {
-    return message.content.toLowerCase().includes('ping');
+    return message.content.toLowerCase() === 'ping';
   }
 
   async execute(message: Message): Promise<void> {
