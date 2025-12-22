@@ -32,7 +32,9 @@ export class CommandHandler {
     }
 
     for (const command of commands) {
-      const isMod = event.badges.moderator || event.badges.broadcaster;
+      const badges = event.badges
+      const isMod = badges.lead_moderator || badges.moderator || badges.broadcaster;
+
       if (command.moderatorOnly && !isMod) {
         log.warn(
           { user: event.chatterDisplayName, command: event.messageText },
