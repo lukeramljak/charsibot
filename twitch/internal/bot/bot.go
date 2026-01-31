@@ -258,7 +258,7 @@ func (b *Bot) init(message twitch.WelcomeMessage) error {
 				Event:       event,
 				Condition: map[string]string{
 					"broadcaster_user_id": b.config.ChannelUserID,
-					"user_id":             b.config.BotUserID,
+					"user_id":             b.config.ChannelUserID,
 				},
 			}); err != nil {
 				return fmt.Errorf("failed to subscribe to event %s: %w", event, err)
