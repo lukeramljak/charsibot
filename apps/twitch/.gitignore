@@ -1,6 +1,0 @@
-dist/
-node_modules/
-*.log
-*.db
-*.db-shm
-*.db-wal

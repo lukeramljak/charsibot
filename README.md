@@ -6,14 +6,15 @@ A multi-service bot application for [Charsibel](https://twitch.tv/charsibel)'s D
 
 This project contains three services:
 
-- **Discord Bot** (`/discord`) - Handles Discord server interactions and commands
-- **Twitch Bot** (`/twitch`) - Manages Twitch chat commands and channel point redemptions
-- **Twitch Overlay** (`/twitch-overlay`) - SvelteKit web app providing browser source overlays for OBS
+- **Discord Bot** (`discord/`) - Handles Discord server interactions and commands (Node.js/Bun)
+- **Twitch Bot** (`twitch/`) - Manages Twitch chat commands, channel point redemptions, and API server (Go)
+- **Twitch Overlay** (`twitch-overlay/`) - Stream overlay SPA for OBS (SvelteKit)
 
 ## Prerequisites
 
 - Bun
-- Docker & Docker Compose
+- Go 1.25+
+- Docker
 
 ## Development Setup
 
@@ -24,74 +25,46 @@ This project contains three services:
    cd charsibot
    ```
 
-2. Install dependencies for all services:
+2. **Discord Bot**:
 
    ```bash
-   # Discord bot
-   cd discord && bun install
-
-   # Twitch bot
-   cd twitch && bun install
-
-   # Twitch overlay
-   cd twitch-overlay && bun install
+   cd discord
+   bun install
+   bun run dev
    ```
 
-3. Set up environment variables:
+3. **Twitch Bot**:
 
    ```bash
-   # Discord bot
+   cd twitch
+   make dev
+   ```
+
+   This will start the Go backend and API server on port 8081.
+
+4. **Twitch Overlay**:
+
+   ```bash
+   cd twitch-overlay
+   bun install
+   bun run dev
+   ```
+
+   Access the overlay at `http://localhost:5173`
+
+## Environment Variables
+
+1. **Discord**:
+
+   ```bash
    cp discord/.env.example discord/.env
-   # Edit discord/.env with your Discord credentials
-
-   # Twitch bot
-   cp twitch/.env.example twitch/.env
-   # Edit twitch/.env with your Twitch credentials
-
-   # Twitch overlay
-   cp twitch-overlay/.env.example twitch-overlay/.env
-   # Edit twitch-overlay/.env with WebSocket URL
    ```
 
-## Running Services
+2. **Twitch**:
+   ```bash
+   cp twitch/.env.example twitch/.env
+   ```
 
-### Development
+## Database
 
-Run all services:
-
-```bash
-bun run dev
-```
-
-Run individual services:
-
-```bash
-bun run dev:discord
-bun run dev:twitch
-bun run dev:overlay
-```
-
-### Production (Docker Compose)
-
-**Run all services:**
-
-```bash
-docker compose up -d
-```
-
-**Run individual service:**
-
-```bash
-docker compose up discord -d
-
-docker compose up twitch -d
-
-# Overlay only
-docker compose up twitch-overlay -d
-```
-
-**Build and restart:**
-
-```bash
-docker compose up --build -d
-```
+The Twitch bot uses a SQLite database (`charsibot.db`) which will be created automatically in the root of the `twitch` directory.
