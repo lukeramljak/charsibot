@@ -9,7 +9,6 @@ func TestParseModifyStatCommand(t *testing.T) {
 	tests := []struct {
 		name            string
 		input           string
-		wantLogin       string
 		wantColumn      string
 		wantAmount      int64
 		wantErr         bool
@@ -18,7 +17,6 @@ func TestParseModifyStatCommand(t *testing.T) {
 		{
 			name:       "parses addstat command",
 			input:      "!addstat @foo strength 3",
-			wantLogin:  "foo",
 			wantColumn: "strength",
 			wantAmount: 3,
 			wantErr:    false,
@@ -26,16 +24,9 @@ func TestParseModifyStatCommand(t *testing.T) {
 		{
 			name:       "parses rmstat command",
 			input:      "!rmstat @bar luck 2",
-			wantLogin:  "bar",
 			wantColumn: "luck",
 			wantAmount: 2,
 			wantErr:    false,
-		},
-		{
-			name:            "errors on missing mention",
-			input:           "!addstat strength 3",
-			wantErr:         true,
-			wantErrContains: "expected format",
 		},
 		{
 			name:            "errors on missing stat and amount",
@@ -58,15 +49,6 @@ func TestParseModifyStatCommand(t *testing.T) {
 		{
 			name:       "handles mention with @ symbol",
 			input:      "!addstat @username strength 5",
-			wantLogin:  "username",
-			wantColumn: "strength",
-			wantAmount: 5,
-			wantErr:    false,
-		},
-		{
-			name:       "converts username to lowercase",
-			input:      "!addstat @UserName strength 5",
-			wantLogin:  "username",
 			wantColumn: "strength",
 			wantAmount: 5,
 			wantErr:    false,
@@ -74,7 +56,6 @@ func TestParseModifyStatCommand(t *testing.T) {
 		{
 			name:       "handles extra whitespace",
 			input:      "!addstat  @user   strength   5",
-			wantLogin:  "user",
 			wantColumn: "strength",
 			wantAmount: 5,
 			wantErr:    false,
@@ -82,7 +63,6 @@ func TestParseModifyStatCommand(t *testing.T) {
 		{
 			name:       "parses negative numbers",
 			input:      "!addstat @user strength -3",
-			wantLogin:  "user",
 			wantColumn: "strength",
 			wantAmount: -3,
 			wantErr:    false,
@@ -90,7 +70,6 @@ func TestParseModifyStatCommand(t *testing.T) {
 		{
 			name:       "parses zero",
 			input:      "!addstat @user strength 0",
-			wantLogin:  "user",
 			wantColumn: "strength",
 			wantAmount: 0,
 			wantErr:    false,
@@ -99,7 +78,7 @@ func TestParseModifyStatCommand(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			login, column, amount, err := parseModifyStatCommand(tt.input)
+			column, amount, err := parseModifyStatCommand(tt.input)
 
 			if tt.wantErr {
 				if err == nil {
@@ -115,9 +94,6 @@ func TestParseModifyStatCommand(t *testing.T) {
 				return
 			}
 
-			if login != tt.wantLogin {
-				t.Errorf("login = %q, want %q", login, tt.wantLogin)
-			}
 			if column != tt.wantColumn {
 				t.Errorf("column = %q, want %q", column, tt.wantColumn)
 			}

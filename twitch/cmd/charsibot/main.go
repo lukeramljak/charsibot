@@ -47,6 +47,7 @@ func main() {
 		stats.NewStatsCommand(),
 		stats.NewLeaderboardCommand(),
 		stats.NewModifyStatCommand(),
+		stats.NewExplodeCommand(),
 		blindbox.NewCompletedCollectionsCommand(),
 	}
 

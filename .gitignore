@@ -1,8 +1,7 @@
 # Build artifacts
 tmp/
 */tmp/
-charsibot
-charsibot-*
+bin
 
 # Dependencies
 node_modules

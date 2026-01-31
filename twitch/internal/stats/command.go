@@ -5,14 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/joeyak/go-twitch-eventsub/v3"
 	"github.com/lukeramljak/charsibot/internal/bot"
 	"github.com/lukeramljak/charsibot/internal/store"
-	"github.com/nicklaw5/helix/v2"
 )
 
 // StatsCommand displays a user's stats
@@ -156,32 +154,23 @@ func (c *ModifyStatCommand) Execute(b *bot.Bot, event twitch.EventChannelChatMes
 	command := parts[0]
 	isRemove := command == "!rmstat"
 
-	mentionedLogin, statColumn, amount, err := parseModifyStatCommand(event.Message.Text)
+	mentionedUser, err := extractMentionedUserFromFragments(event.Message.Fragments)
+	if err != nil {
+		b.SendMessage(bot.SendMessageParams{
+			Message:              "Missing user mention",
+			ReplyParentMessageID: event.MessageId,
+		})
+		return
+	}
+
+	statColumn, amount, err := parseModifyStatCommand(event.Message.Text)
 	if err != nil {
 		slog.Warn("invalid modify stat command", "err", err, "msg", event.Message.Text)
-		if err := b.SendMessage(bot.SendMessageParams{
+		b.SendMessage(bot.SendMessageParams{
 			Message: err.Error(),
-		}); err != nil {
-			slog.Error("failed to send error message", "err", err)
-		}
+		})
 		return
 	}
-
-	// Look up the mentioned user using the bot's helix client
-	mentionedUser, err := b.HelixClient().GetUsers(&helix.UsersParams{
-		Logins: []string{mentionedLogin},
-	})
-	if err != nil || len(mentionedUser.Data.Users) == 0 {
-		slog.Error("failed to find user", "login", mentionedLogin, "err", err)
-		if err := b.SendMessage(bot.SendMessageParams{
-			Message: "Failed to find user",
-		}); err != nil {
-			slog.Error("failed to send error message", "err", err)
-		}
-		return
-	}
-
-	user := mentionedUser.Data.Users[0]
 
 	// Modify the stat
 	finalAmount := amount
@@ -189,19 +178,27 @@ func (c *ModifyStatCommand) Execute(b *bot.Bot, event twitch.EventChannelChatMes
 		finalAmount = -amount
 	}
 
-	if err := b.Store().ModifyStat(b.Context(), user.ID, user.Login, statColumn, finalAmount); err != nil {
-		slog.Error("failed to modify stat", "err", err, "user", user.Login)
+	if err := b.Store().ModifyStat(b.Context(), mentionedUser.UserID, mentionedUser.UserLogin, statColumn, finalAmount); err != nil {
+		slog.Error("failed to modify stat", "err", err, "user", mentionedUser.UserLogin)
+		b.SendMessage(bot.SendMessageParams{
+			Message:              "Failed to update stats",
+			ReplyParentMessageID: event.MessageId,
+		})
 		return
 	}
 
 	// Get updated stats
-	stats, err := b.Store().GetStats(b.Context(), user.ID)
+	stats, err := b.Store().GetStats(b.Context(), mentionedUser.UserID)
 	if err != nil {
-		slog.Error("failed to get stats", "err", err, "user", user.Login)
+		slog.Error("failed to get stats", "err", err, "user", mentionedUser.UserLogin)
+		b.SendMessage(bot.SendMessageParams{
+			Message:              "Failed to get stats",
+			ReplyParentMessageID: event.MessageId,
+		})
 		return
 	}
 
-	message := store.FormatStats(user.Login, stats)
+	message := store.FormatStats(mentionedUser.UserLogin, stats)
 	if err := b.SendMessage(bot.SendMessageParams{
 		Message: message,
 	}); err != nil {
@@ -209,33 +206,86 @@ func (c *ModifyStatCommand) Execute(b *bot.Bot, event twitch.EventChannelChatMes
 	}
 }
 
-var mentionRegex = regexp.MustCompile(`@(\w+)`)
+// ExplodeCommand sets a user's penis stat to -1000.
+type ExplodeCommand struct{}
+
+func NewExplodeCommand() *ExplodeCommand {
+	return &ExplodeCommand{}
+}
+
+func (c *ExplodeCommand) ModeratorOnly() bool {
+	return true
+}
+
+func (c *ExplodeCommand) ShouldTrigger(command string) bool {
+	return command == "explode"
+}
+
+func (c *ExplodeCommand) Execute(b *bot.Bot, event twitch.EventChannelChatMessage) {
+	fragments := event.Message.Fragments
+
+	mentionedUser, err := extractMentionedUserFromFragments(fragments)
+	if err != nil {
+		b.SendMessage(bot.SendMessageParams{
+			Message:              "Missing user mention",
+			ReplyParentMessageID: event.MessageId,
+		})
+	}
+
+	if err := b.Store().ModifyStat(b.Context(), mentionedUser.UserID, mentionedUser.UserLogin, "penis", -1003); err != nil {
+		slog.Error("failed to modify stat", "err", err, "user", mentionedUser.UserLogin)
+		b.SendMessage(bot.SendMessageParams{
+			Message:              "Failed to update stats",
+			ReplyParentMessageID: event.MessageId,
+		})
+		return
+	}
+
+	stats, err := b.Store().GetStats(b.Context(), mentionedUser.UserID)
+	if err != nil {
+		slog.Error("failed to get stats", "err", err, "user", mentionedUser.UserLogin)
+		b.SendMessage(bot.SendMessageParams{
+			Message:              "Failed to get updated stats",
+			ReplyParentMessageID: event.MessageId,
+		})
+		return
+	}
+
+	message := store.FormatStats(mentionedUser.UserLogin, stats)
+	b.SendMessage(bot.SendMessageParams{
+		Message:              message,
+		ReplyParentMessageID: event.MessageId,
+	})
+}
+
+// extractMentionedUserFromFragments extracts the user of the first mention from message fragments.
+func extractMentionedUserFromFragments(fragments []twitch.ChatMessageFragment) (*twitch.ChatMessageFragmentMention, error) {
+	for _, fragment := range fragments {
+		if fragment.Type == "mention" && fragment.Mention != nil {
+			return fragment.Mention, nil
+		}
+	}
+	return nil, fmt.Errorf("no user mention found")
+}
 
 // parseModifyStatCommand parses commands like: !addstat @user stat amount OR !rmstat @user stat amount
-func parseModifyStatCommand(text string) (string, string, int64, error) {
+func parseModifyStatCommand(text string) (string, int64, error) {
 	parts := strings.Fields(text)
 	if len(parts) < 4 {
-		return "", "", 0, fmt.Errorf("expected format: !addstat/!rmstat @user stat amount")
+		return "", 0, fmt.Errorf("expected format: !addstat/!rmstat @user stat amount")
 	}
 
-	// Find mention
-	matches := mentionRegex.FindStringSubmatch(text)
-	if len(matches) < 2 {
-		return "", "", 0, fmt.Errorf("no user mention found")
-	}
-
-	mentionedLogin := strings.ToLower(matches[1])
 	statColumn := parts[2]
 	amountStr := parts[3]
 
 	if statColumn == "" || amountStr == "" {
-		return "", "", 0, fmt.Errorf("expected 'stat amount'")
+		return "", 0, fmt.Errorf("expected 'stat amount'")
 	}
 
 	amount, err := strconv.ParseInt(amountStr, 10, 64)
 	if err != nil {
-		return "", "", 0, fmt.Errorf("invalid number")
+		return "", 0, fmt.Errorf("invalid number")
 	}
 
-	return mentionedLogin, statColumn, amount, nil
+	return statColumn, amount, nil
 }
