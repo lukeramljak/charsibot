@@ -66,12 +66,9 @@ func (r *PotionRedemption) Execute(b *bot.Bot, event twitch.EventChannelChannelP
 	message := "A shifty looking merchant hands " + username + " a glittering potion. Without hesitation, they sink the whole drink. " +
 		username + " " + outcome + " " + stat.Display
 
-	if err := b.SendMessage(bot.SendMessageParams{
+	b.SendMessage(bot.SendMessageParams{
 		Message: message,
-	}); err != nil {
-		slog.Error("failed to send potion message", "err", err)
-		return
-	}
+	})
 
 	stats, err := b.Store().GetStats(b.Context(), userId)
 	if err != nil {
@@ -79,11 +76,9 @@ func (r *PotionRedemption) Execute(b *bot.Bot, event twitch.EventChannelChannelP
 		return
 	}
 
-	if err := b.SendMessage(bot.SendMessageParams{
+	b.SendMessage(bot.SendMessageParams{
 		Message: store.FormatStats(username, stats),
-	}); err != nil {
-		slog.Error("failed to send stats message", "err", err)
-	}
+	})
 }
 
 // TemptDiceRedemption handles the "Tempt the Dice" channel point redemption
@@ -102,12 +97,9 @@ func (r *TemptDiceRedemption) Execute(b *bot.Bot, event twitch.EventChannelChann
 	username := event.UserName
 
 	// Send initiative message
-	if err := b.SendMessage(bot.SendMessageParams{
+	b.SendMessage(bot.SendMessageParams{
 		Message: username + " has rolled with initiative.",
-	}); err != nil {
-		slog.Error("failed to send initiative message", "err", err)
-		return
-	}
+	})
 
 	// Get stats
 	stats, err := b.Store().GetStats(b.Context(), userId)
@@ -132,10 +124,7 @@ func (r *TemptDiceRedemption) Execute(b *bot.Bot, event twitch.EventChannelChann
 		}
 	}
 
-	// Send stats
-	if err := b.SendMessage(bot.SendMessageParams{
+	b.SendMessage(bot.SendMessageParams{
 		Message: store.FormatStats(username, stats),
-	}); err != nil {
-		slog.Error("failed to send stats message", "err", err)
-	}
+	})
 }

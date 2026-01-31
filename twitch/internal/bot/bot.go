@@ -322,11 +322,12 @@ func (b *Bot) HelixClient() *helix.Client {
 	return b.helixClient
 }
 
-func (b *Bot) SendMessage(params SendMessageParams) error {
+func (b *Bot) SendMessage(params SendMessageParams) {
 	b.mu.RLock()
 	if !b.isRunning {
 		b.mu.RUnlock()
-		return errors.New("bot is not running")
+		b.logger.Error("failed to send message: bot is not running")
+		return
 	}
 	b.mu.RUnlock()
 
@@ -343,7 +344,7 @@ func (b *Bot) SendMessage(params SendMessageParams) error {
 	resp, err := b.botHelixClient.SendChatMessage(msgParams)
 	if err != nil {
 		b.logger.Error("failed to send message", "err", err, "message", params.Message)
-		return fmt.Errorf("failed to send message: %w", err)
+		return
 	}
 
 	if resp.Error != "" {
@@ -351,7 +352,6 @@ func (b *Bot) SendMessage(params SendMessageParams) error {
 	}
 
 	b.logger.Debug("message sent", "message", params.Message)
-	return nil
 }
 
 func (b *Bot) BroadcastOverlayEvent(event server.OverlayEvent) {

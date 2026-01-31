@@ -56,12 +56,10 @@ func (c *StatsCommand) Execute(b *bot.Bot, event twitch.EventChannelChatMessage)
 	}
 
 	message := store.FormatStats(username, stats)
-	if err := b.SendMessage(bot.SendMessageParams{
+	b.SendMessage(bot.SendMessageParams{
 		Message:              message,
 		ReplyParentMessageID: event.MessageId,
-	}); err != nil {
-		slog.Error("failed to send stats message", "err", err)
-	}
+	})
 }
 
 // LeaderboardCommand displays the stats leaderboard
@@ -123,11 +121,9 @@ func (c *LeaderboardCommand) Execute(b *bot.Bot, event twitch.EventChannelChatMe
 		message += part
 	}
 
-	if err := b.SendMessage(bot.SendMessageParams{
+	b.SendMessage(bot.SendMessageParams{
 		Message: message,
-	}); err != nil {
-		slog.Error("failed to send leaderboard message", "err", err)
-	}
+	})
 }
 
 // ModifyStatCommand allows moderators to modify user stats
@@ -199,11 +195,9 @@ func (c *ModifyStatCommand) Execute(b *bot.Bot, event twitch.EventChannelChatMes
 	}
 
 	message := store.FormatStats(mentionedUser.UserLogin, stats)
-	if err := b.SendMessage(bot.SendMessageParams{
+	b.SendMessage(bot.SendMessageParams{
 		Message: message,
-	}); err != nil {
-		slog.Error("failed to send stats message", "err", err)
-	}
+	})
 }
 
 // ExplodeCommand sets a user's penis stat to -1000.

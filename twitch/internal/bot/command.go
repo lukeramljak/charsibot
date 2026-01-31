@@ -51,7 +51,7 @@ func (h *CommandHandler) Process(bot *Bot, event twitch.EventChannelChatMessage)
 				"user", event.ChatterUserName,
 				"command", cmd,
 			)
-			_ = bot.SendMessage(SendMessageParams{
+			bot.SendMessage(SendMessageParams{
 				Message:              "You must be a moderator to use this command",
 				ReplyParentMessageID: event.MessageId,
 			})

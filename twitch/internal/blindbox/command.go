@@ -61,11 +61,9 @@ func (c *ShowCollectionCommand) Execute(b *bot.Bot, event twitch.EventChannelCha
 
 	if err != nil {
 		slog.Error("failed to get collection", "err", err, "user", username)
-		if err := b.SendMessage(bot.SendMessageParams{
+		b.SendMessage(bot.SendMessageParams{
 			Message: fmt.Sprintf("Failed to get %s's collection", username),
-		}); err != nil {
-			slog.Error("failed to send error message", "err", err)
-		}
+		})
 		return
 	}
 
@@ -141,12 +139,9 @@ func (c *CompletedCollectionsCommand) Execute(b *bot.Bot, event twitch.EventChan
 	}
 
 	// Send header
-	if err := b.SendMessage(bot.SendMessageParams{
+	b.SendMessage(bot.SendMessageParams{
 		Message: "The following chatters have completed the below blind box collections:",
-	}); err != nil {
-		slog.Error("failed to send header message", "err", err)
-		return
-	}
+	})
 
 	// Send each collection
 	for _, collection := range collections {
@@ -158,10 +153,8 @@ func (c *CompletedCollectionsCommand) Execute(b *bot.Bot, event twitch.EventChan
 		usernames := strings.Split(collection.UsernamesCsv, ",")
 		message := fmt.Sprintf("%s: %s", collectionType, strings.Join(usernames, ", "))
 
-		if err := b.SendMessage(bot.SendMessageParams{
+		b.SendMessage(bot.SendMessageParams{
 			Message: message,
-		}); err != nil {
-			slog.Error("failed to send collection message", "err", err, "collection", collectionType)
-		}
+		})
 	}
 }

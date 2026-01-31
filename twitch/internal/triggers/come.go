@@ -1,7 +1,6 @@
 package triggers
 
 import (
-	"log/slog"
 	"slices"
 	"strings"
 
@@ -38,10 +37,8 @@ func (t *ComeTrigger) ShouldTrigger(event twitch.EventChannelChatMessage) bool {
 }
 
 func (t *ComeTrigger) Execute(b *bot.Bot, event twitch.EventChannelChatMessage) {
-	if err := b.SendMessage(bot.SendMessageParams{
+	b.SendMessage(bot.SendMessageParams{
 		Message:              "no coming",
 		ReplyParentMessageID: event.MessageId,
-	}); err != nil {
-		slog.Error("failed to send come trigger response", "err", err)
-	}
+	})
 }
