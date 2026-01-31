@@ -7,6 +7,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o /charsibot ./cmd/charsibot
 FROM alpine:latest
 WORKDIR /app
 RUN apk add --no-cache ca-certificates tzdata
+RUN mkdir -p /data && chmod 777 /data
 COPY --from=build /charsibot /charsibot
 COPY --from=build /app/internal/store/migrations /app/internal/store/migrations
 EXPOSE 8081
