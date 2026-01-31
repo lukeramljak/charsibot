@@ -61,6 +61,17 @@ func (s *Server) handleSSE(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.logger.Info("client connected")
+
+	connectedEvent := map[string]any{
+		"type":      "connected",
+		"timestamp": time.Now().Format(time.RFC3339),
+	}
+	data, err := json.Marshal(connectedEvent)
+	if err == nil {
+		fmt.Fprintf(w, "data: %s\n\n", data)
+		flusher.Flush()
+	}
+
 	clientGone := r.Context().Done()
 
 	for {
