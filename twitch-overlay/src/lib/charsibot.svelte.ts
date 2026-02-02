@@ -1,7 +1,7 @@
-import { env } from "$env/dynamic/public";
-import type { OverlayEvent } from "$lib/types";
+import { env } from '$env/dynamic/public';
+import type { OverlayEvent } from '$lib/types';
 
-type SSEEvent = OverlayEvent | { type: "connected"; timestamp: string };
+type SSEEvent = OverlayEvent | { type: 'connected'; timestamp: string };
 
 class Charsibot {
   private eventSource: EventSource | null = null;
@@ -11,7 +11,7 @@ class Charsibot {
   connect() {
     if (this.eventSource) return;
 
-    const url = env.PUBLIC_TWITCH_SSE_URL || "http://localhost:8081/events";
+    const url = env.PUBLIC_TWITCH_SSE_URL || 'http://localhost:8081/events';
     this.eventSource = new EventSource(url);
 
     this.eventSource.onopen = () => {

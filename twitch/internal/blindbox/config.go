@@ -20,7 +20,6 @@ type BlindBoxConfig struct {
 
 // GetWeightedRandomPlushie returns a random plushie key based on weights
 func GetWeightedRandomPlushie(plushies []PlushieData) int {
-
 	weighted := []int{}
 	for _, p := range plushies {
 		for i := 0; i < p.Weight; i++ {
@@ -77,6 +76,23 @@ var BlindBoxConfigs = []BlindBoxConfig{
 		CollectionDisplayCommand: "xmas",
 		ResetCommand:             "xmas-reset",
 		RewardTitle:              "Christmas Series Blind Box",
+		Plushies: []PlushieData{
+			{Key: 1, Weight: 3},
+			{Key: 2, Weight: 3},
+			{Key: 3, Weight: 3},
+			{Key: 4, Weight: 3},
+			{Key: 5, Weight: 3},
+			{Key: 6, Weight: 3},
+			{Key: 7, Weight: 3},
+			{Key: 8, Weight: 1},
+		},
+	},
+	{
+		CollectionType:           "valentines",
+		ModeratorCommand:         "valentines-redeem",
+		CollectionDisplayCommand: "valentines",
+		ResetCommand:             "valentines-reset",
+		RewardTitle:              "Valentine's Series Blind Box",
 		Plushies: []PlushieData{
 			{Key: 1, Weight: 3},
 			{Key: 2, Weight: 3},

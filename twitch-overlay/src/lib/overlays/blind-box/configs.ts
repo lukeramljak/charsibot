@@ -190,4 +190,67 @@ export const blindBoxConfigs: BlindBoxOverlayConfig[] = [
       },
     ],
   },
+  {
+    collectionType: 'valentines',
+    collectionName: 'Valentines',
+
+    revealSound: '/blind-box/valentines/reveal.mp3',
+
+    boxFrontFace: '/blind-box/valentines/box-front.png',
+    boxSideFace: '/blind-box/valentines/box-side.png',
+
+    displayColor: '#ffa7c3',
+    textColor: '#ffffff',
+
+    plushies: [
+      {
+        key: 'reward1',
+        name: 'Choccy',
+        image: '/blind-box/valentines/choccy.png',
+        emptyImage: '/blind-box/valentines/choccy-blank.png',
+      },
+      {
+        key: 'reward2',
+        name: 'Cupie',
+        image: '/blind-box/valentines/cupie.png',
+        emptyImage: '/blind-box/valentines/cupie-blank.png',
+      },
+      {
+        key: 'reward3',
+        name: 'Bachie',
+        image: '/blind-box/valentines/bachie.png',
+        emptyImage: '/blind-box/valentines/bachie-blank.png',
+      },
+      {
+        key: 'reward4',
+        name: 'Drinky',
+        image: '/blind-box/valentines/drinky.png',
+        emptyImage: '/blind-box/valentines/drinky-blank.png',
+      },
+      {
+        key: 'reward5',
+        name: 'Sherbie',
+        image: '/blind-box/valentines/sherbie.png',
+        emptyImage: '/blind-box/valentines/sherbie-blank.png',
+      },
+      {
+        key: 'reward6',
+        name: 'Lovey',
+        image: '/blind-box/valentines/lovey.png',
+        emptyImage: '/blind-box/valentines/lovey-blank.png',
+      },
+      {
+        key: 'reward7',
+        name: 'Bunchie',
+        image: '/blind-box/valentines/bunchie.png',
+        emptyImage: '/blind-box/valentines/bunchie-blank.png',
+      },
+      {
+        key: 'reward8',
+        name: 'Secret',
+        image: '/blind-box/valentines/secret.png',
+        emptyImage: '/blind-box/valentines/secret-blank.png',
+      },
+    ],
+  },
 ];

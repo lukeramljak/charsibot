@@ -1,21 +1,18 @@
 <script lang="ts">
-  import {
-    type BlindBoxRedemptionEvent,
-    type CollectionDisplayEvent,
-  } from "$lib/types";
-  import type { BlindBoxOverlayConfig, PlushieData } from "../types";
-  import Box3D from "./Box3D.svelte";
-  import PlushieReveal from "./PlushieReveal.svelte";
-  import DisplayBanner from "./DisplayBanner.svelte";
-  import CollectionDisplay from "./CollectionDisplay.svelte";
-  import BackgroundEffects from "./BackgroundEffects.svelte";
+  import { type BlindBoxRedemptionEvent, type CollectionDisplayEvent } from '$lib/types';
+  import type { BlindBoxOverlayConfig, PlushieData } from '../types';
+  import Box3D from './Box3D.svelte';
+  import PlushieReveal from './PlushieReveal.svelte';
+  import DisplayBanner from './DisplayBanner.svelte';
+  import CollectionDisplay from './CollectionDisplay.svelte';
+  import BackgroundEffects from './BackgroundEffects.svelte';
   import {
     BlindBoxQueue,
     type PlushieDisplayQueueItem,
     type PlushieRedemptionQueueItem,
-  } from "../queue.svelte";
-  import { charsibot } from "$lib/charsibot.svelte";
-  import { onMount } from "svelte";
+  } from '../queue.svelte';
+  import { charsibot } from '$lib/charsibot.svelte';
+  import { onMount } from 'svelte';
 
   interface Props {
     configs: BlindBoxOverlayConfig[];
@@ -27,13 +24,13 @@
     charsibot.connect();
   });
 
-  type AnimationMode = "idle" | "reveal" | "collection";
+  type AnimationMode = 'idle' | 'reveal' | 'collection';
 
-  let mode = $state<AnimationMode>("idle");
+  let mode = $state<AnimationMode>('idle');
   let animationKey = $state(0);
   let currentPlushie = $state<PlushieData | null>(null);
   let currentConfig = $state<BlindBoxOverlayConfig>();
-  let displayMessage = $state("");
+  let displayMessage = $state('');
   let userCollection = $state<string[]>([]);
   let audioElement: HTMLAudioElement | undefined = $state();
   let lastProcessedMessage: unknown = null;
@@ -49,7 +46,7 @@
       audioElement.currentTime = 0;
       await audioElement.play();
     } catch (error) {
-      console.warn("Audio playback failed:", error);
+      console.warn('Audio playback failed:', error);
     }
   }
 
@@ -59,7 +56,7 @@
       mode = animationMode;
 
       setTimeout(() => {
-        mode = "idle";
+        mode = 'idle';
         currentConfig = undefined;
         currentPlushie = null;
         resolve();
@@ -72,10 +69,10 @@
     userCollection = item.collection;
     currentPlushie = item.plushie;
     displayMessage = `${item.username} just got <strong>${item.plushie.name}</strong>${
-      item.isDuplicate ? " (duplicate)" : ""
+      item.isDuplicate ? ' (duplicate)' : ''
     }`;
     await playAudio(item.config.revealSound);
-    await playAnimation("reveal");
+    await playAnimation('reveal');
   }
 
   async function playCollection(item: PlushieDisplayQueueItem) {
@@ -83,7 +80,7 @@
     userCollection = item.collection;
     currentPlushie = null;
     displayMessage = `${item.username}'s ${item.config.collectionName}`;
-    await playAnimation("collection");
+    await playAnimation('collection');
   }
 
   const handlers = {
@@ -98,25 +95,20 @@
   const queue = new BlindBoxQueue(handlers);
 
   function handleRedemptionEvent(event: BlindBoxRedemptionEvent) {
-    const config = configs.find(
-      (c) => c.collectionType === event.data.collectionType,
-    );
+    const config = configs.find((c) => c.collectionType === event.data.collectionType);
     if (!config) {
-      console.warn(
-        "Config not found for collection type:",
-        event.data.collectionType,
-      );
+      console.warn('Config not found for collection type:', event.data.collectionType);
       return;
     }
 
     const plushie = config.plushies.find((p) => p.key === event.data.plushie);
     if (!plushie) {
-      console.warn("Plushie not found for reward key:", event.data.plushie);
+      console.warn('Plushie not found for reward key:', event.data.plushie);
       return;
     }
 
     queue.addRedemption({
-      type: "redemption",
+      type: 'redemption',
       username: event.data.username,
       plushie,
       isDuplicate: !event.data.isNew,
@@ -128,19 +120,14 @@
   }
 
   function handleDisplayEvent(event: CollectionDisplayEvent) {
-    const config = configs.find(
-      (c) => c.collectionType === event.data.collectionType,
-    );
+    const config = configs.find((c) => c.collectionType === event.data.collectionType);
     if (!config) {
-      console.warn(
-        "Config not found for collection type:",
-        event.data.collectionType,
-      );
+      console.warn('Config not found for collection type:', event.data.collectionType);
       return;
     }
 
     queue.addDisplay({
-      type: "display",
+      type: 'display',
       username: event.data.username,
       collection: event.data.collection,
       config: config,
@@ -155,9 +142,9 @@
 
     lastProcessedMessage = lastMsg;
 
-    if (lastMsg.type === "blindbox_redemption") {
+    if (lastMsg.type === 'blindbox_redemption') {
       handleRedemptionEvent(lastMsg as BlindBoxRedemptionEvent);
-    } else if (lastMsg.type === "collection_display") {
+    } else if (lastMsg.type === 'collection_display') {
       handleDisplayEvent(lastMsg as CollectionDisplayEvent);
     }
   });
@@ -193,25 +180,21 @@
 
 {#if currentConfig && charsibot.isConnected}
   {#key animationKey}
-    <div
-      class="scene"
-      class:reveal={mode === "reveal"}
-      class:collection={mode === "collection"}
-    >
-      <BackgroundEffects show={mode !== "idle"} />
+    <div class="scene" class:reveal={mode === 'reveal'} class:collection={mode === 'collection'}>
+      <BackgroundEffects show={mode !== 'idle'} />
 
       <div class="content-wrapper" class:with-plushie={currentPlushie !== null}>
         <Box3D
           boxFrontFace={currentConfig.boxFrontFace}
           boxSideFace={currentConfig.boxSideFace}
-          isAnimating={mode === "reveal"}
-          visible={mode !== "idle"}
+          isAnimating={mode === 'reveal'}
+          visible={mode !== 'idle'}
         >
           <div class="plushie-container">
             <PlushieReveal
               plushie={currentPlushie}
-              isAnimating={mode === "reveal"}
-              visible={mode !== "idle"}
+              isAnimating={mode === 'reveal'}
+              visible={mode !== 'idle'}
             />
           </div>
         </Box3D>
@@ -221,13 +204,13 @@
             message={displayMessage}
             displayColor={currentConfig.displayColor}
             textColor={currentConfig.textColor}
-            visible={mode !== "idle"}
+            visible={mode !== 'idle'}
           />
 
           <CollectionDisplay
             plushies={currentConfig.plushies}
             {userCollection}
-            visible={mode !== "idle"}
+            visible={mode !== 'idle'}
           />
         </div>
       </div>
@@ -243,10 +226,10 @@
     width: 100vw;
     height: 100vh;
     font-family:
-      "Inter",
+      'Inter',
       -apple-system,
       BlinkMacSystemFont,
-      "Segoe UI",
+      'Segoe UI',
       sans-serif;
   }
 
