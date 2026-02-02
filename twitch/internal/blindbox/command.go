@@ -2,6 +2,7 @@ package blindbox
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -59,15 +60,20 @@ func (c *ShowCollectionCommand) Execute(b *bot.Bot, event twitch.EventChannelCha
 		CollectionType: sql.NullString{String: c.config.CollectionType, Valid: true},
 	})
 
+	var collection []int
 	if err != nil {
-		slog.Error("failed to get collection", "err", err, "user", username)
-		b.SendMessage(bot.SendMessageParams{
-			Message: fmt.Sprintf("Failed to get %s's collection", username),
-		})
-		return
+		if errors.Is(err, sql.ErrNoRows) {
+			collection = []int{}
+		} else {
+			slog.Error("failed to get collection", "err", err, "user", username)
+			b.SendMessage(bot.SendMessageParams{
+				Message: fmt.Sprintf("Failed to get %s's collection", username),
+			})
+			return
+		}
+	} else {
+		collection = store.GetUserCollection(uc)
 	}
-
-	collection := store.GetUserCollection(uc)
 
 	b.BroadcastOverlayEvent(server.OverlayEvent{
 		Type: "collection_display",
