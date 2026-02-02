@@ -7,21 +7,27 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"sync"
 	"time"
 )
+
+type client struct {
+	ch chan OverlayEvent
+}
 
 type Server struct {
 	port     int
 	logger   *slog.Logger
 	server   *http.Server
-	clientCh chan OverlayEvent
+	clients  map[*client]bool
+	mu       sync.RWMutex
 }
 
 func NewServer(port int, logger *slog.Logger) *Server {
 	return &Server{
-		port:     port,
-		logger:   logger,
-		clientCh: make(chan OverlayEvent, 10),
+		port:    port,
+		logger:  logger,
+		clients: make(map[*client]bool),
 	}
 }
 
@@ -48,6 +54,19 @@ func (s *Server) Start() error {
 	return nil
 }
 
+func (s *Server) addClient(c *client) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.clients[c] = true
+}
+
+func (s *Server) removeClient(c *client) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.clients, c)
+	close(c.ch)
+}
+
 func (s *Server) handleSSE(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
@@ -59,6 +78,12 @@ func (s *Server) handleSSE(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "streaming unsupported", http.StatusInternalServerError)
 		return
 	}
+
+	client := &client{
+		ch: make(chan OverlayEvent, 100),
+	}
+	s.addClient(client)
+	defer s.removeClient(client)
 
 	s.logger.Info("client connected")
 
@@ -79,7 +104,7 @@ func (s *Server) handleSSE(w http.ResponseWriter, r *http.Request) {
 		case <-clientGone:
 			s.logger.Debug("client disconnected")
 			return
-		case event := <-s.clientCh:
+		case event := <-client.ch:
 			data, err := json.Marshal(event)
 			if err != nil {
 				s.logger.Error("failed to marshal event", "err", err)
@@ -92,12 +117,24 @@ func (s *Server) handleSSE(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) Broadcast(event OverlayEvent) {
-	select {
-	case s.clientCh <- event:
-		s.logger.Info("event sent", "type", event.Type)
-	default:
-		s.logger.Warn("no client connected, event dropped", "type", event.Type)
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if len(s.clients) == 0 {
+		s.logger.Warn("no clients connected, event dropped", "type", event.Type)
+		return
 	}
+
+	for client := range s.clients {
+		select {
+		case client.ch <- event:
+			// Event sent successfully
+		default:
+			s.logger.Warn("client channel full, dropping event", "type", event.Type)
+		}
+	}
+
+	s.logger.Info("event sent", "type", event.Type, "clients", len(s.clients))
 }
 
 func (s *Server) Stop() {
