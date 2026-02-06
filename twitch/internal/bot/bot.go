@@ -117,6 +117,13 @@ func (b *Bot) Start() error {
 		})
 	})
 
+	client.OnEventChannelRaid(func(event twitch.EventChannelRaid) {
+		userName := event.FromBroadcasterUserName
+		b.SendMessage(SendMessageParams{
+			Message: fmt.Sprintf("!so @%s", userName),
+		})
+	})
+
 	b.mu.Lock()
 	b.isRunning = true
 	b.mu.Unlock()
