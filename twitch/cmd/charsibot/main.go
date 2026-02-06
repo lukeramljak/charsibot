@@ -43,6 +43,23 @@ func main() {
 	}))
 	slog.SetDefault(logger)
 
+	ctx := context.Background()
+	if streamerTokens, err := queries.GetTokens(ctx, "streamer"); err == nil {
+		logger.Info("loaded streamer tokens from database")
+		cfg.StreamerAccessToken = streamerTokens.AccessToken
+		cfg.StreamerRefreshToken = streamerTokens.RefreshToken
+	} else {
+		logger.Info("using streamer tokens from environment variables")
+	}
+
+	if botTokens, err := queries.GetTokens(ctx, "bot"); err == nil {
+		logger.Info("loaded bot tokens from database")
+		cfg.BotAccessToken = botTokens.AccessToken
+		cfg.BotRefreshToken = botTokens.RefreshToken
+	} else {
+		logger.Info("using bot tokens from environment variables")
+	}
+
 	commands := []bot.Command{
 		stats.NewStatsCommand(),
 		stats.NewLeaderboardCommand(),

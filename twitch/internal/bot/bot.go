@@ -343,8 +343,36 @@ func (b *Bot) SendMessage(params SendMessageParams) {
 
 	resp, err := b.botHelixClient.SendChatMessage(msgParams)
 	if err != nil {
-		b.logger.Error("failed to send message", "err", err, "message", params.Message)
-		return
+		if resp != nil && (resp.StatusCode == 401 || resp.StatusCode == 403) {
+			b.logger.Info("token may have expired, refreshing and retrying")
+
+			refresh, err := b.botHelixClient.RefreshUserAccessToken(b.botHelixClient.GetRefreshToken())
+			if err != nil {
+				b.logger.Error("failed to refresh token", "err", err)
+				b.logger.Error("failed to send message", "err", err, "message", params.Message)
+				return
+			}
+
+			b.botHelixClient.SetUserAccessToken(refresh.Data.AccessToken)
+			b.botHelixClient.SetRefreshToken(refresh.Data.RefreshToken)
+
+			if err = b.store.SaveTokens(b.ctx, store.SaveTokensParams{
+				TokenType:    "bot",
+				AccessToken:  refresh.Data.AccessToken,
+				RefreshToken: refresh.Data.RefreshToken,
+			}); err != nil {
+				b.logger.Error("failed to save refreshed bot tokens", "err", err)
+			}
+
+			resp, err = b.botHelixClient.SendChatMessage(msgParams)
+			if err != nil {
+				b.logger.Error("failed to send message after token refresh", "err", err, "message", params.Message)
+				return
+			}
+		} else {
+			b.logger.Error("failed to send message", "err", err, "message", params.Message)
+			return
+		}
 	}
 
 	if resp.Error != "" {
