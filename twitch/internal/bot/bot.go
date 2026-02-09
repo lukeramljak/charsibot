@@ -254,6 +254,7 @@ func (b *Bot) init(message twitch.WelcomeMessage) error {
 		events := []twitch.EventSubscription{
 			twitch.SubChannelChatMessage,
 			twitch.SubChannelChannelPointsCustomRewardRedemptionAdd,
+			twitch.SubChannelRaid,
 		}
 
 		for _, event := range events {
