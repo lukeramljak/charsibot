@@ -254,6 +254,7 @@ func (b *Bot) init(message twitch.WelcomeMessage) error {
 		events := []twitch.EventSubscription{
 			twitch.SubChannelChatMessage,
 			twitch.SubChannelChannelPointsCustomRewardRedemptionAdd,
+			twitch.SubChannelRaid,
 		}
 
 		for _, event := range events {
@@ -264,8 +265,9 @@ func (b *Bot) init(message twitch.WelcomeMessage) error {
 				AccessToken: helixClient.GetUserAccessToken(),
 				Event:       event,
 				Condition: map[string]string{
-					"broadcaster_user_id": b.config.ChannelUserID,
-					"user_id":             b.config.ChannelUserID,
+					"broadcaster_user_id":      b.config.ChannelUserID,
+					"user_id":                  b.config.ChannelUserID,
+					"from_broadcaster_user_id": b.config.ChannelUserID,
 				},
 			}); err != nil {
 				return fmt.Errorf("failed to subscribe to event %s: %w", event, err)
