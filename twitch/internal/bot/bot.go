@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"sync"
 
 	"github.com/joeyak/go-twitch-eventsub/v3"
@@ -352,8 +353,18 @@ func (b *Bot) SendMessage(params SendMessageParams) {
 
 	resp, err := b.botHelixClient.SendChatMessage(msgParams)
 	if err != nil {
-		if resp != nil && (resp.StatusCode == 401 || resp.StatusCode == 403) {
-			b.logger.Info("token may have expired, refreshing and retrying")
+		if resp != nil {
+			b.logger.Debug("send message error details", "status_code", resp.StatusCode, "err", err)
+		} else {
+			b.logger.Debug("send message error with nil response", "err", err)
+		}
+
+		// Check for token expiry (401/403) or decode errors that might indicate token issues
+		isTokenError := resp != nil && (resp.StatusCode == 401 || resp.StatusCode == 403)
+		isDecodeError := (strings.Contains(err.Error(), "Failed to decode") || strings.Contains(err.Error(), "invalid character"))
+
+		if isTokenError || isDecodeError {
+			b.logger.Info("token may have expired or auto-refresh encountered an error, refreshing and retrying", "is_token_error", isTokenError, "is_decode_error", isDecodeError)
 
 			refresh, err := b.botHelixClient.RefreshUserAccessToken(b.botHelixClient.GetRefreshToken())
 			if err != nil {
@@ -379,7 +390,11 @@ func (b *Bot) SendMessage(params SendMessageParams) {
 				return
 			}
 		} else {
-			b.logger.Error("failed to send message", "err", err, "message", params.Message)
+			statusCode := 0
+			if resp != nil {
+				statusCode = resp.StatusCode
+			}
+			b.logger.Error("failed to send message", "err", err, "status_code", statusCode, "message", params.Message)
 			return
 		}
 	}
