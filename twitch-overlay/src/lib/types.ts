@@ -4,7 +4,8 @@ export type OverlayEvent =
   | ChatCommandEvent
   | RedemptionEvent
   | CollectionDisplayEvent
-  | BlindBoxRedemptionEvent;
+  | BlindBoxRedemptionEvent
+  | LeaderboardEvent;
 
 export interface ChatCommandEvent {
   type: 'chat_command';
@@ -39,4 +40,19 @@ export interface BlindBoxRedemptionEvent {
     collectionSize: number;
     collection: string[];
   };
+}
+
+export type Stat = 'STR' | 'INT' | 'CHA' | 'LUCK' | 'DEX' | 'PENIS';
+
+export type Leaderboard = Record<
+  Stat,
+  {
+    username: string;
+    value: number;
+  }
+>;
+
+export interface LeaderboardEvent {
+  type: 'leaderboard';
+  data: Leaderboard;
 }

@@ -11,6 +11,12 @@
       >
         Blind Box
       </a>
+      <a
+        href={resolve('/leaderboard')}
+        class="rounded-lg bg-black px-8 py-4 font-semibold text-white transition-colors duration-200 hover:bg-black/80"
+      >
+        Leaderboard
+      </a>
     </div>
   </div>
 </div>

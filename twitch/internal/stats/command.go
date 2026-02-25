@@ -10,6 +10,7 @@ import (
 
 	"github.com/joeyak/go-twitch-eventsub/v3"
 	"github.com/lukeramljak/charsibot/internal/bot"
+	"github.com/lukeramljak/charsibot/internal/server"
 	"github.com/lukeramljak/charsibot/internal/store"
 )
 
@@ -85,44 +86,20 @@ func (c *LeaderboardCommand) Execute(b *bot.Bot, event twitch.EventChannelChatMe
 	}
 
 	statMap := map[string]struct {
-		username string
-		value    int64
+		Username string `json:"username"`
+		Value    int64  `json:"value"`
 	}{
-		"STR":   {username: stats.TopStrengthUsername, value: stats.TopStrengthValue},
-		"INT":   {username: stats.TopIntelligenceUsername, value: stats.TopIntelligenceValue},
-		"CHA":   {username: stats.TopCharismaUsername, value: stats.TopCharismaValue},
-		"LUCK":  {username: stats.TopLuckUsername, value: stats.TopLuckValue},
-		"DEX":   {username: stats.TopDexterityUsername, value: stats.TopDexterityValue},
-		"PENIS": {username: stats.TopPenisUsername, value: stats.TopPenisValue},
+		"STR":   {Username: stats.TopStrengthUsername, Value: stats.TopStrengthValue},
+		"INT":   {Username: stats.TopIntelligenceUsername, Value: stats.TopIntelligenceValue},
+		"CHA":   {Username: stats.TopCharismaUsername, Value: stats.TopCharismaValue},
+		"LUCK":  {Username: stats.TopLuckUsername, Value: stats.TopLuckValue},
+		"DEX":   {Username: stats.TopDexterityUsername, Value: stats.TopDexterityValue},
+		"PENIS": {Username: stats.TopPenisUsername, Value: stats.TopPenisValue},
 	}
 
-	emojiMap := map[string]string{
-		"STR":   "💪",
-		"INT":   "🧠",
-		"CHA":   "✨",
-		"LUCK":  "🍀",
-		"DEX":   "🤸",
-		"PENIS": "🍆",
-	}
-
-	order := []string{"STR", "INT", "CHA", "LUCK", "DEX", "PENIS"}
-	parts := []string{}
-	for _, label := range order {
-		emoji := emojiMap[label]
-		stat := statMap[label]
-		parts = append(parts, fmt.Sprintf("%s %s(%d)", emoji, stat.username, stat.value))
-	}
-
-	message := "Stats leaderboard: "
-	for i, part := range parts {
-		if i > 0 {
-			message += " | "
-		}
-		message += part
-	}
-
-	b.SendMessage(bot.SendMessageParams{
-		Message: message,
+	b.BroadcastOverlayEvent(server.OverlayEvent{
+		Type: server.EventTypeLeaderboard,
+		Data: statMap,
 	})
 }
 
