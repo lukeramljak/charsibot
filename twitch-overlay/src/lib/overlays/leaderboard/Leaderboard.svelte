@@ -94,6 +94,7 @@
     color: #fff;
     margin: 0;
     letter-spacing: 0.5px;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
   }
 
   .rows {
@@ -124,6 +125,7 @@
     text-transform: uppercase;
     letter-spacing: 0.5px;
     min-width: 52px;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
   }
 
   .username {
@@ -134,12 +136,14 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
   }
 
   .value {
     font-size: 14px;
     font-weight: 700;
     color: #fff;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
     background: rgba(255, 255, 255, 0.2);
     border-radius: 8px;
     padding: 3px 10px;
