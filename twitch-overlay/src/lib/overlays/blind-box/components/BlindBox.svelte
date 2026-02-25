@@ -226,7 +226,7 @@
     width: 100vw;
     height: 100vh;
     font-family:
-      'Inter',
+      'Nunito',
       -apple-system,
       BlinkMacSystemFont,
       'Segoe UI',
