@@ -21,7 +21,7 @@
 
     timeoutId = setTimeout(() => {
       leaderboard = null;
-    }, 4000);
+    }, 8000);
   });
 
   const statEmojis: Record<Stat, string> = {
