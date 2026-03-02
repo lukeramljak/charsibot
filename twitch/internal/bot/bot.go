@@ -252,26 +252,42 @@ func (b *Bot) init(message twitch.WelcomeMessage) error {
 	b.botHelixClient = botHelixClient
 
 	if !b.config.UseMockServer {
-		events := []twitch.EventSubscription{
-			twitch.SubChannelChatMessage,
-			twitch.SubChannelChannelPointsCustomRewardRedemptionAdd,
-			twitch.SubChannelRaid,
-		}
-
-		for _, event := range events {
-			b.logger.Info("subscribing to event", "event", event)
-			if _, err := twitch.SubscribeEvent(twitch.SubscribeRequest{
+		requests := []twitch.SubscribeRequest{
+			{
 				SessionID:   message.Payload.Session.ID,
 				ClientID:    b.config.ClientID,
 				AccessToken: helixClient.GetUserAccessToken(),
-				Event:       event,
+				Event:       twitch.SubChannelChatMessage,
 				Condition: map[string]string{
-					"broadcaster_user_id":      b.config.ChannelUserID,
-					"user_id":                  b.config.ChannelUserID,
-					"from_broadcaster_user_id": b.config.ChannelUserID,
+					"broadcaster_user_id": b.config.ChannelUserID,
+					"user_id":             b.config.ChannelUserID,
 				},
-			}); err != nil {
-				return fmt.Errorf("failed to subscribe to event %s: %w", event, err)
+			},
+			{
+				SessionID:   message.Payload.Session.ID,
+				ClientID:    b.config.ClientID,
+				AccessToken: helixClient.GetUserAccessToken(),
+				Event:       twitch.SubChannelChannelPointsCustomRewardRedemptionAdd,
+				Condition: map[string]string{
+					"broadcaster_user_id": b.config.ChannelUserID,
+					"user_id":             b.config.ChannelUserID,
+				},
+			},
+			{
+				SessionID:   message.Payload.Session.ID,
+				ClientID:    b.config.ClientID,
+				AccessToken: helixClient.GetUserAccessToken(),
+				Event:       twitch.SubChannelRaid,
+				Condition: map[string]string{
+					"to_broadcaster_user_id": b.config.ChannelUserID,
+				},
+			},
+		}
+
+		for _, request := range requests {
+			b.logger.Info("subscribing to event", "event", request.Event)
+			if _, err := twitch.SubscribeEvent(request); err != nil {
+				return fmt.Errorf("failed to subscribe to event %s: %w", request.Event, err)
 			}
 		}
 	}
