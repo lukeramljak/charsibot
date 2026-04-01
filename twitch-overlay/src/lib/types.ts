@@ -1,4 +1,4 @@
-export type CollectionType = 'coobubu' | 'olliepop' | 'christmas' | 'valentines';
+export type CollectionType = 'coobubu' | 'olliepop' | 'christmas' | 'valentines' | 'easter';
 
 export type OverlayEvent =
   | ChatCommandEvent

@@ -104,4 +104,21 @@ var BlindBoxConfigs = []BlindBoxConfig{
 			{Key: 8, Weight: 1},
 		},
 	},
+	{
+		CollectionType:           "easter",
+		ModeratorCommand:         "easter-redeem",
+		CollectionDisplayCommand: "easter",
+		ResetCommand:             "easter-reset",
+		RewardTitle:              "Easter Series Blind Box",
+		Plushies: []PlushieData{
+			{Key: 1, Weight: 5},
+			{Key: 2, Weight: 5},
+			{Key: 3, Weight: 5},
+			{Key: 4, Weight: 5},
+			{Key: 5, Weight: 5},
+			{Key: 6, Weight: 5},
+			{Key: 7, Weight: 5},
+			{Key: 8, Weight: 1},
+		},
+	},
 }

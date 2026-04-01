@@ -253,4 +253,67 @@ export const blindBoxConfigs: BlindBoxOverlayConfig[] = [
       },
     ],
   },
+  {
+    collectionType: 'easter',
+    collectionName: 'Chocopups',
+
+    revealSound: '/blind-box/easter/reveal.mp3',
+
+    boxFrontFace: '/blind-box/easter/box-front.png',
+    boxSideFace: '/blind-box/easter/box-side.png',
+
+    displayColor: '#ff81a9',
+    textColor: '#ffffff',
+
+    plushies: [
+      {
+        key: 'reward1',
+        name: 'Bunny',
+        image: '/blind-box/easter/bunny.png',
+        emptyImage: '/blind-box/easter/bunny-blank.png',
+      },
+      {
+        key: 'reward2',
+        name: 'Chikky',
+        image: '/blind-box/easter/chikky.png',
+        emptyImage: '/blind-box/easter/chikky-blank.png',
+      },
+      {
+        key: 'reward3',
+        name: 'Nesty',
+        image: '/blind-box/easter/nesty.png',
+        emptyImage: '/blind-box/easter/nesty-blank.png',
+      },
+      {
+        key: 'reward4',
+        name: 'Lamby',
+        image: '/blind-box/easter/lamby.png',
+        emptyImage: '/blind-box/easter/lamby-blank.png',
+      },
+      {
+        key: 'reward5',
+        name: 'Choccy',
+        image: '/blind-box/easter/choccy.png',
+        emptyImage: '/blind-box/easter/choccy-blank.png',
+      },
+      {
+        key: 'reward6',
+        name: 'Eggy',
+        image: '/blind-box/easter/eggy.png',
+        emptyImage: '/blind-box/easter/eggy-blank.png',
+      },
+      {
+        key: 'reward7',
+        name: 'Flowey',
+        image: '/blind-box/easter/flowey.png',
+        emptyImage: '/blind-box/easter/flowey-blank.png',
+      },
+      {
+        key: 'reward8',
+        name: 'Secret',
+        image: '/blind-box/easter/secret.png',
+        emptyImage: '/blind-box/easter/secret-blank.png',
+      },
+    ],
+  },
 ];
