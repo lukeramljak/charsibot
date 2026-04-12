@@ -9,137 +9,197 @@ import (
 	"context"
 )
 
-const getStats = `-- name: GetStats :one
-SELECT id, username, strength, intelligence, charisma, luck, dexterity, penis
-FROM stats
-WHERE id = ?
+const ensureUserStats = `-- name: EnsureUserStats :exec
+INSERT INTO user_stats (user_id, username, stat_name, value)
+SELECT ?, ?, sd.name, sd.default_value FROM stat_definitions sd
+WHERE sd.name NOT IN (
+  SELECT us.stat_name FROM user_stats us WHERE us.user_id = ?
+)
 `
 
-func (q *Queries) GetStats(ctx context.Context, id string) (Stat, error) {
-	row := q.queryRow(ctx, q.getStatsStmt, getStats, id)
-	var i Stat
+type EnsureUserStatsParams struct {
+	UserID   string `json:"userId"`
+	Username string `json:"username"`
+	UserID_2 string `json:"userId2"`
+}
+
+func (q *Queries) EnsureUserStats(ctx context.Context, arg EnsureUserStatsParams) error {
+	_, err := q.exec(ctx, q.ensureUserStatsStmt, ensureUserStats, arg.UserID, arg.Username, arg.UserID_2)
+	return err
+}
+
+const getRandomStatDefinition = `-- name: GetRandomStatDefinition :one
+SELECT name, short_name, long_name, default_value, sort_order FROM stat_definitions ORDER BY RANDOM() LIMIT 1
+`
+
+func (q *Queries) GetRandomStatDefinition(ctx context.Context) (StatDefinition, error) {
+	row := q.queryRow(ctx, q.getRandomStatDefinitionStmt, getRandomStatDefinition)
+	var i StatDefinition
 	err := row.Scan(
-		&i.ID,
-		&i.Username,
-		&i.Strength,
-		&i.Intelligence,
-		&i.Charisma,
-		&i.Luck,
-		&i.Dexterity,
-		&i.Penis,
+		&i.Name,
+		&i.ShortName,
+		&i.LongName,
+		&i.DefaultValue,
+		&i.SortOrder,
 	)
 	return i, err
 }
 
-const modifyCharisma = `-- name: ModifyCharisma :exec
-INSERT INTO stats (id, username)
-VALUES (?, ?)
-ON CONFLICT(id) DO NOTHING
+const getStatDefinitions = `-- name: GetStatDefinitions :many
+SELECT name, short_name, long_name, default_value, sort_order FROM stat_definitions ORDER BY sort_order
 `
 
-type ModifyCharismaParams struct {
-	ID       string `json:"id"`
-	Username string `json:"username"`
+func (q *Queries) GetStatDefinitions(ctx context.Context) ([]StatDefinition, error) {
+	rows, err := q.query(ctx, q.getStatDefinitionsStmt, getStatDefinitions)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []StatDefinition{}
+	for rows.Next() {
+		var i StatDefinition
+		if err := rows.Scan(
+			&i.Name,
+			&i.ShortName,
+			&i.LongName,
+			&i.DefaultValue,
+			&i.SortOrder,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
-func (q *Queries) ModifyCharisma(ctx context.Context, arg ModifyCharismaParams) error {
-	_, err := q.exec(ctx, q.modifyCharismaStmt, modifyCharisma, arg.ID, arg.Username)
+const getStatLeaderboard = `-- name: GetStatLeaderboard :many
+SELECT sd.short_name, sv.username, CAST(MAX(sv.value) AS INTEGER) AS value
+FROM user_stats sv
+JOIN stat_definitions sd ON sv.stat_name = sd.name
+GROUP BY sv.stat_name
+ORDER BY sd.sort_order
+`
+
+type GetStatLeaderboardRow struct {
+	ShortName string `json:"shortName"`
+	Username  string `json:"username"`
+	Value     int64  `json:"value"`
+}
+
+func (q *Queries) GetStatLeaderboard(ctx context.Context) ([]GetStatLeaderboardRow, error) {
+	rows, err := q.query(ctx, q.getStatLeaderboardStmt, getStatLeaderboard)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetStatLeaderboardRow{}
+	for rows.Next() {
+		var i GetStatLeaderboardRow
+		if err := rows.Scan(&i.ShortName, &i.Username, &i.Value); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getUserStats = `-- name: GetUserStats :many
+SELECT sd.name, sd.short_name, sd.long_name, sv.value
+FROM user_stats sv
+JOIN stat_definitions sd ON sv.stat_name = sd.name
+WHERE sv.user_id = ?
+ORDER BY sd.sort_order
+`
+
+type GetUserStatsRow struct {
+	Name      string `json:"name"`
+	ShortName string `json:"shortName"`
+	LongName  string `json:"longName"`
+	Value     int64  `json:"value"`
+}
+
+func (q *Queries) GetUserStats(ctx context.Context, userID string) ([]GetUserStatsRow, error) {
+	rows, err := q.query(ctx, q.getUserStatsStmt, getUserStats, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetUserStatsRow{}
+	for rows.Next() {
+		var i GetUserStatsRow
+		if err := rows.Scan(
+			&i.Name,
+			&i.ShortName,
+			&i.LongName,
+			&i.Value,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const modifyStatValue = `-- name: ModifyStatValue :exec
+UPDATE user_stats SET value = value + ?
+WHERE user_id = ? AND stat_name = ?
+`
+
+type ModifyStatValueParams struct {
+	Value    int64  `json:"value"`
+	UserID   string `json:"userId"`
+	StatName string `json:"statName"`
+}
+
+func (q *Queries) ModifyStatValue(ctx context.Context, arg ModifyStatValueParams) error {
+	_, err := q.exec(ctx, q.modifyStatValueStmt, modifyStatValue, arg.Value, arg.UserID, arg.StatName)
 	return err
 }
 
-const modifyDexterity = `-- name: ModifyDexterity :exec
-INSERT INTO stats (id, username)
-VALUES (?, ?)
-ON CONFLICT(id) DO NOTHING
+const setStatValue = `-- name: SetStatValue :exec
+UPDATE user_stats SET value = ?
+WHERE user_id = ? AND stat_name = ?
 `
 
-type ModifyDexterityParams struct {
-	ID       string `json:"id"`
-	Username string `json:"username"`
+type SetStatValueParams struct {
+	Value    int64  `json:"value"`
+	UserID   string `json:"userId"`
+	StatName string `json:"statName"`
 }
 
-func (q *Queries) ModifyDexterity(ctx context.Context, arg ModifyDexterityParams) error {
-	_, err := q.exec(ctx, q.modifyDexterityStmt, modifyDexterity, arg.ID, arg.Username)
+func (q *Queries) SetStatValue(ctx context.Context, arg SetStatValueParams) error {
+	_, err := q.exec(ctx, q.setStatValueStmt, setStatValue, arg.Value, arg.UserID, arg.StatName)
 	return err
 }
 
-const modifyIntelligence = `-- name: ModifyIntelligence :exec
-INSERT INTO stats (id, username)
-VALUES (?, ?)
-ON CONFLICT(id) DO NOTHING
+const updateUsername = `-- name: UpdateUsername :exec
+UPDATE user_stats SET username = ? WHERE user_id = ?
 `
 
-type ModifyIntelligenceParams struct {
-	ID       string `json:"id"`
+type UpdateUsernameParams struct {
 	Username string `json:"username"`
+	UserID   string `json:"userId"`
 }
 
-func (q *Queries) ModifyIntelligence(ctx context.Context, arg ModifyIntelligenceParams) error {
-	_, err := q.exec(ctx, q.modifyIntelligenceStmt, modifyIntelligence, arg.ID, arg.Username)
-	return err
-}
-
-const modifyLuck = `-- name: ModifyLuck :exec
-INSERT INTO stats (id, username)
-VALUES (?, ?)
-ON CONFLICT(id) DO NOTHING
-`
-
-type ModifyLuckParams struct {
-	ID       string `json:"id"`
-	Username string `json:"username"`
-}
-
-func (q *Queries) ModifyLuck(ctx context.Context, arg ModifyLuckParams) error {
-	_, err := q.exec(ctx, q.modifyLuckStmt, modifyLuck, arg.ID, arg.Username)
-	return err
-}
-
-const modifyPenis = `-- name: ModifyPenis :exec
-INSERT INTO stats (id, username)
-VALUES (?, ?)
-ON CONFLICT(id) DO NOTHING
-`
-
-type ModifyPenisParams struct {
-	ID       string `json:"id"`
-	Username string `json:"username"`
-}
-
-func (q *Queries) ModifyPenis(ctx context.Context, arg ModifyPenisParams) error {
-	_, err := q.exec(ctx, q.modifyPenisStmt, modifyPenis, arg.ID, arg.Username)
-	return err
-}
-
-const modifyStrength = `-- name: ModifyStrength :exec
-INSERT INTO stats (id, username)
-VALUES (?, ?)
-ON CONFLICT(id) DO NOTHING
-`
-
-type ModifyStrengthParams struct {
-	ID       string `json:"id"`
-	Username string `json:"username"`
-}
-
-func (q *Queries) ModifyStrength(ctx context.Context, arg ModifyStrengthParams) error {
-	_, err := q.exec(ctx, q.modifyStrengthStmt, modifyStrength, arg.ID, arg.Username)
-	return err
-}
-
-const upsertStatsUser = `-- name: UpsertStatsUser :exec
-INSERT INTO stats (id, username)
-VALUES (?, ?)
-ON CONFLICT(id) DO UPDATE SET
-  username = excluded.username
-`
-
-type UpsertStatsUserParams struct {
-	ID       string `json:"id"`
-	Username string `json:"username"`
-}
-
-func (q *Queries) UpsertStatsUser(ctx context.Context, arg UpsertStatsUserParams) error {
-	_, err := q.exec(ctx, q.upsertStatsUserStmt, upsertStatsUser, arg.ID, arg.Username)
+func (q *Queries) UpdateUsername(ctx context.Context, arg UpdateUsernameParams) error {
+	_, err := q.exec(ctx, q.updateUsernameStmt, updateUsername, arg.Username, arg.UserID)
 	return err
 }

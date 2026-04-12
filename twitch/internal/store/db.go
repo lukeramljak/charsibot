@@ -24,115 +24,86 @@ func New(db DBTX) *Queries {
 func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	q := Queries{db: db}
 	var err error
-	if q.addReward1Stmt, err = db.PrepareContext(ctx, addReward1); err != nil {
-		return nil, fmt.Errorf("error preparing query AddReward1: %w", err)
+	if q.ensureUserStatsStmt, err = db.PrepareContext(ctx, ensureUserStats); err != nil {
+		return nil, fmt.Errorf("error preparing query EnsureUserStats: %w", err)
 	}
-	if q.addReward2Stmt, err = db.PrepareContext(ctx, addReward2); err != nil {
-		return nil, fmt.Errorf("error preparing query AddReward2: %w", err)
+	if q.getAllSeriesStmt, err = db.PrepareContext(ctx, getAllSeries); err != nil {
+		return nil, fmt.Errorf("error preparing query GetAllSeries: %w", err)
 	}
-	if q.addReward3Stmt, err = db.PrepareContext(ctx, addReward3); err != nil {
-		return nil, fmt.Errorf("error preparing query AddReward3: %w", err)
+	if q.getAllSeriesWithPlushiesStmt, err = db.PrepareContext(ctx, getAllSeriesWithPlushies); err != nil {
+		return nil, fmt.Errorf("error preparing query GetAllSeriesWithPlushies: %w", err)
 	}
-	if q.addReward4Stmt, err = db.PrepareContext(ctx, addReward4); err != nil {
-		return nil, fmt.Errorf("error preparing query AddReward4: %w", err)
-	}
-	if q.addReward5Stmt, err = db.PrepareContext(ctx, addReward5); err != nil {
-		return nil, fmt.Errorf("error preparing query AddReward5: %w", err)
-	}
-	if q.addReward6Stmt, err = db.PrepareContext(ctx, addReward6); err != nil {
-		return nil, fmt.Errorf("error preparing query AddReward6: %w", err)
-	}
-	if q.addReward7Stmt, err = db.PrepareContext(ctx, addReward7); err != nil {
-		return nil, fmt.Errorf("error preparing query AddReward7: %w", err)
-	}
-	if q.addReward8Stmt, err = db.PrepareContext(ctx, addReward8); err != nil {
-		return nil, fmt.Errorf("error preparing query AddReward8: %w", err)
+	if q.getCollectedPlushiesStmt, err = db.PrepareContext(ctx, getCollectedPlushies); err != nil {
+		return nil, fmt.Errorf("error preparing query GetCollectedPlushies: %w", err)
 	}
 	if q.getCompletedCollectionsStmt, err = db.PrepareContext(ctx, getCompletedCollections); err != nil {
 		return nil, fmt.Errorf("error preparing query GetCompletedCollections: %w", err)
 	}
+	if q.getPlushiesForSeriesStmt, err = db.PrepareContext(ctx, getPlushiesForSeries); err != nil {
+		return nil, fmt.Errorf("error preparing query GetPlushiesForSeries: %w", err)
+	}
+	if q.getRandomStatDefinitionStmt, err = db.PrepareContext(ctx, getRandomStatDefinition); err != nil {
+		return nil, fmt.Errorf("error preparing query GetRandomStatDefinition: %w", err)
+	}
+	if q.getSeriesByTypeStmt, err = db.PrepareContext(ctx, getSeriesByType); err != nil {
+		return nil, fmt.Errorf("error preparing query GetSeriesByType: %w", err)
+	}
+	if q.getStatDefinitionsStmt, err = db.PrepareContext(ctx, getStatDefinitions); err != nil {
+		return nil, fmt.Errorf("error preparing query GetStatDefinitions: %w", err)
+	}
 	if q.getStatLeaderboardStmt, err = db.PrepareContext(ctx, getStatLeaderboard); err != nil {
 		return nil, fmt.Errorf("error preparing query GetStatLeaderboard: %w", err)
 	}
-	if q.getStatsStmt, err = db.PrepareContext(ctx, getStats); err != nil {
-		return nil, fmt.Errorf("error preparing query GetStats: %w", err)
+	if q.getUserStatsStmt, err = db.PrepareContext(ctx, getUserStats); err != nil {
+		return nil, fmt.Errorf("error preparing query GetUserStats: %w", err)
 	}
-	if q.getTokensStmt, err = db.PrepareContext(ctx, getTokens); err != nil {
-		return nil, fmt.Errorf("error preparing query GetTokens: %w", err)
+	if q.hasUserPlushieStmt, err = db.PrepareContext(ctx, hasUserPlushie); err != nil {
+		return nil, fmt.Errorf("error preparing query HasUserPlushie: %w", err)
 	}
-	if q.getUserCollectionRowStmt, err = db.PrepareContext(ctx, getUserCollectionRow); err != nil {
-		return nil, fmt.Errorf("error preparing query GetUserCollectionRow: %w", err)
+	if q.insertUserPlushieIfNewStmt, err = db.PrepareContext(ctx, insertUserPlushieIfNew); err != nil {
+		return nil, fmt.Errorf("error preparing query InsertUserPlushieIfNew: %w", err)
 	}
-	if q.modifyCharismaStmt, err = db.PrepareContext(ctx, modifyCharisma); err != nil {
-		return nil, fmt.Errorf("error preparing query ModifyCharisma: %w", err)
+	if q.lastChangeCountStmt, err = db.PrepareContext(ctx, lastChangeCount); err != nil {
+		return nil, fmt.Errorf("error preparing query LastChangeCount: %w", err)
 	}
-	if q.modifyDexterityStmt, err = db.PrepareContext(ctx, modifyDexterity); err != nil {
-		return nil, fmt.Errorf("error preparing query ModifyDexterity: %w", err)
+	if q.modifyStatValueStmt, err = db.PrepareContext(ctx, modifyStatValue); err != nil {
+		return nil, fmt.Errorf("error preparing query ModifyStatValue: %w", err)
 	}
-	if q.modifyIntelligenceStmt, err = db.PrepareContext(ctx, modifyIntelligence); err != nil {
-		return nil, fmt.Errorf("error preparing query ModifyIntelligence: %w", err)
+	if q.resetUserPlushiesStmt, err = db.PrepareContext(ctx, resetUserPlushies); err != nil {
+		return nil, fmt.Errorf("error preparing query ResetUserPlushies: %w", err)
 	}
-	if q.modifyLuckStmt, err = db.PrepareContext(ctx, modifyLuck); err != nil {
-		return nil, fmt.Errorf("error preparing query ModifyLuck: %w", err)
+	if q.setStatValueStmt, err = db.PrepareContext(ctx, setStatValue); err != nil {
+		return nil, fmt.Errorf("error preparing query SetStatValue: %w", err)
 	}
-	if q.modifyPenisStmt, err = db.PrepareContext(ctx, modifyPenis); err != nil {
-		return nil, fmt.Errorf("error preparing query ModifyPenis: %w", err)
+	if q.updateUsernameStmt, err = db.PrepareContext(ctx, updateUsername); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateUsername: %w", err)
 	}
-	if q.modifyStrengthStmt, err = db.PrepareContext(ctx, modifyStrength); err != nil {
-		return nil, fmt.Errorf("error preparing query ModifyStrength: %w", err)
-	}
-	if q.resetUserCollectionStmt, err = db.PrepareContext(ctx, resetUserCollection); err != nil {
-		return nil, fmt.Errorf("error preparing query ResetUserCollection: %w", err)
-	}
-	if q.saveTokensStmt, err = db.PrepareContext(ctx, saveTokens); err != nil {
-		return nil, fmt.Errorf("error preparing query SaveTokens: %w", err)
-	}
-	if q.upsertStatsUserStmt, err = db.PrepareContext(ctx, upsertStatsUser); err != nil {
-		return nil, fmt.Errorf("error preparing query UpsertStatsUser: %w", err)
+	if q.upsertUserPlushieStmt, err = db.PrepareContext(ctx, upsertUserPlushie); err != nil {
+		return nil, fmt.Errorf("error preparing query UpsertUserPlushie: %w", err)
 	}
 	return &q, nil
 }
 
 func (q *Queries) Close() error {
 	var err error
-	if q.addReward1Stmt != nil {
-		if cerr := q.addReward1Stmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing addReward1Stmt: %w", cerr)
+	if q.ensureUserStatsStmt != nil {
+		if cerr := q.ensureUserStatsStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing ensureUserStatsStmt: %w", cerr)
 		}
 	}
-	if q.addReward2Stmt != nil {
-		if cerr := q.addReward2Stmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing addReward2Stmt: %w", cerr)
+	if q.getAllSeriesStmt != nil {
+		if cerr := q.getAllSeriesStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getAllSeriesStmt: %w", cerr)
 		}
 	}
-	if q.addReward3Stmt != nil {
-		if cerr := q.addReward3Stmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing addReward3Stmt: %w", cerr)
+	if q.getAllSeriesWithPlushiesStmt != nil {
+		if cerr := q.getAllSeriesWithPlushiesStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getAllSeriesWithPlushiesStmt: %w", cerr)
 		}
 	}
-	if q.addReward4Stmt != nil {
-		if cerr := q.addReward4Stmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing addReward4Stmt: %w", cerr)
-		}
-	}
-	if q.addReward5Stmt != nil {
-		if cerr := q.addReward5Stmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing addReward5Stmt: %w", cerr)
-		}
-	}
-	if q.addReward6Stmt != nil {
-		if cerr := q.addReward6Stmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing addReward6Stmt: %w", cerr)
-		}
-	}
-	if q.addReward7Stmt != nil {
-		if cerr := q.addReward7Stmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing addReward7Stmt: %w", cerr)
-		}
-	}
-	if q.addReward8Stmt != nil {
-		if cerr := q.addReward8Stmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing addReward8Stmt: %w", cerr)
+	if q.getCollectedPlushiesStmt != nil {
+		if cerr := q.getCollectedPlushiesStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getCollectedPlushiesStmt: %w", cerr)
 		}
 	}
 	if q.getCompletedCollectionsStmt != nil {
@@ -140,69 +111,74 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getCompletedCollectionsStmt: %w", cerr)
 		}
 	}
+	if q.getPlushiesForSeriesStmt != nil {
+		if cerr := q.getPlushiesForSeriesStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getPlushiesForSeriesStmt: %w", cerr)
+		}
+	}
+	if q.getRandomStatDefinitionStmt != nil {
+		if cerr := q.getRandomStatDefinitionStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getRandomStatDefinitionStmt: %w", cerr)
+		}
+	}
+	if q.getSeriesByTypeStmt != nil {
+		if cerr := q.getSeriesByTypeStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getSeriesByTypeStmt: %w", cerr)
+		}
+	}
+	if q.getStatDefinitionsStmt != nil {
+		if cerr := q.getStatDefinitionsStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getStatDefinitionsStmt: %w", cerr)
+		}
+	}
 	if q.getStatLeaderboardStmt != nil {
 		if cerr := q.getStatLeaderboardStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getStatLeaderboardStmt: %w", cerr)
 		}
 	}
-	if q.getStatsStmt != nil {
-		if cerr := q.getStatsStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing getStatsStmt: %w", cerr)
+	if q.getUserStatsStmt != nil {
+		if cerr := q.getUserStatsStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getUserStatsStmt: %w", cerr)
 		}
 	}
-	if q.getTokensStmt != nil {
-		if cerr := q.getTokensStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing getTokensStmt: %w", cerr)
+	if q.hasUserPlushieStmt != nil {
+		if cerr := q.hasUserPlushieStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing hasUserPlushieStmt: %w", cerr)
 		}
 	}
-	if q.getUserCollectionRowStmt != nil {
-		if cerr := q.getUserCollectionRowStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing getUserCollectionRowStmt: %w", cerr)
+	if q.insertUserPlushieIfNewStmt != nil {
+		if cerr := q.insertUserPlushieIfNewStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing insertUserPlushieIfNewStmt: %w", cerr)
 		}
 	}
-	if q.modifyCharismaStmt != nil {
-		if cerr := q.modifyCharismaStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing modifyCharismaStmt: %w", cerr)
+	if q.lastChangeCountStmt != nil {
+		if cerr := q.lastChangeCountStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing lastChangeCountStmt: %w", cerr)
 		}
 	}
-	if q.modifyDexterityStmt != nil {
-		if cerr := q.modifyDexterityStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing modifyDexterityStmt: %w", cerr)
+	if q.modifyStatValueStmt != nil {
+		if cerr := q.modifyStatValueStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing modifyStatValueStmt: %w", cerr)
 		}
 	}
-	if q.modifyIntelligenceStmt != nil {
-		if cerr := q.modifyIntelligenceStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing modifyIntelligenceStmt: %w", cerr)
+	if q.resetUserPlushiesStmt != nil {
+		if cerr := q.resetUserPlushiesStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing resetUserPlushiesStmt: %w", cerr)
 		}
 	}
-	if q.modifyLuckStmt != nil {
-		if cerr := q.modifyLuckStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing modifyLuckStmt: %w", cerr)
+	if q.setStatValueStmt != nil {
+		if cerr := q.setStatValueStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing setStatValueStmt: %w", cerr)
 		}
 	}
-	if q.modifyPenisStmt != nil {
-		if cerr := q.modifyPenisStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing modifyPenisStmt: %w", cerr)
+	if q.updateUsernameStmt != nil {
+		if cerr := q.updateUsernameStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateUsernameStmt: %w", cerr)
 		}
 	}
-	if q.modifyStrengthStmt != nil {
-		if cerr := q.modifyStrengthStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing modifyStrengthStmt: %w", cerr)
-		}
-	}
-	if q.resetUserCollectionStmt != nil {
-		if cerr := q.resetUserCollectionStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing resetUserCollectionStmt: %w", cerr)
-		}
-	}
-	if q.saveTokensStmt != nil {
-		if cerr := q.saveTokensStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing saveTokensStmt: %w", cerr)
-		}
-	}
-	if q.upsertStatsUserStmt != nil {
-		if cerr := q.upsertStatsUserStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing upsertStatsUserStmt: %w", cerr)
+	if q.upsertUserPlushieStmt != nil {
+		if cerr := q.upsertUserPlushieStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing upsertUserPlushieStmt: %w", cerr)
 		}
 	}
 	return err
@@ -242,57 +218,51 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 }
 
 type Queries struct {
-	db                          DBTX
-	tx                          *sql.Tx
-	addReward1Stmt              *sql.Stmt
-	addReward2Stmt              *sql.Stmt
-	addReward3Stmt              *sql.Stmt
-	addReward4Stmt              *sql.Stmt
-	addReward5Stmt              *sql.Stmt
-	addReward6Stmt              *sql.Stmt
-	addReward7Stmt              *sql.Stmt
-	addReward8Stmt              *sql.Stmt
-	getCompletedCollectionsStmt *sql.Stmt
-	getStatLeaderboardStmt      *sql.Stmt
-	getStatsStmt                *sql.Stmt
-	getTokensStmt               *sql.Stmt
-	getUserCollectionRowStmt    *sql.Stmt
-	modifyCharismaStmt          *sql.Stmt
-	modifyDexterityStmt         *sql.Stmt
-	modifyIntelligenceStmt      *sql.Stmt
-	modifyLuckStmt              *sql.Stmt
-	modifyPenisStmt             *sql.Stmt
-	modifyStrengthStmt          *sql.Stmt
-	resetUserCollectionStmt     *sql.Stmt
-	saveTokensStmt              *sql.Stmt
-	upsertStatsUserStmt         *sql.Stmt
+	db                           DBTX
+	tx                           *sql.Tx
+	ensureUserStatsStmt          *sql.Stmt
+	getAllSeriesStmt             *sql.Stmt
+	getAllSeriesWithPlushiesStmt *sql.Stmt
+	getCollectedPlushiesStmt     *sql.Stmt
+	getCompletedCollectionsStmt  *sql.Stmt
+	getPlushiesForSeriesStmt     *sql.Stmt
+	getRandomStatDefinitionStmt  *sql.Stmt
+	getSeriesByTypeStmt          *sql.Stmt
+	getStatDefinitionsStmt       *sql.Stmt
+	getStatLeaderboardStmt       *sql.Stmt
+	getUserStatsStmt             *sql.Stmt
+	hasUserPlushieStmt           *sql.Stmt
+	insertUserPlushieIfNewStmt   *sql.Stmt
+	lastChangeCountStmt          *sql.Stmt
+	modifyStatValueStmt          *sql.Stmt
+	resetUserPlushiesStmt        *sql.Stmt
+	setStatValueStmt             *sql.Stmt
+	updateUsernameStmt           *sql.Stmt
+	upsertUserPlushieStmt        *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:                          tx,
-		tx:                          tx,
-		addReward1Stmt:              q.addReward1Stmt,
-		addReward2Stmt:              q.addReward2Stmt,
-		addReward3Stmt:              q.addReward3Stmt,
-		addReward4Stmt:              q.addReward4Stmt,
-		addReward5Stmt:              q.addReward5Stmt,
-		addReward6Stmt:              q.addReward6Stmt,
-		addReward7Stmt:              q.addReward7Stmt,
-		addReward8Stmt:              q.addReward8Stmt,
-		getCompletedCollectionsStmt: q.getCompletedCollectionsStmt,
-		getStatLeaderboardStmt:      q.getStatLeaderboardStmt,
-		getStatsStmt:                q.getStatsStmt,
-		getTokensStmt:               q.getTokensStmt,
-		getUserCollectionRowStmt:    q.getUserCollectionRowStmt,
-		modifyCharismaStmt:          q.modifyCharismaStmt,
-		modifyDexterityStmt:         q.modifyDexterityStmt,
-		modifyIntelligenceStmt:      q.modifyIntelligenceStmt,
-		modifyLuckStmt:              q.modifyLuckStmt,
-		modifyPenisStmt:             q.modifyPenisStmt,
-		modifyStrengthStmt:          q.modifyStrengthStmt,
-		resetUserCollectionStmt:     q.resetUserCollectionStmt,
-		saveTokensStmt:              q.saveTokensStmt,
-		upsertStatsUserStmt:         q.upsertStatsUserStmt,
+		db:                           tx,
+		tx:                           tx,
+		ensureUserStatsStmt:          q.ensureUserStatsStmt,
+		getAllSeriesStmt:             q.getAllSeriesStmt,
+		getAllSeriesWithPlushiesStmt: q.getAllSeriesWithPlushiesStmt,
+		getCollectedPlushiesStmt:     q.getCollectedPlushiesStmt,
+		getCompletedCollectionsStmt:  q.getCompletedCollectionsStmt,
+		getPlushiesForSeriesStmt:     q.getPlushiesForSeriesStmt,
+		getRandomStatDefinitionStmt:  q.getRandomStatDefinitionStmt,
+		getSeriesByTypeStmt:          q.getSeriesByTypeStmt,
+		getStatDefinitionsStmt:       q.getStatDefinitionsStmt,
+		getStatLeaderboardStmt:       q.getStatLeaderboardStmt,
+		getUserStatsStmt:             q.getUserStatsStmt,
+		hasUserPlushieStmt:           q.hasUserPlushieStmt,
+		insertUserPlushieIfNewStmt:   q.insertUserPlushieIfNewStmt,
+		lastChangeCountStmt:          q.lastChangeCountStmt,
+		modifyStatValueStmt:          q.modifyStatValueStmt,
+		resetUserPlushiesStmt:        q.resetUserPlushiesStmt,
+		setStatValueStmt:             q.setStatValueStmt,
+		updateUsernameStmt:           q.updateUsernameStmt,
+		upsertUserPlushieStmt:        q.upsertUserPlushieStmt,
 	}
 }

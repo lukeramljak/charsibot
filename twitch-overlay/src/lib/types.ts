@@ -1,5 +1,3 @@
-export type CollectionType = 'coobubu' | 'olliepop' | 'christmas' | 'valentines' | 'easter';
-
 export type OverlayEvent =
   | ChatCommandEvent
   | RedemptionEvent
@@ -22,7 +20,7 @@ export interface CollectionDisplayEvent {
   data: {
     userId: string;
     username: string;
-    collectionType: CollectionType;
+    series: string;
     collection: string[];
     collectionSize: number;
   };
@@ -33,7 +31,7 @@ export interface BlindBoxRedemptionEvent {
   data: {
     userId: string;
     username: string;
-    collectionType: CollectionType;
+    series: string;
     seriesName: string;
     plushie: string;
     isNew: boolean;
@@ -42,15 +40,11 @@ export interface BlindBoxRedemptionEvent {
   };
 }
 
-export type Stat = 'STR' | 'INT' | 'CHA' | 'LUCK' | 'DEX' | 'PENIS';
-
-export type Leaderboard = Record<
-  Stat,
-  {
-    username: string;
-    value: number;
-  }
->;
+export type Leaderboard = Array<{
+  displayName: string;
+  username: string;
+  value: number;
+}>;
 
 export interface LeaderboardEvent {
   type: 'leaderboard';

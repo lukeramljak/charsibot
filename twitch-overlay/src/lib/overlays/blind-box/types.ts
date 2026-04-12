@@ -1,7 +1,5 @@
-import type { CollectionType } from '$lib/types';
-
 export interface PlushieData {
-  /** Unique identifier for the plushie */
+  /** Unique identifier for the plushie (matches key from DB) */
   key: string;
   name: string;
   /** Path to the plushie image asset */
@@ -10,11 +8,11 @@ export interface PlushieData {
 }
 
 export interface BlindBoxOverlayConfig {
-  /** Collection type identifier */
-  collectionType: CollectionType;
+  /** Series identifier (e.g. 'coobubu', 'xmas') */
+  series: string;
 
-  /** Name of the blind box collection to be displayed (e.g. "Coobubus") */
-  collectionName: string;
+  /** Display name of the blind box collection (e.g. "Coobubus") */
+  name: string;
 
   revealSound: string;
 

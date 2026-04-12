@@ -7,27 +7,39 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
+
+	helix "github.com/nicklaw5/helix/v2"
+
+	"github.com/lukeramljak/charsibot/internal/bot"
+	"github.com/lukeramljak/charsibot/internal/store"
 )
 
 type client struct {
-	ch chan OverlayEvent
+	ch chan bot.OverlayEvent
 }
 
 type Server struct {
-	port     int
-	logger   *slog.Logger
-	server   *http.Server
-	clients  map[*client]bool
-	mu       sync.RWMutex
+	port         int
+	clientID     string
+	clientSecret string
+	redirectURI  string
+	server       *http.Server
+	clients      map[*client]bool
+	mu           sync.RWMutex
+	queries      *store.Queries
 }
 
-func NewServer(port int, logger *slog.Logger) *Server {
+func NewServer(port int, clientID, clientSecret, redirectURI string, queries *store.Queries) *Server {
 	return &Server{
-		port:    port,
-		logger:  logger,
-		clients: make(map[*client]bool),
+		port:         port,
+		clientID:     clientID,
+		clientSecret: clientSecret,
+		redirectURI:  redirectURI,
+		clients:      make(map[*client]bool),
+		queries:      queries,
 	}
 }
 
@@ -38,6 +50,9 @@ func (s *Server) Start() error {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
 	})
+	mux.HandleFunc("GET /oauth/start", s.handleOAuthStart)
+	mux.HandleFunc("GET /oauth/callback", s.handleOAuthCallback)
+	mux.HandleFunc("GET /api/blindbox", s.handleBlindBox)
 
 	s.server = &http.Server{
 		Addr:         fmt.Sprintf(":%d", s.port),
@@ -46,12 +61,104 @@ func (s *Server) Start() error {
 		WriteTimeout: 0, // No timeout for SSE connections
 	}
 
-	s.logger.Info("SSE server started", "port", s.port)
-	if err := s.server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		s.logger.Error("SSE server error", "err", err)
-	}
+	slog.Info("SSE server started", "port", s.port)
+	go func() {
+		if err := s.server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			slog.Error("SSE server error", "err", err)
+		}
+	}()
 
 	return nil
+}
+
+var oauthScopes = map[string][]string{
+	"streamer": {"channel:read:redemptions", "channel:bot"},
+	"bot":      {"user:read:chat", "user:write:chat", "user:bot"},
+}
+
+func (s *Server) handleOAuthStart(w http.ResponseWriter, r *http.Request) {
+	account := r.URL.Query().Get("account")
+	scopes, ok := oauthScopes[account]
+	if !ok {
+		http.Error(w, `account must be "streamer" or "bot"`, http.StatusBadRequest)
+		return
+	}
+
+	helixClient, err := helix.NewClient(&helix.Options{
+		ClientID:    s.clientID,
+		RedirectURI: s.redirectURI,
+	})
+	if err != nil {
+		slog.Error("failed to create helix client", "err", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	authURL := helixClient.GetAuthorizationURL(&helix.AuthorizationURLParams{
+		ResponseType: "code",
+		Scopes:       scopes,
+		State:        account,
+		ForceVerify:  true,
+	})
+
+	http.Redirect(w, r, authURL, http.StatusFound)
+}
+
+func (s *Server) handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
+	account := r.URL.Query().Get("state")
+	if _, ok := oauthScopes[account]; !ok {
+		http.Error(w, "invalid state parameter", http.StatusBadRequest)
+		return
+	}
+
+	code := r.URL.Query().Get("code")
+	if code == "" {
+		errMsg := r.URL.Query().Get("error_description")
+		if errMsg == "" {
+			errMsg = r.URL.Query().Get("error")
+		}
+		http.Error(w, "auth denied: "+errMsg, http.StatusBadRequest)
+		return
+	}
+
+	helixClient, err := helix.NewClient(&helix.Options{
+		ClientID:     s.clientID,
+		ClientSecret: s.clientSecret,
+		RedirectURI:  s.redirectURI,
+	})
+	if err != nil {
+		slog.Error("failed to create helix client", "err", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	tokenResp, err := helixClient.RequestUserAccessToken(code)
+	if err != nil {
+		slog.Error("token exchange request failed", "account", account, "err", err)
+		http.Error(w, "token exchange failed", http.StatusInternalServerError)
+		return
+	}
+	if tokenResp.ErrorMessage != "" {
+		slog.Error("twitch returned error during token exchange", "account", account, "error", tokenResp.Error, "message", tokenResp.ErrorMessage)
+		http.Error(w, "token exchange failed: "+tokenResp.ErrorMessage, http.StatusInternalServerError)
+		return
+	}
+
+	slog.Info("OAuth authorization complete", "account", account)
+	accountLabel := strings.ToUpper(account[:1]) + account[1:]
+	fmt.Fprintf(w, "%s authorization complete.", accountLabel)
+}
+
+func (s *Server) handleBlindBox(w http.ResponseWriter, r *http.Request) {
+	series, err := bot.LoadAllSeries(r.Context(), s.queries)
+	if err != nil {
+		http.Error(w, "failed to load series", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	json.NewEncoder(w).Encode(series)
 }
 
 func (s *Server) addClient(c *client) {
@@ -80,12 +187,12 @@ func (s *Server) handleSSE(w http.ResponseWriter, r *http.Request) {
 	}
 
 	client := &client{
-		ch: make(chan OverlayEvent, 100),
+		ch: make(chan bot.OverlayEvent, 100),
 	}
 	s.addClient(client)
 	defer s.removeClient(client)
 
-	s.logger.Info("client connected")
+	slog.Info("client connected")
 
 	connectedEvent := map[string]any{
 		"type":      "connected",
@@ -102,12 +209,12 @@ func (s *Server) handleSSE(w http.ResponseWriter, r *http.Request) {
 	for {
 		select {
 		case <-clientGone:
-			s.logger.Debug("client disconnected")
+			slog.Debug("client disconnected")
 			return
 		case event := <-client.ch:
 			data, err := json.Marshal(event)
 			if err != nil {
-				s.logger.Error("failed to marshal event", "err", err)
+				slog.Error("failed to marshal event", "err", err)
 				continue
 			}
 			fmt.Fprintf(w, "data: %s\n\n", data)
@@ -116,12 +223,12 @@ func (s *Server) handleSSE(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Server) Broadcast(event OverlayEvent) {
+func (s *Server) Broadcast(event bot.OverlayEvent) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
 	if len(s.clients) == 0 {
-		s.logger.Warn("no clients connected, event dropped", "type", event.Type)
+		slog.Warn("no clients connected, event dropped", "type", event.Type)
 		return
 	}
 
@@ -130,11 +237,11 @@ func (s *Server) Broadcast(event OverlayEvent) {
 		case client.ch <- event:
 			// Event sent successfully
 		default:
-			s.logger.Warn("client channel full, dropping event", "type", event.Type)
+			slog.Warn("client channel full, dropping event", "type", event.Type)
 		}
 	}
 
-	s.logger.Info("event sent", "type", event.Type, "clients", len(s.clients))
+	slog.Info("event sent", "type", event.Type, "clients", len(s.clients))
 }
 
 func (s *Server) Stop() {

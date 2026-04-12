@@ -11,7 +11,7 @@ class Charsibot {
   connect() {
     if (this.eventSource) return;
 
-    const url = env.PUBLIC_TWITCH_SSE_URL || 'http://localhost:8081/events';
+    const url = `${env.PUBLIC_SERVER_BASE_URL}/events`;
     this.eventSource = new EventSource(url);
 
     this.eventSource.onopen = () => {

@@ -4,38 +4,46 @@
 
 package store
 
-import (
-	"database/sql"
-)
-
-type OauthToken struct {
-	TokenType    string          `json:"token_type"`
-	AccessToken  string          `json:"access_token"`
-	RefreshToken string          `json:"refresh_token"`
-	UpdatedAt    sql.NullFloat64 `json:"updated_at"`
+type BlindBoxPlushie struct {
+	ID         int64  `json:"id"`
+	Series     string `json:"series"`
+	Key        string `json:"key"`
+	SortOrder  int64  `json:"sortOrder"`
+	Weight     int64  `json:"weight"`
+	Name       string `json:"name"`
+	Image      string `json:"image"`
+	EmptyImage string `json:"emptyImage"`
 }
 
-type Stat struct {
-	ID           string `json:"id"`
-	Username     string `json:"username"`
-	Strength     int64  `json:"strength"`
-	Intelligence int64  `json:"intelligence"`
-	Charisma     int64  `json:"charisma"`
-	Luck         int64  `json:"luck"`
-	Dexterity    int64  `json:"dexterity"`
-	Penis        int64  `json:"penis"`
+type BlindBoxSeries struct {
+	Series          string `json:"series"`
+	RedemptionTitle string `json:"redemptionTitle"`
+	Name            string `json:"name"`
+	RevealSound     string `json:"revealSound"`
+	BoxFrontFace    string `json:"boxFrontFace"`
+	BoxSideFace     string `json:"boxSideFace"`
+	DisplayColor    string `json:"displayColor"`
+	TextColor       string `json:"textColor"`
 }
 
-type UserCollection struct {
-	UserID         sql.NullString `json:"user_id"`
-	Username       string         `json:"username"`
-	CollectionType sql.NullString `json:"collection_type"`
-	Reward1        sql.NullInt64  `json:"reward1"`
-	Reward2        sql.NullInt64  `json:"reward2"`
-	Reward3        sql.NullInt64  `json:"reward3"`
-	Reward4        sql.NullInt64  `json:"reward4"`
-	Reward5        sql.NullInt64  `json:"reward5"`
-	Reward6        sql.NullInt64  `json:"reward6"`
-	Reward7        sql.NullInt64  `json:"reward7"`
-	Reward8        sql.NullInt64  `json:"reward8"`
+type StatDefinition struct {
+	Name         string `json:"name"`
+	ShortName    string `json:"shortName"`
+	LongName     string `json:"longName"`
+	DefaultValue int64  `json:"defaultValue"`
+	SortOrder    int64  `json:"sortOrder"`
+}
+
+type UserPlushie struct {
+	UserID   string `json:"userId"`
+	Username string `json:"username"`
+	Series   string `json:"series"`
+	Key      string `json:"key"`
+}
+
+type UserStat struct {
+	UserID   string `json:"userId"`
+	Username string `json:"username"`
+	StatName string `json:"statName"`
+	Value    int64  `json:"value"`
 }

@@ -1,10 +1,11 @@
 <script lang="ts">
   import { charsibot } from '$lib/charsibot.svelte';
-  import type { Leaderboard, Stat } from '$lib/types';
+  import type { Leaderboard } from '$lib/types';
   import { onMount } from 'svelte';
   import { fly } from 'svelte/transition';
 
-  let leaderboard = $state<Leaderboard | null>(null);
+  let leaderboard = $state<Leaderboard>([]);
+  let visible = $state(false);
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
   onMount(() => {
@@ -16,15 +17,16 @@
     if (!lastMsg || lastMsg.type !== 'leaderboard') return;
 
     leaderboard = lastMsg.data;
+    visible = true;
 
     if (timeoutId) clearTimeout(timeoutId);
 
     timeoutId = setTimeout(() => {
-      leaderboard = null;
+      visible = false;
     }, 8000);
   });
 
-  const statEmojis: Record<Stat, string> = {
+  const statEmojis: Record<string, string> = {
     STR: '💪',
     INT: '🧠',
     CHA: '✨',
@@ -34,23 +36,23 @@
   };
 
   function getEmoji(stat: string) {
-    return statEmojis[stat as Stat] ?? '✨';
+    return statEmojis[stat] ?? '✨';
   }
 </script>
 
-{#if leaderboard}
+{#if visible}
   <div class="overlay">
     <div class="card" in:fly={{ y: 200, duration: 350 }} out:fly>
       <div class="header">
         <h2 class="title">Leaderboard</h2>
       </div>
       <div class="rows">
-        {#each Object.entries(leaderboard) as [stat, { username, value }] (stat)}
+        {#each leaderboard as entry (entry.displayName)}
           <div class="row">
-            <span class="emoji">{getEmoji(stat)}</span>
-            <span class="stat">{stat}</span>
-            <span class="username">{username}</span>
-            <span class="value">{value}</span>
+            <span class="emoji">{getEmoji(entry.displayName)}</span>
+            <span class="stat">{entry.displayName}</span>
+            <span class="username">{entry.username}</span>
+            <span class="value">{entry.value}</span>
           </div>
         {/each}
       </div>

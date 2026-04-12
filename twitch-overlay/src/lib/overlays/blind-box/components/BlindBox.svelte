@@ -79,7 +79,7 @@
     currentConfig = item.config;
     userCollection = item.collection;
     currentPlushie = null;
-    displayMessage = `${item.username}'s ${item.config.collectionName}`;
+    displayMessage = `${item.username}'s ${item.config.name}`;
     await playAnimation('collection');
   }
 
@@ -95,9 +95,9 @@
   const queue = new BlindBoxQueue(handlers);
 
   function handleRedemptionEvent(event: BlindBoxRedemptionEvent) {
-    const config = configs.find((c) => c.collectionType === event.data.collectionType);
+    const config = configs.find((c) => c.series === event.data.series);
     if (!config) {
-      console.warn('Config not found for collection type:', event.data.collectionType);
+      console.warn('Config not found for series:', event.data.series);
       return;
     }
 
@@ -120,9 +120,9 @@
   }
 
   function handleDisplayEvent(event: CollectionDisplayEvent) {
-    const config = configs.find((c) => c.collectionType === event.data.collectionType);
+    const config = configs.find((c) => c.series === event.data.series);
     if (!config) {
-      console.warn('Config not found for collection type:', event.data.collectionType);
+      console.warn('Config not found for series:', event.data.series);
       return;
     }
 

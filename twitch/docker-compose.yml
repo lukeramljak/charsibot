@@ -15,10 +15,6 @@ services:
       - DB_PATH=/data/charsibot.db
       - TWITCH_CLIENT_ID
       - TWITCH_CLIENT_SECRET
-      - TWITCH_OAUTH_TOKEN
-      - TWITCH_REFRESH_TOKEN
-      - TWITCH_BOT_OAUTH_TOKEN
-      - TWITCH_BOT_REFRESH_TOKEN
       - TWITCH_BOT_USER_ID
       - TWITCH_CHANNEL_USER_ID
     labels:

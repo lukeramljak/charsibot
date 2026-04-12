@@ -1,6 +1,8 @@
 package config
 
 import (
+	"fmt"
+	"log/slog"
 	"os"
 	"strconv"
 
@@ -8,17 +10,15 @@ import (
 )
 
 type Config struct {
-	ClientID             string
-	ClientSecret         string
-	StreamerAccessToken  string
-	StreamerRefreshToken string
-	BotAccessToken       string
-	BotRefreshToken      string
-	BotUserID            string
-	ChannelUserID        string
-	DBPath               string
-	UseMockServer        bool
-	ServerPort           int
+	ClientID         string
+	ClientSecret     string
+	BotUserID        string
+	ChannelUserID    string
+	OAuthRedirectURI string
+	DBPath           string
+	UseMockServer    bool
+	ServerPort       int
+	LogLevel         slog.Level
 }
 
 func Load() Config {
@@ -33,18 +33,29 @@ func Load() Config {
 	if dbPath == "" {
 		dbPath = "charsibot.db"
 	}
+	dbPath = "file:" + dbPath + "?_pragma=foreign_keys(1)&_pragma=journal_mode(WAL)"
+
+	redirectURI := os.Getenv("TWITCH_OAUTH_REDIRECT_URI")
+	if redirectURI == "" {
+		redirectURI = fmt.Sprintf("http://localhost:%d/oauth/callback", serverPort)
+	}
+
+	logLevel := slog.LevelInfo
+	if raw := os.Getenv("LOG_LEVEL"); raw != "" {
+		if err := logLevel.UnmarshalText([]byte(raw)); err != nil {
+			logLevel = slog.LevelInfo
+		}
+	}
 
 	return Config{
-		ClientID:             os.Getenv("TWITCH_CLIENT_ID"),
-		ClientSecret:         os.Getenv("TWITCH_CLIENT_SECRET"),
-		StreamerAccessToken:  os.Getenv("TWITCH_OAUTH_TOKEN"),
-		StreamerRefreshToken: os.Getenv("TWITCH_REFRESH_TOKEN"),
-		BotAccessToken:       os.Getenv("TWITCH_BOT_OAUTH_TOKEN"),
-		BotRefreshToken:      os.Getenv("TWITCH_BOT_REFRESH_TOKEN"),
-		BotUserID:            os.Getenv("TWITCH_BOT_USER_ID"),
-		ChannelUserID:        os.Getenv("TWITCH_CHANNEL_USER_ID"),
-		DBPath:               dbPath,
-		UseMockServer:        os.Getenv("USE_MOCK_SERVER") == "true",
-		ServerPort:           serverPort,
+		ClientID:         os.Getenv("TWITCH_CLIENT_ID"),
+		ClientSecret:     os.Getenv("TWITCH_CLIENT_SECRET"),
+		BotUserID:        os.Getenv("TWITCH_BOT_USER_ID"),
+		ChannelUserID:    os.Getenv("TWITCH_CHANNEL_USER_ID"),
+		OAuthRedirectURI: redirectURI,
+		DBPath:           dbPath,
+		UseMockServer:    os.Getenv("USE_MOCK_SERVER") == "true",
+		ServerPort:       serverPort,
+		LogLevel:         logLevel,
 	}
 }
