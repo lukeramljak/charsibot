@@ -2,7 +2,9 @@ package bot
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -71,7 +73,7 @@ func twitchRequest(method, clientID, token, endpoint string, payload, result any
 		bodyReader = bytes.NewReader(b)
 	}
 
-	req, err := http.NewRequest(method, twitchAPIBase+endpoint, bodyReader)
+	req, err := http.NewRequestWithContext(context.Background(), method, twitchAPIBase+endpoint, bodyReader)
 	if err != nil {
 		return 0, err
 	}
@@ -95,7 +97,7 @@ func twitchRequest(method, clientID, token, endpoint string, payload, result any
 		}
 	}
 
-	if resp.StatusCode >= 400 {
+	if resp.StatusCode >= http.StatusBadRequest {
 		return resp.StatusCode, fmt.Errorf("%s %s failed (%d): %s", method, endpoint, resp.StatusCode, respBody)
 	}
 
@@ -115,11 +117,18 @@ func getOrCreateConduit(clientID, appToken string) (string, error) {
 	}
 
 	var created conduitListResponse
-	if _, err := twitchRequest(http.MethodPost, clientID, appToken, "/eventsub/conduits", createConduitRequest{ShardCount: 1}, &created); err != nil {
+	if _, err := twitchRequest(
+		http.MethodPost,
+		clientID,
+		appToken,
+		"/eventsub/conduits",
+		createConduitRequest{ShardCount: 1},
+		&created,
+	); err != nil {
 		return "", fmt.Errorf("create conduit: %w", err)
 	}
 	if len(created.Data) == 0 {
-		return "", fmt.Errorf("conduit creation returned empty response")
+		return "", errors.New("conduit creation returned empty response")
 	}
 
 	return created.Data[0].ID, nil
@@ -141,7 +150,14 @@ func updateConduitShard(clientID, appToken, conduitID, sessionID string) error {
 	}
 
 	var result updateShardsResponse
-	if _, err := twitchRequest(http.MethodPatch, clientID, appToken, "/eventsub/conduits/shards", payload, &result); err != nil {
+	if _, err := twitchRequest(
+		http.MethodPatch,
+		clientID,
+		appToken,
+		"/eventsub/conduits/shards",
+		payload,
+		&result,
+	); err != nil {
 		return fmt.Errorf("update conduit shard: %w", err)
 	}
 
@@ -154,7 +170,10 @@ func updateConduitShard(clientID, appToken, conduitID, sessionID string) error {
 
 // createConduitSubscription creates an EventSub subscription using conduit
 // transport. A 409 Conflict (already exists) is treated as success.
-func createConduitSubscription(clientID, appToken, conduitID, subType, version string, condition map[string]string) error {
+func createConduitSubscription(
+	clientID, appToken, conduitID, subType, version string,
+	condition map[string]string,
+) error {
 	payload := conduitSubscriptionRequest{
 		Type:      subType,
 		Version:   version,

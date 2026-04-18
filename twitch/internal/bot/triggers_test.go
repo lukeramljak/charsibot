@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/joeyak/go-twitch-eventsub/v3"
+
 	"github.com/lukeramljak/charsibot/internal/config"
 )
 
@@ -150,15 +151,20 @@ func TestProcessTriggers_ProbabilityDistribution(t *testing.T) {
 		executionCounts += count
 	}
 
-	min := int(float64(iterations) * 0.40)
-	max := int(float64(iterations) * 0.60)
+	minExpected := int(float64(iterations) * 0.40)
+	maxExpected := int(float64(iterations) * 0.60)
 
-	if executionCounts < min || executionCounts > max {
+	if executionCounts < minExpected || executionCounts > maxExpected {
 		t.Errorf("with 50%% chance and %d iterations, got %d executions, want between %d and %d",
-			iterations, executionCounts, min, max)
+			iterations, executionCounts, minExpected, maxExpected)
 	}
 
-	t.Logf("50%% chance: %d/%d executions (%.1f%%)", executionCounts, iterations, float64(executionCounts)/float64(iterations)*100)
+	t.Logf(
+		"50%% chance: %d/%d executions (%.1f%%)",
+		executionCounts,
+		iterations,
+		float64(executionCounts)/float64(iterations)*100,
+	)
 }
 
 func TestProcessTriggers_ProbabilityLowChance(t *testing.T) {
@@ -187,7 +193,12 @@ func TestProcessTriggers_ProbabilityLowChance(t *testing.T) {
 			iterations, executionCounts)
 	}
 
-	t.Logf("1%% chance: %d/%d executions (%.2f%%)", executionCounts, iterations, float64(executionCounts)/float64(iterations)*100)
+	t.Logf(
+		"1%% chance: %d/%d executions (%.2f%%)",
+		executionCounts,
+		iterations,
+		float64(executionCounts)/float64(iterations)*100,
+	)
 }
 
 func TestProcessTriggers_ProbabilityHighChance(t *testing.T) {
@@ -216,7 +227,12 @@ func TestProcessTriggers_ProbabilityHighChance(t *testing.T) {
 			iterations, executionCounts)
 	}
 
-	t.Logf("99%% chance: %d/%d executions (%.1f%%)", executionCounts, iterations, float64(executionCounts)/float64(iterations)*100)
+	t.Logf(
+		"99%% chance: %d/%d executions (%.1f%%)",
+		executionCounts,
+		iterations,
+		float64(executionCounts)/float64(iterations)*100,
+	)
 }
 
 func TestProcessTriggers_Empty(t *testing.T) {

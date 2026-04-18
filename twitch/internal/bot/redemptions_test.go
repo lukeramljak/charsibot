@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/joeyak/go-twitch-eventsub/v3"
+
 	"github.com/lukeramljak/charsibot/internal/config"
 )
 

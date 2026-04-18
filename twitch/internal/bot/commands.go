@@ -1,13 +1,20 @@
 package bot
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"strconv"
 	"strings"
 
 	"github.com/joeyak/go-twitch-eventsub/v3"
+
 	"github.com/lukeramljak/charsibot/internal/store"
+)
+
+const (
+	statsCommandMinParts    = 5
+	blindBoxCommandMinParts = 2
 )
 
 type Command struct {
@@ -16,25 +23,28 @@ type Command struct {
 }
 
 // Commands returns the full map of chat commands keyed by trigger word.
+//
+//nolint:cyclop // Commands is a registry mapping every command.
 func Commands(seriesConfigs []SeriesConfig) map[string]Command {
-	cmds := map[string]Command{"collections": {
-		Execute: func(b *Bot, event twitch.EventChannelChatMessage) {
-			collections, err := b.store.GetCompletedCollections(b.ctx)
-			if err != nil {
-				slog.Error("failed to get completed collections", "err", err)
-				return
-			}
+	cmds := map[string]Command{
+		"collections": {
+			Execute: func(b *Bot, _ twitch.EventChannelChatMessage) {
+				collections, err := b.store.GetCompletedCollections(b.ctx)
+				if err != nil {
+					slog.Error("failed to get completed collections", "err", err)
+					return
+				}
 
-			b.SendMessage(SendMessageParams{
-				Message: "The following chatters have completed the below blind box collections:",
-			})
-			for _, row := range collections {
 				b.SendMessage(SendMessageParams{
-					Message: fmt.Sprintf("%s: %s", row.SeriesName, row.Usernames),
+					Message: "The following chatters have completed the below blind box collections:",
 				})
-			}
+				for _, row := range collections {
+					b.SendMessage(SendMessageParams{
+						Message: fmt.Sprintf("%s: %s", row.SeriesName, row.Usernames),
+					})
+				}
+			},
 		},
-	},
 
 		"explode": {
 			ModeratorOnly: true,
@@ -48,7 +58,12 @@ func Commands(seriesConfigs []SeriesConfig) map[string]Command {
 					return
 				}
 
-				if _, err := GetOrCreateStats(b.ctx, b.store, mentionedUser.UserID, mentionedUser.UserLogin); err != nil {
+				if _, err = GetOrCreateStats(
+					b.ctx,
+					b.store,
+					mentionedUser.UserID,
+					mentionedUser.UserLogin,
+				); err != nil {
 					slog.Error("failed to ensure stats", "err", err, "user", mentionedUser.UserLogin)
 					b.SendMessage(SendMessageParams{
 						Message:              "Failed to update stats",
@@ -57,7 +72,7 @@ func Commands(seriesConfigs []SeriesConfig) map[string]Command {
 					return
 				}
 
-				if err := b.store.ModifyStatValue(b.ctx, store.ModifyStatValueParams{
+				if err = b.store.ModifyStatValue(b.ctx, store.ModifyStatValueParams{
 					Value:    -1003,
 					UserID:   mentionedUser.UserID,
 					StatName: "penis",
@@ -87,7 +102,7 @@ func Commands(seriesConfigs []SeriesConfig) map[string]Command {
 		},
 
 		"leaderboard": {
-			Execute: func(b *Bot, event twitch.EventChannelChatMessage) {
+			Execute: func(b *Bot, _ twitch.EventChannelChatMessage) {
 				rows, err := b.store.GetStatLeaderboard(b.ctx)
 				if err != nil {
 					slog.Error("failed to get leaderboard", "err", err)
@@ -132,7 +147,7 @@ func Commands(seriesConfigs []SeriesConfig) map[string]Command {
 					return
 				}
 
-				if len(parts) < 5 {
+				if len(parts) < statsCommandMinParts {
 					b.SendMessage(SendMessageParams{
 						Message:              "Usage: !stats <add|rm> <@user> <stat> <amount>",
 						ReplyParentMessageID: event.MessageId,
@@ -172,7 +187,12 @@ func Commands(seriesConfigs []SeriesConfig) map[string]Command {
 					amount = -amount
 				}
 
-				if _, err := GetOrCreateStats(b.ctx, b.store, mentionedUser.UserID, mentionedUser.UserLogin); err != nil {
+				if _, err = GetOrCreateStats(
+					b.ctx,
+					b.store,
+					mentionedUser.UserID,
+					mentionedUser.UserLogin,
+				); err != nil {
 					slog.Error("failed to ensure stats", "err", err, "user", mentionedUser.UserLogin)
 					b.SendMessage(SendMessageParams{
 						Message:              "Failed to update stats",
@@ -181,7 +201,7 @@ func Commands(seriesConfigs []SeriesConfig) map[string]Command {
 					return
 				}
 
-				if err := b.store.ModifyStatValue(b.ctx, store.ModifyStatValueParams{
+				if err = b.store.ModifyStatValue(b.ctx, store.ModifyStatValueParams{
 					Value:    amount,
 					UserID:   mentionedUser.UserID,
 					StatName: statColumn,
@@ -213,7 +233,7 @@ func Commands(seriesConfigs []SeriesConfig) map[string]Command {
 			Execute: func(b *Bot, event twitch.EventChannelChatMessage) {
 				parts := strings.Fields(event.Message.Text)
 				subcommand := ""
-				if len(parts) >= 2 {
+				if len(parts) >= blindBoxCommandMinParts {
 					subcommand = strings.ToLower(parts[1])
 				}
 
@@ -279,13 +299,15 @@ func Commands(seriesConfigs []SeriesConfig) map[string]Command {
 	return cmds
 }
 
-func extractMentionedUserFromFragments(fragments []twitch.ChatMessageFragment) (*twitch.ChatMessageFragmentMention, error) {
+func extractMentionedUserFromFragments(
+	fragments []twitch.ChatMessageFragment,
+) (*twitch.ChatMessageFragmentMention, error) {
 	for _, fragment := range fragments {
 		if fragment.Type == "mention" && fragment.Mention != nil {
 			return fragment.Mention, nil
 		}
 	}
-	return nil, fmt.Errorf("no user mention found")
+	return nil, errors.New("no user mention found")
 }
 
 func IsModerator(event twitch.EventChannelChatMessage) bool {

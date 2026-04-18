@@ -46,9 +46,11 @@ func NewServer(port int, clientID, clientSecret, redirectURI string, queries *st
 func (s *Server) Start() error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/events", s.handleSSE)
-	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/health", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
+		if _, err := w.Write([]byte("OK")); err != nil {
+			slog.Error("failed to write health response", "err", err)
+		}
 	})
 	mux.HandleFunc("GET /oauth/start", s.handleOAuthStart)
 	mux.HandleFunc("GET /oauth/callback", s.handleOAuthCallback)
@@ -57,7 +59,7 @@ func (s *Server) Start() error {
 	s.server = &http.Server{
 		Addr:         fmt.Sprintf(":%d", s.port),
 		Handler:      mux,
-		ReadTimeout:  10 * time.Second,
+		ReadTimeout:  serverReadTimeout,
 		WriteTimeout: 0, // No timeout for SSE connections
 	}
 
@@ -71,14 +73,24 @@ func (s *Server) Start() error {
 	return nil
 }
 
-var oauthScopes = map[string][]string{
-	"streamer": {"channel:read:redemptions", "channel:bot"},
-	"bot":      {"user:read:chat", "user:write:chat", "user:bot"},
+const (
+	serverReadTimeout  = 10 * time.Second
+	eventChannelBuffer = 100
+	shutdownTimeout    = 5 * time.Second
+)
+
+func oauthScopes(account string) ([]string, bool) {
+	scopes := map[string][]string{
+		"streamer": {"channel:read:redemptions", "channel:bot"},
+		"bot":      {"user:read:chat", "user:write:chat", "user:bot"},
+	}
+	s, ok := scopes[account]
+	return s, ok
 }
 
 func (s *Server) handleOAuthStart(w http.ResponseWriter, r *http.Request) {
 	account := r.URL.Query().Get("account")
-	scopes, ok := oauthScopes[account]
+	scopes, ok := oauthScopes(account)
 	if !ok {
 		http.Error(w, `account must be "streamer" or "bot"`, http.StatusBadRequest)
 		return
@@ -106,7 +118,7 @@ func (s *Server) handleOAuthStart(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
 	account := r.URL.Query().Get("state")
-	if _, ok := oauthScopes[account]; !ok {
+	if _, ok := oauthScopes(account); !ok {
 		http.Error(w, "invalid state parameter", http.StatusBadRequest)
 		return
 	}
@@ -139,7 +151,15 @@ func (s *Server) handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if tokenResp.ErrorMessage != "" {
-		slog.Error("twitch returned error during token exchange", "account", account, "error", tokenResp.Error, "message", tokenResp.ErrorMessage)
+		slog.Error(
+			"twitch returned error during token exchange",
+			"account",
+			account,
+			"error",
+			tokenResp.Error,
+			"message",
+			tokenResp.ErrorMessage,
+		)
 		http.Error(w, "token exchange failed: "+tokenResp.ErrorMessage, http.StatusInternalServerError)
 		return
 	}
@@ -158,7 +178,9 @@ func (s *Server) handleBlindBox(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	json.NewEncoder(w).Encode(series)
+	if err := json.NewEncoder(w).Encode(series); err != nil {
+		slog.Error("failed to encode series response", "err", err)
+	}
 }
 
 func (s *Server) addClient(c *client) {
@@ -187,7 +209,7 @@ func (s *Server) handleSSE(w http.ResponseWriter, r *http.Request) {
 	}
 
 	client := &client{
-		ch: make(chan bot.OverlayEvent, 100),
+		ch: make(chan bot.OverlayEvent, eventChannelBuffer),
 	}
 	s.addClient(client)
 	defer s.removeClient(client)
@@ -198,9 +220,9 @@ func (s *Server) handleSSE(w http.ResponseWriter, r *http.Request) {
 		"type":      "connected",
 		"timestamp": time.Now().Format(time.RFC3339),
 	}
-	data, err := json.Marshal(connectedEvent)
+	connData, err := json.Marshal(connectedEvent)
 	if err == nil {
-		fmt.Fprintf(w, "data: %s\n\n", data)
+		fmt.Fprintf(w, "data: %s\n\n", connData)
 		flusher.Flush()
 	}
 
@@ -212,12 +234,12 @@ func (s *Server) handleSSE(w http.ResponseWriter, r *http.Request) {
 			slog.Debug("client disconnected")
 			return
 		case event := <-client.ch:
-			data, err := json.Marshal(event)
+			eventData, err := json.Marshal(event)
 			if err != nil {
 				slog.Error("failed to marshal event", "err", err)
 				continue
 			}
-			fmt.Fprintf(w, "data: %s\n\n", data)
+			fmt.Fprintf(w, "data: %s\n\n", eventData)
 			flusher.Flush()
 		}
 	}
@@ -246,8 +268,10 @@ func (s *Server) Broadcast(event bot.OverlayEvent) {
 
 func (s *Server) Stop() {
 	if s.server != nil {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 		defer cancel()
-		s.server.Shutdown(ctx)
+		if err := s.server.Shutdown(ctx); err != nil {
+			slog.Error("error shutting down server", "err", err)
+		}
 	}
 }

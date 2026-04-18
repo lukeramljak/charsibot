@@ -5,8 +5,9 @@ import (
 	"database/sql"
 	"testing"
 
-	"github.com/lukeramljak/charsibot/internal/store"
 	_ "modernc.org/sqlite"
+
+	"github.com/lukeramljak/charsibot/internal/store"
 )
 
 func setupBlindBoxTestDB(t *testing.T) (*store.Queries, *sql.DB) {
@@ -158,7 +159,13 @@ func TestCollections(t *testing.T) {
 			t.Error("expected isNew to be false for existing key")
 		}
 
-		row := db.QueryRowContext(ctx, `SELECT username FROM user_plushies WHERE user_id = ? AND series = ? AND key = ?`, "user3", "coobubu", "cutey")
+		row := db.QueryRowContext(
+			ctx,
+			`SELECT username FROM user_plushies WHERE user_id = ? AND series = ? AND key = ?`,
+			"user3",
+			"coobubu",
+			"cutey",
+		)
 		var username string
 		if err := row.Scan(&username); err != nil {
 			t.Fatalf("failed to query username: %v", err)
@@ -274,7 +281,10 @@ func TestGetAllSeriesWithPlushies(t *testing.T) {
 	})
 
 	t.Run("series with no plushies returns one row with null plushie fields", func(t *testing.T) {
-		db.ExecContext(ctx, `INSERT INTO blind_box_series (series, redemption_title, name) VALUES ('empty', 'Empty Series', 'Empty')`)
+		db.ExecContext(
+			ctx,
+			`INSERT INTO blind_box_series (series, redemption_title, name) VALUES ('empty', 'Empty Series', 'Empty')`,
+		)
 
 		rows, err := queries.GetAllSeriesWithPlushies(ctx)
 		if err != nil {
@@ -298,8 +308,14 @@ func TestGetAllSeriesWithPlushies(t *testing.T) {
 
 	t.Run("multiple series are ordered by series key", func(t *testing.T) {
 		// 'aardvark' sorts before 'coobubu'
-		db.ExecContext(ctx, `INSERT INTO blind_box_series (series, redemption_title, name) VALUES ('aardvark', 'Aardvark Series', 'Aardvarks')`)
-		db.ExecContext(ctx, `INSERT INTO blind_box_plushies (series, key, sort_order, weight) VALUES ('aardvark', 'andy', 1, 1)`)
+		db.ExecContext(
+			ctx,
+			`INSERT INTO blind_box_series (series, redemption_title, name) VALUES ('aardvark', 'Aardvark Series', 'Aardvarks')`,
+		)
+		db.ExecContext(
+			ctx,
+			`INSERT INTO blind_box_plushies (series, key, sort_order, weight) VALUES ('aardvark', 'andy', 1, 1)`,
+		)
 
 		rows, err := queries.GetAllSeriesWithPlushies(ctx)
 		if err != nil {

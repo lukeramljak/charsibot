@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/joeyak/go-twitch-eventsub/v3"
+
 	"github.com/lukeramljak/charsibot/internal/config"
 	"github.com/lukeramljak/charsibot/internal/store"
 )
@@ -248,7 +249,7 @@ func TestProcessCommand_Nil(t *testing.T) {
 	b.processCommand(event)
 }
 
-// Helper function to create a test bot
+// Helper function to create a test bot.
 func createTestBot(t *testing.T) *Bot {
 	t.Helper()
 
@@ -367,14 +368,14 @@ func TestStatsCommandValidation(t *testing.T) {
 		}
 	}
 
-	t.Run("too few parts returns early", func(t *testing.T) {
+	t.Run("too few parts returns early", func(_ *testing.T) {
 		makeBot().processCommand(twitch.EventChannelChatMessage{
 			Badges:  modBadges,
 			Message: twitch.ChatMessage{Text: "!stats add @user"},
 		})
 	})
 
-	t.Run("unknown subcommand returns early", func(t *testing.T) {
+	t.Run("unknown subcommand returns early", func(_ *testing.T) {
 		makeBot().processCommand(twitch.EventChannelChatMessage{
 			Badges: modBadges,
 			Message: twitch.ChatMessage{
@@ -384,14 +385,14 @@ func TestStatsCommandValidation(t *testing.T) {
 		})
 	})
 
-	t.Run("missing mention returns early", func(t *testing.T) {
+	t.Run("missing mention returns early", func(_ *testing.T) {
 		makeBot().processCommand(twitch.EventChannelChatMessage{
 			Badges:  modBadges,
 			Message: twitch.ChatMessage{Text: "!stats add @user strength 5"},
 		})
 	})
 
-	t.Run("invalid amount returns early", func(t *testing.T) {
+	t.Run("invalid amount returns early", func(_ *testing.T) {
 		makeBot().processCommand(twitch.EventChannelChatMessage{
 			Badges: modBadges,
 			Message: twitch.ChatMessage{
@@ -548,11 +549,11 @@ func TestBlindboxModGuard(t *testing.T) {
 		}
 	}
 
-	t.Run("non-mod cannot use redeem subcommand", func(t *testing.T) {
+	t.Run("non-mod cannot use redeem subcommand", func(_ *testing.T) {
 		makeBot().processCommand(nonModEvent("!test redeem"))
 	})
 
-	t.Run("non-mod cannot use reset subcommand", func(t *testing.T) {
+	t.Run("non-mod cannot use reset subcommand", func(_ *testing.T) {
 		makeBot().processCommand(nonModEvent("!test reset"))
 	})
 }

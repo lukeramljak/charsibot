@@ -5,8 +5,9 @@ import (
 	"database/sql"
 	"testing"
 
-	"github.com/lukeramljak/charsibot/internal/store"
 	_ "modernc.org/sqlite"
+
+	"github.com/lukeramljak/charsibot/internal/store"
 )
 
 func setupStatsTestDB(t *testing.T) (*store.Queries, *sql.DB) {

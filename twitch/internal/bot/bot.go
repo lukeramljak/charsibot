@@ -2,16 +2,19 @@ package bot
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"math/rand/v2"
+	"net/http"
 	"strings"
 	"sync"
 
 	"github.com/joeyak/go-twitch-eventsub/v3"
+	"github.com/nicklaw5/helix/v2"
+
 	"github.com/lukeramljak/charsibot/internal/config"
 	"github.com/lukeramljak/charsibot/internal/store"
-	"github.com/nicklaw5/helix/v2"
 )
 
 type Bot struct {
@@ -35,7 +38,7 @@ type SendMessageParams struct {
 
 func New(cfg config.Config, queries *store.Queries, overlayServer Broadcaster) (*Bot, error) {
 	if queries == nil {
-		return nil, fmt.Errorf("store queries cannot be nil")
+		return nil, errors.New("store queries cannot be nil")
 	}
 
 	seriesConfigs, err := LoadAllSeries(context.Background(), queries)
@@ -105,11 +108,13 @@ func (b *Bot) Start() error {
 		})
 	})
 
-	client.OnEventChannelChannelPointsCustomRewardRedemptionAdd(func(event twitch.EventChannelChannelPointsCustomRewardRedemptionAdd) {
-		b.wg.Go(func() {
-			b.onChannelPointRedemption(event)
-		})
-	})
+	client.OnEventChannelChannelPointsCustomRewardRedemptionAdd(
+		func(event twitch.EventChannelChannelPointsCustomRewardRedemptionAdd) {
+			b.wg.Go(func() {
+				b.onChannelPointRedemption(event)
+			})
+		},
+	)
 
 	client.OnEventChannelRaid(func(event twitch.EventChannelRaid) {
 		b.onChannelRaid(event)
@@ -196,8 +201,10 @@ func (b *Bot) processTriggers(event twitch.EventChannelChatMessage) {
 			continue
 		}
 
+		const percentMax = 100
+
 		if chance := t.Chance; chance > 0 && chance < 100 {
-			roll := rand.IntN(100) + 1
+			roll := rand.IntN(percentMax) + 1
 			if roll > chance {
 				slog.Debug("trigger failed chance roll", "roll", roll, "chance", chance)
 				continue
@@ -249,7 +256,7 @@ func (b *Bot) initHelixClient() error {
 	}
 
 	resp, err := client.RequestAppAccessToken(nil)
-	if err != nil || resp.StatusCode != 200 {
+	if err != nil || resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("get app access token: %w", err)
 	}
 	client.SetAppAccessToken(resp.Data.AccessToken)
@@ -302,7 +309,14 @@ func (b *Bot) subscribeEvents(sessionID string) error {
 
 	for _, s := range subs {
 		slog.Info("subscribing to event via conduit", "type", s.subType)
-		if err := createConduitSubscription(b.config.ClientID, appToken, b.conduitID, string(s.subType), s.version, s.condition); err != nil {
+		if err := createConduitSubscription(
+			b.config.ClientID,
+			appToken,
+			b.conduitID,
+			string(s.subType),
+			s.version,
+			s.condition,
+		); err != nil {
 			return fmt.Errorf("subscribe to %s: %w", s.subType, err)
 		}
 	}

@@ -5,6 +5,7 @@ import (
 	"math/rand/v2"
 
 	"github.com/joeyak/go-twitch-eventsub/v3"
+
 	"github.com/lukeramljak/charsibot/internal/store"
 )
 
@@ -15,6 +16,11 @@ type RedemptionFunc func(b *Bot, event twitch.EventChannelChannelPointsCustomRew
 func Redemptions(seriesConfigs []SeriesConfig) map[string]RedemptionFunc {
 	redemptions := map[string]RedemptionFunc{
 		"Drink a Potion": func(b *Bot, event twitch.EventChannelChannelPointsCustomRewardRedemptionAdd) {
+			const (
+				negativePercent = 5
+				percentMax      = 100
+			)
+
 			userID := event.UserID
 			username := event.UserName
 
@@ -26,12 +32,13 @@ func Redemptions(seriesConfigs []SeriesConfig) map[string]RedemptionFunc {
 
 			delta := int64(1)
 			outcome := "gained"
-			if rand.Float64() < 0.05 {
+			roll := rand.IntN(percentMax)
+			if roll < negativePercent {
 				delta = -1
 				outcome = "lost"
 			}
 
-			if err := b.store.ModifyStatValue(b.ctx, store.ModifyStatValueParams{
+			if err = b.store.ModifyStatValue(b.ctx, store.ModifyStatValueParams{
 				Value:    delta,
 				UserID:   userID,
 				StatName: stat.Name,

@@ -10,11 +10,12 @@ import (
 	"os/signal"
 	"syscall"
 
+	_ "modernc.org/sqlite"
+
 	"github.com/lukeramljak/charsibot/internal/bot"
 	"github.com/lukeramljak/charsibot/internal/config"
 	"github.com/lukeramljak/charsibot/internal/server"
 	"github.com/lukeramljak/charsibot/internal/store"
-	_ "modernc.org/sqlite"
 )
 
 func main() {
@@ -37,14 +38,14 @@ func run() error {
 	}))
 	slog.SetDefault(logger)
 
-	if err := store.Migrate(context.Background(), db, logger); err != nil {
+	if err = store.Migrate(context.Background(), db, logger); err != nil {
 		return err
 	}
 
 	queries := store.New(db)
 
 	overlayServer := server.NewServer(cfg.ServerPort, cfg.ClientID, cfg.ClientSecret, cfg.OAuthRedirectURI, queries)
-	if err := overlayServer.Start(); err != nil {
+	if err = overlayServer.Start(); err != nil {
 		return fmt.Errorf("start overlay server: %w", err)
 	}
 	defer overlayServer.Stop()

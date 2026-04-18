@@ -13,6 +13,7 @@ import (
 // BlindBoxSeries is embedded so its fields are promoted to the top level.
 type SeriesConfig struct {
 	store.BlindBoxSeries
+
 	Plushies []store.BlindBoxPlushie `json:"plushies"`
 }
 
@@ -67,7 +68,7 @@ func groupSeriesRows(rows []store.GetAllSeriesWithPlushiesRow) []SeriesConfig {
 func weightedRandomKey(plushies []store.BlindBoxPlushie) string {
 	weighted := []string{}
 	for _, p := range plushies {
-		for i := 0; i < int(p.Weight); i++ {
+		for range p.Weight {
 			weighted = append(weighted, p.Key)
 		}
 	}
@@ -77,7 +78,11 @@ func weightedRandomKey(plushies []store.BlindBoxPlushie) string {
 	return weighted[rand.IntN(len(weighted))]
 }
 
-func addPlushieToCollection(ctx context.Context, q *store.Queries, userID, username, series, key string) (bool, []string, error) {
+func addPlushieToCollection(
+	ctx context.Context,
+	q *store.Queries,
+	userID, username, series, key string,
+) (bool, []string, error) {
 	// INSERT OR IGNORE: inserts only if the row doesn't exist.
 	// changes() returns 1 for a new insert, 0 if the row already existed.
 	if err := q.InsertUserPlushieIfNew(ctx, store.InsertUserPlushieIfNewParams{
@@ -96,7 +101,7 @@ func addPlushieToCollection(ctx context.Context, q *store.Queries, userID, usern
 	isNew := n == 1
 
 	// Always sync the username in case it changed (e.g. display name update).
-	if err := q.UpsertUserPlushie(ctx, store.UpsertUserPlushieParams{
+	if err = q.UpsertUserPlushie(ctx, store.UpsertUserPlushieParams{
 		UserID:   userID,
 		Username: username,
 		Series:   series,

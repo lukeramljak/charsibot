@@ -15,18 +15,20 @@ type Trigger struct {
 
 // Triggers returns all chat message triggers.
 func Triggers() []Trigger {
+	const comeTriggerChance = 20
+
 	comeTriggerWords := []string{"come", "coming", "cum", "came"}
 
 	return []Trigger{
 		{
-			Chance: 20,
+			Chance: comeTriggerChance,
 			ShouldTrigger: func(event twitch.EventChannelChatMessage) bool {
 				if strings.ToLower(event.Message.Text) == "no coming" {
 					return false
 				}
 
 				words := strings.FieldsFunc(strings.ToLower(event.Message.Text), func(r rune) bool {
-					return !((r >= 'a' && r <= 'z') || (r >= '0' && r <= '9'))
+					return (r < 'a' || r > 'z') && (r < '0' || r > '9')
 				})
 
 				for _, word := range words {
