@@ -19,6 +19,12 @@ services:
       - TWITCH_CHANNEL_USER_ID
     labels:
       - docker-volume-backup.stop-during-backup=true
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8081/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
 
   backup:
     image: offen/docker-volume-backup:latest
@@ -35,6 +41,7 @@ services:
     volumes:
       - twitch-data:/backup/twitch-data:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
+    exclude_from_hc: true
 
 volumes:
   twitch-data:
