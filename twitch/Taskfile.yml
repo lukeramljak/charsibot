@@ -1,0 +1,38 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+
+version: '3'
+
+dotenv: ['.env']
+
+tasks:
+  vet:
+    desc: Run go vet
+    cmds:
+      - go vet ./...
+
+  build:
+    desc: Build the binary
+    deps: [vet]
+    cmds:
+      - go build -o bin/charsibot ./cmd/charsibot
+
+  run:
+    desc: Build and run the binary
+    deps: [build]
+    cmds:
+      - ./bin/charsibot
+
+  dev:
+    desc: Run with air (live reload)
+    cmds:
+      - air
+
+  test:
+    desc: Run tests
+    cmds:
+      - go test ./...
+
+  lint:
+    desc: Run golangci-lint
+    cmds:
+      - golangci-lint run
