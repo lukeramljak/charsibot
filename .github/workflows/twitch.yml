@@ -1,0 +1,47 @@
+name: twitch
+
+on:
+  push:
+    paths:
+      - "twitch/**"
+  pull_request:
+    paths:
+      - "twitch/**"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: twitch
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: twitch/go.mod
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Build
+        run: go build ./...
+
+      - name: Test
+        run: go test ./...
+
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: twitch/go.mod
+
+      - name: Lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          working-directory: twitch
