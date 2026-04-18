@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -13,7 +14,6 @@ import (
 	"github.com/lukeramljak/charsibot/internal/config"
 	"github.com/lukeramljak/charsibot/internal/server"
 	"github.com/lukeramljak/charsibot/internal/store"
-	"github.com/pressly/goose/v3"
 	_ "modernc.org/sqlite"
 )
 
@@ -32,19 +32,16 @@ func run() error {
 	}
 	defer db.Close()
 
-	goose.SetBaseFS(nil)
-	if err := goose.SetDialect("sqlite3"); err != nil {
-		return fmt.Errorf("set goose dialect: %w", err)
-	}
-	if err := goose.Up(db, "internal/store/migrations"); err != nil {
-		return fmt.Errorf("run migrations: %w", err)
+	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+		Level: cfg.LogLevel,
+	}))
+	slog.SetDefault(logger)
+
+	if err := store.Migrate(context.Background(), db, logger); err != nil {
+		return err
 	}
 
 	queries := store.New(db)
-
-	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-		Level: cfg.LogLevel,
-	})))
 
 	overlayServer := server.NewServer(cfg.ServerPort, cfg.ClientID, cfg.ClientSecret, cfg.OAuthRedirectURI, queries)
 	if err := overlayServer.Start(); err != nil {
