@@ -214,7 +214,11 @@ func (s *Server) handleSSE(w http.ResponseWriter, r *http.Request) {
 	s.addClient(client)
 	defer s.removeClient(client)
 
-	slog.Info("client connected")
+	slog.Info("client connected",
+		"remote_addr", r.RemoteAddr,
+		"user_agent", r.UserAgent(),
+		"origin", r.Header.Get("Origin"),
+	)
 
 	connectedEvent := map[string]any{
 		"type":      "connected",
