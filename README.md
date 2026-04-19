@@ -1,5 +1,10 @@
 # charsibot
 
+[![Go Version](https://img.shields.io/github/go-mod/go-version/lukeramljak/charsibot?filename=twitch%2Fgo.mod)](https://github.com/lukeramljak/charsibot/blob/main/twitch/go.mod)
+[![Go Report Card](https://goreportcard.com/badge/github.com/lukeramljak/charsibot/twitch)](https://goreportcard.com/report/github.com/lukeramljak/charsibot/twitch)
+[![Twitch Bot](https://github.com/lukeramljak/charsibot/actions/workflows/twitch.yml/badge.svg)](https://github.com/lukeramljak/charsibot/actions/workflows/twitch.yml)
+[![Twitch Overlay](https://github.com/lukeramljak/charsibot/actions/workflows/twitch-overlay.yml/badge.svg)](https://github.com/lukeramljak/charsibot/actions/workflows/twitch-overlay.yml)
+
 A multi-service bot application for [Charsibel](https://twitch.tv/charsibel)'s Discord server and Twitch channel.
 
 ## Architecture
