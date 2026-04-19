@@ -20,6 +20,7 @@ This project contains three services:
 - Bun
 - Go 1.25+
 - Docker
+- Task
 
 ## Development Setup
 
@@ -42,7 +43,7 @@ This project contains three services:
 
    ```bash
    cd twitch
-   make dev
+   task dev
    ```
 
    This will start the Go backend and API server on port 8081.
@@ -68,6 +69,11 @@ This project contains three services:
 2. **Twitch**:
    ```bash
    cp twitch/.env.example twitch/.env
+   ```
+
+3. **Twitch Overlay**:
+   ```bash
+   cp twitch-overlay/.env.example twitch-overlay/.env
    ```
 
 ## Database
