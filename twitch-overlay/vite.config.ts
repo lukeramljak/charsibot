@@ -1,13 +1,13 @@
-import { sveltekit } from "@sveltejs/kit/vite";
-import tailwindcss from "@tailwindcss/vite";
-import { defineConfig } from "vite";
+import { sveltekit } from '@sveltejs/kit/vite';
+import tailwindcss from '@tailwindcss/vite';
+import { defineConfig } from 'vite';
 
 export default defineConfig({
   plugins: [tailwindcss(), sveltekit()],
   server: {
     proxy: {
-      "/events": {
-        target: "http://localhost:8081",
+      '/events': {
+        target: 'http://localhost:8081',
         changeOrigin: true,
       },
     },

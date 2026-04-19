@@ -16,6 +16,7 @@
 >
   <div class="star" style="background-color: {textColor}"></div>
   <div class="nameText" style="color: {textColor}">
+    <!-- eslint-disable-next-line svelte/no-at-html-tags -->
     {@html message}
   </div>
   <div class="star" style="background-color: {textColor}"></div>
