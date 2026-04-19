@@ -6,7 +6,7 @@ require (
 	github.com/joeyak/go-twitch-eventsub/v3 v3.0.1
 	github.com/nicklaw5/helix/v2 v2.34.0
 	github.com/pressly/goose/v3 v3.27.0
-	modernc.org/sqlite v1.48.2
+	modernc.org/sqlite v1.49.1
 )
 
 require (
