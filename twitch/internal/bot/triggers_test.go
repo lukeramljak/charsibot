@@ -6,7 +6,7 @@ import (
 
 	"github.com/joeyak/go-twitch-eventsub/v3"
 
-	"github.com/lukeramljak/charsibot/internal/config"
+	"github.com/lukeramljak/charsibot/twitch/internal/config"
 )
 
 func TestProcessTriggers(t *testing.T) {

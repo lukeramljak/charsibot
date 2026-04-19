@@ -12,10 +12,10 @@ import (
 
 	_ "modernc.org/sqlite"
 
-	"github.com/lukeramljak/charsibot/internal/bot"
-	"github.com/lukeramljak/charsibot/internal/config"
-	"github.com/lukeramljak/charsibot/internal/server"
-	"github.com/lukeramljak/charsibot/internal/store"
+	"github.com/lukeramljak/charsibot/twitch/internal/bot"
+	"github.com/lukeramljak/charsibot/twitch/internal/config"
+	"github.com/lukeramljak/charsibot/twitch/internal/server"
+	"github.com/lukeramljak/charsibot/twitch/internal/store"
 )
 
 func main() {

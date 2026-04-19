@@ -1,4 +1,4 @@
-module github.com/lukeramljak/charsibot
+module github.com/lukeramljak/charsibot/twitch
 
 go 1.25.5
 

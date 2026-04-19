@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/lukeramljak/charsibot/internal/store"
+	"github.com/lukeramljak/charsibot/twitch/internal/store"
 )
 
 // GetOrCreateStats ensures stat rows exist for a user then returns their stats.

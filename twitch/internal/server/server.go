@@ -13,8 +13,8 @@ import (
 
 	helix "github.com/nicklaw5/helix/v2"
 
-	"github.com/lukeramljak/charsibot/internal/bot"
-	"github.com/lukeramljak/charsibot/internal/store"
+	"github.com/lukeramljak/charsibot/twitch/internal/bot"
+	"github.com/lukeramljak/charsibot/twitch/internal/store"
 )
 
 type client struct {

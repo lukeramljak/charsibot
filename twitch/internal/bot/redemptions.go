@@ -6,7 +6,7 @@ import (
 
 	"github.com/joeyak/go-twitch-eventsub/v3"
 
-	"github.com/lukeramljak/charsibot/internal/store"
+	"github.com/lukeramljak/charsibot/twitch/internal/store"
 )
 
 // RedemptionFunc handles a channel point redemption event.

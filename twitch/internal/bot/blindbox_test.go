@@ -7,7 +7,7 @@ import (
 
 	_ "modernc.org/sqlite"
 
-	"github.com/lukeramljak/charsibot/internal/store"
+	"github.com/lukeramljak/charsibot/twitch/internal/store"
 )
 
 func setupBlindBoxTestDB(t *testing.T) (*store.Queries, *sql.DB) {

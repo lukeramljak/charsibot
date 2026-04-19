@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"math/rand/v2"
 
-	"github.com/lukeramljak/charsibot/internal/store"
+	"github.com/lukeramljak/charsibot/twitch/internal/store"
 )
 
 // SeriesConfig holds the runtime config for a blind box series.

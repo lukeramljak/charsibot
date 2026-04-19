@@ -13,8 +13,8 @@ import (
 	"github.com/joeyak/go-twitch-eventsub/v3"
 	"github.com/nicklaw5/helix/v2"
 
-	"github.com/lukeramljak/charsibot/internal/config"
-	"github.com/lukeramljak/charsibot/internal/store"
+	"github.com/lukeramljak/charsibot/twitch/internal/config"
+	"github.com/lukeramljak/charsibot/twitch/internal/store"
 )
 
 type Bot struct {
