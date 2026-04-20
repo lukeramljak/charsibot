@@ -3,24 +3,24 @@ name: twitch-overlay
 on:
   push:
     paths:
-      - "twitch-overlay/**"
+      - "twitch/web/overlay/**"
   pull_request:
     paths:
-      - "twitch-overlay/**"
+      - "twitch/web/overlay/**"
 
 jobs:
   build:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: twitch-overlay
+        working-directory: twitch/web/overlay
 
     steps:
       - uses: actions/checkout@v6
 
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version-file: twitch-overlay/package.json
+          bun-version-file: twitch/web/overlay/package.json
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -35,14 +35,14 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: twitch-overlay
+        working-directory: twitch/web/overlay
 
     steps:
       - uses: actions/checkout@v6
 
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version-file: twitch-overlay/package.json
+          bun-version-file: twitch/web/overlay/package.json
 
       - name: Install dependencies
         run: bun install --frozen-lockfile

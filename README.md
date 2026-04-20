@@ -13,7 +13,7 @@ This project contains three services:
 
 - **Discord Bot** (`discord/`) - Handles Discord server interactions and commands (Node.js/Bun)
 - **Twitch Bot** (`twitch/`) - Manages Twitch chat commands, channel point redemptions, and API server (Go)
-- **Twitch Overlay** (`twitch-overlay/`) - Stream overlay SPA for OBS (SvelteKit)
+- **Twitch Overlay** (`twitch/web/overlay/`) - Stream overlay SPA for OBS (SvelteKit)
 
 ## Prerequisites
 
@@ -51,7 +51,7 @@ This project contains three services:
 4. **Twitch Overlay**:
 
    ```bash
-   cd twitch-overlay
+   cd twitch/web/overlay
    bun install
    bun run dev
    ```
@@ -73,7 +73,7 @@ This project contains three services:
 
 3. **Twitch Overlay**:
    ```bash
-   cp twitch-overlay/.env.example twitch-overlay/.env
+   cp twitch/web/overlay/.env.example twitch/web/overlay/.env
    ```
 
 ## Database

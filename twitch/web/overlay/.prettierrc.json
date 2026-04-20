@@ -17,5 +17,5 @@
       }
     }
   ],
-  "tailwindStylesheet": "./apps/twitch-overlay/src/app.css"
+  "tailwindStylesheet": "./src/app.css"
 }
