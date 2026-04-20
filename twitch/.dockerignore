@@ -1,9 +1,0 @@
-web/node_modules
-web/dist
-web/.svelte-kit
-internal/ui/dist
-tmp
-charsibot.db
-charsibot.db-shm
-charsibot.db-wal
-.env
