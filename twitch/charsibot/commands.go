@@ -1,4 +1,4 @@
-package bot
+package charsibot
 
 import (
 	"errors"
@@ -9,7 +9,7 @@ import (
 
 	"github.com/joeyak/go-twitch-eventsub/v3"
 
-	"github.com/lukeramljak/charsibot/twitch/internal/store"
+	"github.com/lukeramljak/charsibot/twitch/db"
 )
 
 const (
@@ -72,7 +72,7 @@ func Commands(seriesConfigs []SeriesConfig) map[string]Command {
 					return
 				}
 
-				if err = b.store.ModifyStatValue(b.ctx, store.ModifyStatValueParams{
+				if err = b.store.ModifyStatValue(b.ctx, db.ModifyStatValueParams{
 					Value:    -1003,
 					UserID:   mentionedUser.UserID,
 					StatName: "penis",
@@ -123,7 +123,7 @@ func Commands(seriesConfigs []SeriesConfig) map[string]Command {
 					}
 				}
 
-				b.BroadcastOverlayEvent(OverlayEvent{
+				b.server.Broadcast(OverlayEvent{
 					Type: EventTypeLeaderboard,
 					Data: entries,
 				})
@@ -201,7 +201,7 @@ func Commands(seriesConfigs []SeriesConfig) map[string]Command {
 					return
 				}
 
-				if err = b.store.ModifyStatValue(b.ctx, store.ModifyStatValueParams{
+				if err = b.store.ModifyStatValue(b.ctx, db.ModifyStatValueParams{
 					Value:    amount,
 					UserID:   mentionedUser.UserID,
 					StatName: statColumn,
@@ -255,7 +255,7 @@ func Commands(seriesConfigs []SeriesConfig) map[string]Command {
 						})
 						return
 					}
-					if err := b.store.ResetUserPlushies(b.ctx, store.ResetUserPlushiesParams{
+					if err := b.store.ResetUserPlushies(b.ctx, db.ResetUserPlushiesParams{
 						UserID: event.ChatterUserId,
 						Series: cfg.Series,
 					}); err != nil {
@@ -267,7 +267,7 @@ func Commands(seriesConfigs []SeriesConfig) map[string]Command {
 					userID := event.ChatterUserId
 					username := event.ChatterUserName
 
-					slots, err := b.store.GetCollectedPlushies(b.ctx, store.GetCollectedPlushiesParams{
+					slots, err := b.store.GetCollectedPlushies(b.ctx, db.GetCollectedPlushiesParams{
 						UserID: userID,
 						Series: cfg.Series,
 					})
@@ -279,7 +279,7 @@ func Commands(seriesConfigs []SeriesConfig) map[string]Command {
 						return
 					}
 
-					b.BroadcastOverlayEvent(OverlayEvent{
+					b.server.Broadcast(OverlayEvent{
 						Type: EventTypeCollectionDisplay,
 						Data: map[string]any{
 							"userId":         userID,

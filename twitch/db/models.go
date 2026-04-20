@@ -2,7 +2,7 @@
 // versions:
 //   sqlc v1.30.0
 
-package store
+package db
 
 type BlindBoxPlushie struct {
 	ID         int64  `json:"id"`

@@ -1,12 +1,10 @@
-package bot
+package charsibot
 
 import (
 	"context"
 	"testing"
 
 	"github.com/joeyak/go-twitch-eventsub/v3"
-
-	"github.com/lukeramljak/charsibot/twitch/internal/config"
 )
 
 func TestProcessTriggers(t *testing.T) {
@@ -289,7 +287,7 @@ func TestProcessTriggers_MessageContent(t *testing.T) {
 func createTestBotForTrigger(t *testing.T) *Bot {
 	t.Helper()
 
-	cfg := config.Config{
+	cfg := Config{
 		BotUserID:     "bot123",
 		ChannelUserID: "channel456",
 	}

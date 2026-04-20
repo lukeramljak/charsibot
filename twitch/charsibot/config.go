@@ -1,4 +1,4 @@
-package config
+package charsibot
 
 import (
 	"fmt"
@@ -19,7 +19,7 @@ type Config struct {
 	LogLevel         slog.Level
 }
 
-func Load() Config {
+func LoadConfig() Config {
 	serverPort := 8081
 	if v := os.Getenv("SERVER_PORT"); v != "" {
 		if p, err := strconv.Atoi(v); err == nil {

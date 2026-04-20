@@ -1,4 +1,4 @@
-package server
+package charsibot
 
 import (
 	"context"
@@ -13,32 +13,34 @@ import (
 
 	helix "github.com/nicklaw5/helix/v2"
 
-	"github.com/lukeramljak/charsibot/twitch/internal/bot"
-	"github.com/lukeramljak/charsibot/twitch/internal/store"
+	"github.com/lukeramljak/charsibot/twitch/db"
 )
 
-type client struct {
-	ch chan bot.OverlayEvent
-}
+const (
+	serverReadTimeout  = 10 * time.Second
+	shutdownTimeout    = 5 * time.Second
+	eventChannelBuffer = 10
+)
 
+// Server handles SSE streaming, OAuth, and API routes.
 type Server struct {
 	port         int
 	clientID     string
 	clientSecret string
 	redirectURI  string
 	server       *http.Server
-	clients      map[*client]bool
+	clients      map[chan OverlayEvent]struct{}
 	mu           sync.RWMutex
-	queries      *store.Queries
+	queries      *db.Queries
 }
 
-func NewServer(port int, clientID, clientSecret, redirectURI string, queries *store.Queries) *Server {
+func NewServer(port int, clientID, clientSecret, redirectURI string, queries *db.Queries) *Server {
 	return &Server{
 		port:         port,
 		clientID:     clientID,
 		clientSecret: clientSecret,
 		redirectURI:  redirectURI,
-		clients:      make(map[*client]bool),
+		clients:      make(map[chan OverlayEvent]struct{}),
 		queries:      queries,
 	}
 }
@@ -46,12 +48,7 @@ func NewServer(port int, clientID, clientSecret, redirectURI string, queries *st
 func (s *Server) Start() error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/events", s.handleSSE)
-	mux.HandleFunc("/health", func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		if _, err := w.Write([]byte("OK")); err != nil {
-			slog.Error("failed to write health response", "err", err)
-		}
-	})
+	mux.HandleFunc("/health", s.handleHealth)
 	mux.HandleFunc("GET /oauth/start", s.handleOAuthStart)
 	mux.HandleFunc("GET /oauth/callback", s.handleOAuthCallback)
 	mux.HandleFunc("GET /api/blindbox", s.handleBlindBox)
@@ -63,21 +60,90 @@ func (s *Server) Start() error {
 		WriteTimeout: 0, // No timeout for SSE connections
 	}
 
-	slog.Info("SSE server started", "port", s.port)
+	slog.Info("server started", "port", s.port)
 	go func() {
 		if err := s.server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			slog.Error("SSE server error", "err", err)
+			slog.Error("server error", "err", err)
 		}
 	}()
 
 	return nil
 }
 
-const (
-	serverReadTimeout  = 10 * time.Second
-	eventChannelBuffer = 100
-	shutdownTimeout    = 5 * time.Second
-)
+func (s *Server) Stop() {
+	if s.server != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+		defer cancel()
+		if err := s.server.Shutdown(ctx); err != nil {
+			slog.Error("error shutting down server", "err", err)
+		}
+	}
+}
+
+func (s *Server) handleSSE(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "streaming unsupported", http.StatusInternalServerError)
+		return
+	}
+
+	ch := make(chan OverlayEvent, eventChannelBuffer)
+	s.mu.Lock()
+	s.clients[ch] = struct{}{}
+	s.mu.Unlock()
+
+	defer func() {
+		s.mu.Lock()
+		delete(s.clients, ch)
+		close(ch)
+		s.mu.Unlock()
+	}()
+
+	slog.Info("SSE client connected", "remote_addr", r.RemoteAddr)
+
+	connectedEvent := map[string]any{
+		"type":      "connected",
+		"timestamp": time.Now().Format(time.RFC3339),
+	}
+	if data, err := json.Marshal(connectedEvent); err == nil {
+		fmt.Fprintf(w, "data: %s\n\n", data)
+		flusher.Flush()
+	}
+
+	for {
+		select {
+		case <-r.Context().Done():
+			slog.Debug("SSE client disconnected")
+			return
+		case event := <-ch:
+			data, err := json.Marshal(event)
+			if err != nil {
+				slog.Error("failed to marshal event", "err", err)
+				continue
+			}
+			fmt.Fprintf(w, "data: %s\n\n", data)
+			flusher.Flush()
+		}
+	}
+}
+
+func (s *Server) Broadcast(event OverlayEvent) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	for ch := range s.clients {
+		select {
+		case ch <- event:
+		default:
+			slog.Warn("SSE client buffer full, dropping event", "type", event.Type)
+		}
+	}
+}
 
 func oauthScopes(account string) ([]string, bool) {
 	scopes := map[string][]string{
@@ -153,12 +219,9 @@ func (s *Server) handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
 	if tokenResp.ErrorMessage != "" {
 		slog.Error(
 			"twitch returned error during token exchange",
-			"account",
-			account,
-			"error",
-			tokenResp.Error,
-			"message",
-			tokenResp.ErrorMessage,
+			"account", account,
+			"error", tokenResp.Error,
+			"message", tokenResp.ErrorMessage,
 		)
 		http.Error(w, "token exchange failed: "+tokenResp.ErrorMessage, http.StatusInternalServerError)
 		return
@@ -169,8 +232,15 @@ func (s *Server) handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "%s authorization complete.", accountLabel)
 }
 
+func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	if _, err := w.Write([]byte("OK")); err != nil {
+		slog.Error("failed to write health response", "err", err)
+	}
+}
+
 func (s *Server) handleBlindBox(w http.ResponseWriter, r *http.Request) {
-	series, err := bot.LoadAllSeries(r.Context(), s.queries)
+	series, err := LoadAllSeries(r.Context(), s.queries)
 	if err != nil {
 		http.Error(w, "failed to load series", http.StatusInternalServerError)
 		return
@@ -180,102 +250,5 @@ func (s *Server) handleBlindBox(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	if err := json.NewEncoder(w).Encode(series); err != nil {
 		slog.Error("failed to encode series response", "err", err)
-	}
-}
-
-func (s *Server) addClient(c *client) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.clients[c] = true
-}
-
-func (s *Server) removeClient(c *client) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	delete(s.clients, c)
-	close(c.ch)
-}
-
-func (s *Server) handleSSE(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Connection", "keep-alive")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-
-	flusher, ok := w.(http.Flusher)
-	if !ok {
-		http.Error(w, "streaming unsupported", http.StatusInternalServerError)
-		return
-	}
-
-	client := &client{
-		ch: make(chan bot.OverlayEvent, eventChannelBuffer),
-	}
-	s.addClient(client)
-	defer s.removeClient(client)
-
-	slog.Info("client connected",
-		"remote_addr", r.RemoteAddr,
-		"user_agent", r.UserAgent(),
-		"origin", r.Header.Get("Origin"),
-	)
-
-	connectedEvent := map[string]any{
-		"type":      "connected",
-		"timestamp": time.Now().Format(time.RFC3339),
-	}
-	connData, err := json.Marshal(connectedEvent)
-	if err == nil {
-		fmt.Fprintf(w, "data: %s\n\n", connData)
-		flusher.Flush()
-	}
-
-	clientGone := r.Context().Done()
-
-	for {
-		select {
-		case <-clientGone:
-			slog.Debug("client disconnected")
-			return
-		case event := <-client.ch:
-			eventData, err := json.Marshal(event)
-			if err != nil {
-				slog.Error("failed to marshal event", "err", err)
-				continue
-			}
-			fmt.Fprintf(w, "data: %s\n\n", eventData)
-			flusher.Flush()
-		}
-	}
-}
-
-func (s *Server) Broadcast(event bot.OverlayEvent) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	if len(s.clients) == 0 {
-		slog.Warn("no clients connected, event dropped", "type", event.Type)
-		return
-	}
-
-	for client := range s.clients {
-		select {
-		case client.ch <- event:
-			// Event sent successfully
-		default:
-			slog.Warn("client channel full, dropping event", "type", event.Type)
-		}
-	}
-
-	slog.Info("event sent", "type", event.Type, "clients", len(s.clients))
-}
-
-func (s *Server) Stop() {
-	if s.server != nil {
-		ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
-		defer cancel()
-		if err := s.server.Shutdown(ctx); err != nil {
-			slog.Error("error shutting down server", "err", err)
-		}
 	}
 }

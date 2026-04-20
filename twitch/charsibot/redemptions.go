@@ -1,4 +1,4 @@
-package bot
+package charsibot
 
 import (
 	"log/slog"
@@ -6,7 +6,7 @@ import (
 
 	"github.com/joeyak/go-twitch-eventsub/v3"
 
-	"github.com/lukeramljak/charsibot/twitch/internal/store"
+	"github.com/lukeramljak/charsibot/twitch/db"
 )
 
 // RedemptionFunc handles a channel point redemption event.
@@ -38,7 +38,7 @@ func Redemptions(seriesConfigs []SeriesConfig) map[string]RedemptionFunc {
 				outcome = "lost"
 			}
 
-			if err = b.store.ModifyStatValue(b.ctx, store.ModifyStatValueParams{
+			if err = b.store.ModifyStatValue(b.ctx, db.ModifyStatValueParams{
 				Value:    delta,
 				UserID:   userID,
 				StatName: stat.Name,

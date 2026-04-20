@@ -1,4 +1,4 @@
-package bot
+package charsibot
 
 import (
 	"context"
@@ -6,8 +6,7 @@ import (
 
 	"github.com/joeyak/go-twitch-eventsub/v3"
 
-	"github.com/lukeramljak/charsibot/twitch/internal/config"
-	"github.com/lukeramljak/charsibot/twitch/internal/store"
+	"github.com/lukeramljak/charsibot/twitch/db"
 )
 
 func TestIsModerator(t *testing.T) {
@@ -253,7 +252,7 @@ func TestProcessCommand_Nil(t *testing.T) {
 func createTestBot(t *testing.T) *Bot {
 	t.Helper()
 
-	cfg := config.Config{
+	cfg := Config{
 		BotUserID:     "bot123",
 		ChannelUserID: "channel456",
 	}
@@ -265,8 +264,8 @@ func createTestBot(t *testing.T) *Bot {
 }
 
 func TestStatsCommandAddRm(t *testing.T) {
-	queries, db := setupStatsTestDB(t)
-	defer db.Close()
+	queries, sqlDB := setupStatsTestDB(t)
+	defer sqlDB.Close()
 	ctx := context.Background()
 
 	if _, err := GetOrCreateStats(ctx, queries, "target1", "targetuser"); err != nil {
@@ -312,7 +311,7 @@ func TestStatsCommandAddRm(t *testing.T) {
 	}
 
 	b := &Bot{
-		config:   config.Config{BotUserID: "bot1", ChannelUserID: "ch1"},
+		config:   Config{BotUserID: "bot1", ChannelUserID: "ch1"},
 		ctx:      ctx,
 		store:    queries,
 		commands: Commands(nil),
@@ -348,7 +347,7 @@ func TestStatsCommandAddRm(t *testing.T) {
 }
 
 func TestStatsCommandValidation(t *testing.T) {
-	// Validation paths all return before touching the store.
+	// Validation paths all return before touching the db.
 	// Using a nil store: if the guard fails the code reaches b.store and panics,
 	// so no panic = correct early return.
 
@@ -362,7 +361,7 @@ func TestStatsCommandValidation(t *testing.T) {
 
 	makeBot := func() *Bot {
 		return &Bot{
-			config:   config.Config{BotUserID: "bot1", ChannelUserID: "ch1"},
+			config:   Config{BotUserID: "bot1", ChannelUserID: "ch1"},
 			ctx:      context.Background(),
 			commands: Commands(nil),
 		}
@@ -403,17 +402,28 @@ func TestStatsCommandValidation(t *testing.T) {
 	})
 }
 
-type mockBroadcaster struct {
-	events []OverlayEvent
+func newTestServer() (*Server, chan OverlayEvent) {
+	s := &Server{clients: make(map[chan OverlayEvent]struct{})}
+	ch := make(chan OverlayEvent, 10)
+	s.clients[ch] = struct{}{}
+	return s, ch
 }
 
-func (m *mockBroadcaster) Broadcast(event OverlayEvent) {
-	m.events = append(m.events, event)
+func drainEvents(ch chan OverlayEvent) []OverlayEvent {
+	var events []OverlayEvent
+	for {
+		select {
+		case e := <-ch:
+			events = append(events, e)
+		default:
+			return events
+		}
+	}
 }
 
 func TestSeriesCommandRegistered(t *testing.T) {
 	cfg := SeriesConfig{
-		BlindBoxSeries: store.BlindBoxSeries{Series: "coobubu", RedemptionTitle: "Cooper Series Blind Box"},
+		BlindBoxSeries: db.BlindBoxSeries{Series: "coobubu", RedemptionTitle: "Cooper Series Blind Box"},
 	}
 
 	cmds := Commands([]SeriesConfig{cfg})
@@ -424,25 +434,25 @@ func TestSeriesCommandRegistered(t *testing.T) {
 }
 
 func TestSeriesCommandShowCollection(t *testing.T) {
-	queries, db := setupBlindBoxTestDB(t)
-	defer db.Close()
+	queries, sqlDB := setupBlindBoxTestDB(t)
+	defer sqlDB.Close()
 	ctx := context.Background()
 
-	queries.UpsertUserPlushie(ctx, store.UpsertUserPlushieParams{
+	queries.UpsertUserPlushie(ctx, db.UpsertUserPlushieParams{
 		UserID: "user1", Username: "alice", Series: "coobubu", Key: "cutey",
 	})
 
-	broadcaster := &mockBroadcaster{}
+	srv, ch := newTestServer()
 	cfg := SeriesConfig{
-		BlindBoxSeries: store.BlindBoxSeries{Series: "coobubu", RedemptionTitle: "Cooper Series Blind Box"},
+		BlindBoxSeries: db.BlindBoxSeries{Series: "coobubu", RedemptionTitle: "Cooper Series Blind Box"},
 	}
 
 	b := &Bot{
-		config:        config.Config{BotUserID: "bot1", ChannelUserID: "ch1"},
-		ctx:           ctx,
-		store:         queries,
-		commands:      Commands([]SeriesConfig{cfg}),
-		overlayServer: broadcaster,
+		config:   Config{BotUserID: "bot1", ChannelUserID: "ch1"},
+		ctx:      ctx,
+		store:    queries,
+		commands: Commands([]SeriesConfig{cfg}),
+		server:   srv,
 	}
 
 	tests := []struct {
@@ -455,38 +465,38 @@ func TestSeriesCommandShowCollection(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			broadcaster.events = nil
 			b.processCommand(twitch.EventChannelChatMessage{
 				Chatter: twitch.Chatter{ChatterUserId: "user1", ChatterUserName: "alice"},
 				Message: twitch.ChatMessage{Text: tt.message},
 			})
-			if len(broadcaster.events) != 1 {
-				t.Fatalf("expected 1 overlay event, got %d", len(broadcaster.events))
+			events := drainEvents(ch)
+			if len(events) != 1 {
+				t.Fatalf("expected 1 overlay event, got %d", len(events))
 			}
-			if broadcaster.events[0].Type != EventTypeCollectionDisplay {
-				t.Errorf("event type = %q, want %q", broadcaster.events[0].Type, EventTypeCollectionDisplay)
+			if events[0].Type != EventTypeCollectionDisplay {
+				t.Errorf("event type = %q, want %q", events[0].Type, EventTypeCollectionDisplay)
 			}
 		})
 	}
 }
 
 func TestSeriesCommandReset(t *testing.T) {
-	queries, db := setupBlindBoxTestDB(t)
-	defer db.Close()
+	queries, sqlDB := setupBlindBoxTestDB(t)
+	defer sqlDB.Close()
 	ctx := context.Background()
 
 	for _, key := range []string{"cutey", "blueberry", "secret"} {
-		queries.UpsertUserPlushie(ctx, store.UpsertUserPlushieParams{
+		queries.UpsertUserPlushie(ctx, db.UpsertUserPlushieParams{
 			UserID: "user1", Username: "alice", Series: "coobubu", Key: key,
 		})
 	}
 
 	cfg := SeriesConfig{
-		BlindBoxSeries: store.BlindBoxSeries{Series: "coobubu", RedemptionTitle: "Cooper Series Blind Box"},
+		BlindBoxSeries: db.BlindBoxSeries{Series: "coobubu", RedemptionTitle: "Cooper Series Blind Box"},
 	}
 
 	b := &Bot{
-		config:   config.Config{BotUserID: "bot1", ChannelUserID: "ch1"},
+		config:   Config{BotUserID: "bot1", ChannelUserID: "ch1"},
 		ctx:      ctx,
 		store:    queries,
 		commands: Commands([]SeriesConfig{cfg}),
@@ -498,7 +508,7 @@ func TestSeriesCommandReset(t *testing.T) {
 		Message: twitch.ChatMessage{Text: "!coobubu reset"},
 	})
 
-	keys, err := queries.GetCollectedPlushies(ctx, store.GetCollectedPlushiesParams{
+	keys, err := queries.GetCollectedPlushies(ctx, db.GetCollectedPlushiesParams{
 		UserID: "user1", Series: "coobubu",
 	})
 	if err != nil {
@@ -514,7 +524,7 @@ func TestSeriesCommandReset(t *testing.T) {
 		Message: twitch.ChatMessage{Text: "!coobubu reset"},
 	})
 
-	keys, err = queries.GetCollectedPlushies(ctx, store.GetCollectedPlushiesParams{
+	keys, err = queries.GetCollectedPlushies(ctx, db.GetCollectedPlushiesParams{
 		UserID: "user1", Series: "coobubu",
 	})
 	if err != nil {
@@ -531,12 +541,12 @@ func TestBlindboxModGuard(t *testing.T) {
 	// b.store and panics, so no panic = guard is in place.
 
 	cfg := SeriesConfig{
-		BlindBoxSeries: store.BlindBoxSeries{Series: "test", RedemptionTitle: "Test"},
+		BlindBoxSeries: db.BlindBoxSeries{Series: "test", RedemptionTitle: "Test"},
 	}
 
 	makeBot := func() *Bot {
 		return &Bot{
-			config:   config.Config{BotUserID: "bot1", ChannelUserID: "ch1"},
+			config:   Config{BotUserID: "bot1", ChannelUserID: "ch1"},
 			ctx:      context.Background(),
 			commands: Commands([]SeriesConfig{cfg}),
 		}

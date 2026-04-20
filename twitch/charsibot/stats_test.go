@@ -1,19 +1,19 @@
-package bot
+package charsibot
 
 import (
 	"context"
 	"database/sql"
 	"testing"
 
-	_ "modernc.org/sqlite"
+	"github.com/lukeramljak/charsibot/twitch/db"
 
-	"github.com/lukeramljak/charsibot/twitch/internal/store"
+	_ "modernc.org/sqlite"
 )
 
-func setupStatsTestDB(t *testing.T) (*store.Queries, *sql.DB) {
+func setupStatsTestDB(t *testing.T) (*db.Queries, *sql.DB) {
 	t.Helper()
 
-	db, err := sql.Open("sqlite", ":memory:")
+	sqlDB, err := sql.Open("sqlite", ":memory:")
 	if err != nil {
 		t.Fatalf("failed to open database: %v", err)
 	}
@@ -44,16 +44,16 @@ func setupStatsTestDB(t *testing.T) (*store.Queries, *sql.DB) {
 	);
 	`
 
-	if _, err := db.Exec(schema); err != nil {
+	if _, err := sqlDB.Exec(schema); err != nil {
 		t.Fatalf("failed to create schema: %v", err)
 	}
 
-	return store.New(db), db
+	return db.New(sqlDB), sqlDB
 }
 
 func TestGetOrCreateStats(t *testing.T) {
-	queries, db := setupStatsTestDB(t)
-	defer db.Close()
+	queries, sqlDB := setupStatsTestDB(t)
+	defer sqlDB.Close()
 	ctx := context.Background()
 
 	t.Run("creates stat rows with defaults on first call", func(t *testing.T) {
@@ -90,7 +90,7 @@ func TestGetOrCreateStats(t *testing.T) {
 			t.Fatalf("GetOrCreateStats failed: %v", err)
 		}
 
-		row := db.QueryRowContext(ctx, `SELECT username FROM user_stats WHERE user_id = ? LIMIT 1`, "user3")
+		row := sqlDB.QueryRowContext(ctx, `SELECT username FROM user_stats WHERE user_id = ? LIMIT 1`, "user3")
 		var username string
 		if err := row.Scan(&username); err != nil {
 			t.Fatalf("failed to query username: %v", err)
@@ -103,7 +103,7 @@ func TestGetOrCreateStats(t *testing.T) {
 }
 
 func TestFormatStats(t *testing.T) {
-	stats := []store.GetUserStatsRow{
+	stats := []db.GetUserStatsRow{
 		{Name: "strength", ShortName: "STR", LongName: "Strength", Value: 5},
 		{Name: "intelligence", ShortName: "INT", LongName: "Intelligence", Value: 5},
 		{Name: "charisma", ShortName: "CHA", LongName: "Charisma", Value: 3},
@@ -121,7 +121,7 @@ func TestFormatStats(t *testing.T) {
 }
 
 func TestFormatStatsNegative(t *testing.T) {
-	stats := []store.GetUserStatsRow{
+	stats := []db.GetUserStatsRow{
 		{Name: "strength", ShortName: "STR", LongName: "Strength", Value: 3},
 		{Name: "intelligence", ShortName: "INT", LongName: "Intelligence", Value: 3},
 		{Name: "charisma", ShortName: "CHA", LongName: "Charisma", Value: 9},
@@ -139,7 +139,7 @@ func TestFormatStatsNegative(t *testing.T) {
 }
 
 func TestFormatStatsEmpty(t *testing.T) {
-	formatted := FormatStats("testuser", []store.GetUserStatsRow{})
+	formatted := FormatStats("testuser", []db.GetUserStatsRow{})
 	expected := "testuser's stats: "
 
 	if formatted != expected {

@@ -12,10 +12,8 @@ import (
 
 	_ "modernc.org/sqlite"
 
-	"github.com/lukeramljak/charsibot/twitch/internal/bot"
-	"github.com/lukeramljak/charsibot/twitch/internal/config"
-	"github.com/lukeramljak/charsibot/twitch/internal/server"
-	"github.com/lukeramljak/charsibot/twitch/internal/store"
+	"github.com/lukeramljak/charsibot/twitch/charsibot"
+	"github.com/lukeramljak/charsibot/twitch/db"
 )
 
 func main() {
@@ -25,32 +23,32 @@ func main() {
 }
 
 func run() error {
-	cfg := config.Load()
+	cfg := charsibot.LoadConfig()
 
-	db, err := sql.Open("sqlite", cfg.DBPath)
+	sqlDB, err := sql.Open("sqlite", cfg.DBPath)
 	if err != nil {
 		return fmt.Errorf("open database: %w", err)
 	}
-	defer db.Close()
+	defer sqlDB.Close()
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 		Level: cfg.LogLevel,
 	}))
 	slog.SetDefault(logger)
 
-	if err = store.Migrate(context.Background(), db, logger); err != nil {
+	if err = db.Migrate(context.Background(), sqlDB, "db/migrations", logger); err != nil {
 		return err
 	}
 
-	queries := store.New(db)
+	queries := db.New(sqlDB)
 
-	overlayServer := server.NewServer(cfg.ServerPort, cfg.ClientID, cfg.ClientSecret, cfg.OAuthRedirectURI, queries)
-	if err = overlayServer.Start(); err != nil {
-		return fmt.Errorf("start overlay server: %w", err)
+	srv := charsibot.NewServer(cfg.ServerPort, cfg.ClientID, cfg.ClientSecret, cfg.OAuthRedirectURI, queries)
+	if err = srv.Start(); err != nil {
+		return fmt.Errorf("start server: %w", err)
 	}
-	defer overlayServer.Stop()
+	defer srv.Stop()
 
-	twitchBot, err := bot.New(cfg, queries, overlayServer)
+	bot, err := charsibot.New(cfg, queries, srv)
 	if err != nil {
 		return fmt.Errorf("create bot: %w", err)
 	}
@@ -62,11 +60,11 @@ func run() error {
 	go func() {
 		<-sigChan
 		slog.Info("received shutdown signal")
-		twitchBot.Shutdown()
+		bot.Shutdown()
 		close(done)
 	}()
 
-	if err := twitchBot.Start(); err != nil {
+	if err := bot.Start(); err != nil {
 		return fmt.Errorf("bot: %w", err)
 	}
 

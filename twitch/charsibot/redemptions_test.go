@@ -1,12 +1,10 @@
-package bot
+package charsibot
 
 import (
 	"context"
 	"testing"
 
 	"github.com/joeyak/go-twitch-eventsub/v3"
-
-	"github.com/lukeramljak/charsibot/twitch/internal/config"
 )
 
 func TestOnChannelPointRedemption(t *testing.T) {
@@ -118,7 +116,7 @@ func TestRedemptionTitleMatching(t *testing.T) {
 func createTestBotForRedemption(t *testing.T) *Bot {
 	t.Helper()
 
-	cfg := config.Config{
+	cfg := Config{
 		BotUserID:     "bot123",
 		ChannelUserID: "channel456",
 	}

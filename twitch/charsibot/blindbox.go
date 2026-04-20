@@ -1,4 +1,4 @@
-package bot
+package charsibot
 
 import (
 	"context"
@@ -6,20 +6,20 @@ import (
 	"log/slog"
 	"math/rand/v2"
 
-	"github.com/lukeramljak/charsibot/twitch/internal/store"
+	"github.com/lukeramljak/charsibot/twitch/db"
 )
 
 // SeriesConfig holds the runtime config for a blind box series.
 // BlindBoxSeries is embedded so its fields are promoted to the top level.
 type SeriesConfig struct {
-	store.BlindBoxSeries
+	db.BlindBoxSeries
 
-	Plushies []store.BlindBoxPlushie `json:"plushies"`
+	Plushies []db.BlindBoxPlushie `json:"plushies"`
 }
 
 // LoadAllSeries queries all series and their plushies from the DB and returns
 // one SeriesConfig per series. The caller decides what to register.
-func LoadAllSeries(ctx context.Context, q *store.Queries) ([]SeriesConfig, error) {
+func LoadAllSeries(ctx context.Context, q *db.Queries) ([]SeriesConfig, error) {
 	rows, err := q.GetAllSeriesWithPlushies(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("load blind box series: %w", err)
@@ -27,7 +27,7 @@ func LoadAllSeries(ctx context.Context, q *store.Queries) ([]SeriesConfig, error
 	return groupSeriesRows(rows), nil
 }
 
-func groupSeriesRows(rows []store.GetAllSeriesWithPlushiesRow) []SeriesConfig {
+func groupSeriesRows(rows []db.GetAllSeriesWithPlushiesRow) []SeriesConfig {
 	var configs []SeriesConfig
 	index := map[string]int{}
 
@@ -35,7 +35,7 @@ func groupSeriesRows(rows []store.GetAllSeriesWithPlushiesRow) []SeriesConfig {
 		if _, seen := index[row.Series]; !seen {
 			index[row.Series] = len(configs)
 			configs = append(configs, SeriesConfig{
-				BlindBoxSeries: store.BlindBoxSeries{
+				BlindBoxSeries: db.BlindBoxSeries{
 					Series:          row.Series,
 					RedemptionTitle: row.RedemptionTitle,
 					Name:            row.Name,
@@ -49,7 +49,7 @@ func groupSeriesRows(rows []store.GetAllSeriesWithPlushiesRow) []SeriesConfig {
 		}
 		if row.PlushieKey.Valid {
 			i := index[row.Series]
-			configs[i].Plushies = append(configs[i].Plushies, store.BlindBoxPlushie{
+			configs[i].Plushies = append(configs[i].Plushies, db.BlindBoxPlushie{
 				ID:         row.PlushieID.Int64,
 				Series:     row.Series,
 				Key:        row.PlushieKey.String,
@@ -65,7 +65,7 @@ func groupSeriesRows(rows []store.GetAllSeriesWithPlushiesRow) []SeriesConfig {
 	return configs
 }
 
-func weightedRandomKey(plushies []store.BlindBoxPlushie) string {
+func weightedRandomKey(plushies []db.BlindBoxPlushie) string {
 	weighted := []string{}
 	for _, p := range plushies {
 		for range p.Weight {
@@ -80,12 +80,12 @@ func weightedRandomKey(plushies []store.BlindBoxPlushie) string {
 
 func addPlushieToCollection(
 	ctx context.Context,
-	q *store.Queries,
+	q *db.Queries,
 	userID, username, series, key string,
 ) (bool, []string, error) {
 	// INSERT OR IGNORE: inserts only if the row doesn't exist.
 	// changes() returns 1 for a new insert, 0 if the row already existed.
-	if err := q.InsertUserPlushieIfNew(ctx, store.InsertUserPlushieIfNewParams{
+	if err := q.InsertUserPlushieIfNew(ctx, db.InsertUserPlushieIfNewParams{
 		UserID:   userID,
 		Username: username,
 		Series:   series,
@@ -101,7 +101,7 @@ func addPlushieToCollection(
 	isNew := n == 1
 
 	// Always sync the username in case it changed (e.g. display name update).
-	if err = q.UpsertUserPlushie(ctx, store.UpsertUserPlushieParams{
+	if err = q.UpsertUserPlushie(ctx, db.UpsertUserPlushieParams{
 		UserID:   userID,
 		Username: username,
 		Series:   series,
@@ -110,7 +110,7 @@ func addPlushieToCollection(
 		return false, nil, fmt.Errorf("sync username: %w", err)
 	}
 
-	keys, err := q.GetCollectedPlushies(ctx, store.GetCollectedPlushiesParams{
+	keys, err := q.GetCollectedPlushies(ctx, db.GetCollectedPlushiesParams{
 		UserID: userID,
 		Series: series,
 	})
@@ -139,7 +139,7 @@ func RedeemBlindBox(b *Bot, userID, username string, cfg SeriesConfig) {
 		return
 	}
 
-	b.BroadcastOverlayEvent(OverlayEvent{
+	b.server.Broadcast(OverlayEvent{
 		Type: EventTypeBlindBoxRedemption,
 		Data: map[string]any{
 			"userId":         userID,

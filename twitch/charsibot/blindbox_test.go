@@ -1,4 +1,4 @@
-package bot
+package charsibot
 
 import (
 	"context"
@@ -7,13 +7,13 @@ import (
 
 	_ "modernc.org/sqlite"
 
-	"github.com/lukeramljak/charsibot/twitch/internal/store"
+	"github.com/lukeramljak/charsibot/twitch/db"
 )
 
-func setupBlindBoxTestDB(t *testing.T) (*store.Queries, *sql.DB) {
+func setupBlindBoxTestDB(t *testing.T) (*db.Queries, *sql.DB) {
 	t.Helper()
 
-	db, err := sql.Open("sqlite", ":memory:")
+	sqlDB, err := sql.Open("sqlite", ":memory:")
 	if err != nil {
 		t.Fatalf("failed to open database: %v", err)
 	}
@@ -59,21 +59,21 @@ func setupBlindBoxTestDB(t *testing.T) (*store.Queries, *sql.DB) {
 	);
 	`
 
-	if _, err := db.Exec(schema); err != nil {
+	if _, err := sqlDB.Exec(schema); err != nil {
 		t.Fatalf("failed to create schema: %v", err)
 	}
 
-	return store.New(db), db
+	return db.New(sqlDB), sqlDB
 }
 
 func TestCollections(t *testing.T) {
-	queries, db := setupBlindBoxTestDB(t)
-	defer db.Close()
+	queries, sqlDB := setupBlindBoxTestDB(t)
+	defer sqlDB.Close()
 	ctx := context.Background()
 
 	t.Run("resets collection", func(t *testing.T) {
 		for _, key := range []string{"cutey", "blueberry", "secret"} {
-			queries.UpsertUserPlushie(ctx, store.UpsertUserPlushieParams{
+			queries.UpsertUserPlushie(ctx, db.UpsertUserPlushieParams{
 				UserID:   "reset1",
 				Username: "charlie",
 				Series:   "coobubu",
@@ -81,7 +81,7 @@ func TestCollections(t *testing.T) {
 			})
 		}
 
-		err := queries.ResetUserPlushies(ctx, store.ResetUserPlushiesParams{
+		err := queries.ResetUserPlushies(ctx, db.ResetUserPlushiesParams{
 			UserID: "reset1",
 			Series: "coobubu",
 		})
@@ -89,7 +89,7 @@ func TestCollections(t *testing.T) {
 			t.Fatalf("ResetUserPlushies failed: %v", err)
 		}
 
-		keys, err := queries.GetCollectedPlushies(ctx, store.GetCollectedPlushiesParams{
+		keys, err := queries.GetCollectedPlushies(ctx, db.GetCollectedPlushiesParams{
 			UserID: "reset1",
 			Series: "coobubu",
 		})
@@ -104,7 +104,7 @@ func TestCollections(t *testing.T) {
 
 	t.Run("adds plushie to collection - new reward", func(t *testing.T) {
 		// Pre-seed one key so we can test isNew=false later
-		queries.UpsertUserPlushie(ctx, store.UpsertUserPlushieParams{
+		queries.UpsertUserPlushie(ctx, db.UpsertUserPlushieParams{
 			UserID:   "user1",
 			Username: "alice",
 			Series:   "coobubu",
@@ -126,7 +126,7 @@ func TestCollections(t *testing.T) {
 	})
 
 	t.Run("adds plushie to collection - existing reward", func(t *testing.T) {
-		queries.UpsertUserPlushie(ctx, store.UpsertUserPlushieParams{
+		queries.UpsertUserPlushie(ctx, db.UpsertUserPlushieParams{
 			UserID:   "user2",
 			Username: "bob",
 			Series:   "coobubu",
@@ -144,7 +144,7 @@ func TestCollections(t *testing.T) {
 	})
 
 	t.Run("syncs username when re-adding existing plushie", func(t *testing.T) {
-		queries.UpsertUserPlushie(ctx, store.UpsertUserPlushieParams{
+		queries.UpsertUserPlushie(ctx, db.UpsertUserPlushieParams{
 			UserID:   "user3",
 			Username: "oldname",
 			Series:   "coobubu",
@@ -159,7 +159,7 @@ func TestCollections(t *testing.T) {
 			t.Error("expected isNew to be false for existing key")
 		}
 
-		row := db.QueryRowContext(
+		row := sqlDB.QueryRowContext(
 			ctx,
 			`SELECT username FROM user_plushies WHERE user_id = ? AND series = ? AND key = ?`,
 			"user3",
@@ -177,13 +177,13 @@ func TestCollections(t *testing.T) {
 }
 
 func TestGetCompletedCollections(t *testing.T) {
-	queries, db := setupBlindBoxTestDB(t)
-	defer db.Close()
+	queries, sqlDB := setupBlindBoxTestDB(t)
+	defer sqlDB.Close()
 	ctx := context.Background()
 
 	seed := func(userID, username, key string) {
 		t.Helper()
-		queries.UpsertUserPlushie(ctx, store.UpsertUserPlushieParams{
+		queries.UpsertUserPlushie(ctx, db.UpsertUserPlushieParams{
 			UserID: userID, Username: username, Series: "coobubu", Key: key,
 		})
 	}
@@ -239,8 +239,8 @@ func TestGetCompletedCollections(t *testing.T) {
 }
 
 func TestGetAllSeriesWithPlushies(t *testing.T) {
-	queries, db := setupBlindBoxTestDB(t)
-	defer db.Close()
+	queries, sqlDB := setupBlindBoxTestDB(t)
+	defer sqlDB.Close()
 	ctx := context.Background()
 
 	t.Run("returns plushies grouped under their series", func(t *testing.T) {
@@ -281,7 +281,7 @@ func TestGetAllSeriesWithPlushies(t *testing.T) {
 	})
 
 	t.Run("series with no plushies returns one row with null plushie fields", func(t *testing.T) {
-		db.ExecContext(
+		sqlDB.ExecContext(
 			ctx,
 			`INSERT INTO blind_box_series (series, redemption_title, name) VALUES ('empty', 'Empty Series', 'Empty')`,
 		)
@@ -291,7 +291,7 @@ func TestGetAllSeriesWithPlushies(t *testing.T) {
 			t.Fatalf("GetAllSeriesWithPlushies failed: %v", err)
 		}
 
-		var emptyRow *store.GetAllSeriesWithPlushiesRow
+		var emptyRow *db.GetAllSeriesWithPlushiesRow
 		for i := range rows {
 			if rows[i].Series == "empty" {
 				emptyRow = &rows[i]
@@ -308,11 +308,11 @@ func TestGetAllSeriesWithPlushies(t *testing.T) {
 
 	t.Run("multiple series are ordered by series key", func(t *testing.T) {
 		// 'aardvark' sorts before 'coobubu'
-		db.ExecContext(
+		sqlDB.ExecContext(
 			ctx,
 			`INSERT INTO blind_box_series (series, redemption_title, name) VALUES ('aardvark', 'Aardvark Series', 'Aardvarks')`,
 		)
-		db.ExecContext(
+		sqlDB.ExecContext(
 			ctx,
 			`INSERT INTO blind_box_plushies (series, key, sort_order, weight) VALUES ('aardvark', 'andy', 1, 1)`,
 		)

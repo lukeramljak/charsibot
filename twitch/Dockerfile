@@ -9,6 +9,6 @@ WORKDIR /app
 RUN apk add --no-cache ca-certificates tzdata
 RUN mkdir -p /data && chmod 777 /data
 COPY --from=build /charsibot /charsibot
-COPY --from=build /app/internal/store/migrations /app/internal/store/migrations
+COPY --from=build /app/db/migrations /app/db/migrations
 EXPOSE 8081
 CMD ["/charsibot"]

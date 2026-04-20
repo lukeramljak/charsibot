@@ -3,7 +3,7 @@
 //   sqlc v1.30.0
 // source: blind_box.sql
 
-package store
+package db
 
 import (
 	"context"

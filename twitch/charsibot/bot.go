@@ -1,4 +1,4 @@
-package bot
+package charsibot
 
 import (
 	"context"
@@ -13,22 +13,21 @@ import (
 	"github.com/joeyak/go-twitch-eventsub/v3"
 	"github.com/nicklaw5/helix/v2"
 
-	"github.com/lukeramljak/charsibot/twitch/internal/config"
-	"github.com/lukeramljak/charsibot/twitch/internal/store"
+	"github.com/lukeramljak/charsibot/twitch/db"
 )
 
 type Bot struct {
-	config        config.Config
-	store         *store.Queries
-	commands      map[string]Command
-	redemptions   map[string]RedemptionFunc
-	triggers      []Trigger
-	twitchClient  *twitch.Client
-	helixClient   *helix.Client
-	conduitID     string
-	overlayServer Broadcaster
-	ctx           context.Context
-	wg            sync.WaitGroup
+	config       Config
+	store        *db.Queries
+	commands     map[string]Command
+	redemptions  map[string]RedemptionFunc
+	triggers     []Trigger
+	twitchClient *twitch.Client
+	helixClient  *helix.Client
+	conduitID    string
+	server       *Server
+	ctx          context.Context
+	wg           sync.WaitGroup
 }
 
 type SendMessageParams struct {
@@ -36,7 +35,7 @@ type SendMessageParams struct {
 	ReplyParentMessageID string
 }
 
-func New(cfg config.Config, queries *store.Queries, overlayServer Broadcaster) (*Bot, error) {
+func New(cfg Config, queries *db.Queries, server *Server) (*Bot, error) {
 	if queries == nil {
 		return nil, errors.New("store queries cannot be nil")
 	}
@@ -47,13 +46,13 @@ func New(cfg config.Config, queries *store.Queries, overlayServer Broadcaster) (
 	}
 
 	return &Bot{
-		config:        cfg,
-		store:         queries,
-		commands:      Commands(seriesConfigs),
-		redemptions:   Redemptions(seriesConfigs),
-		triggers:      Triggers(),
-		overlayServer: overlayServer,
-		ctx:           context.Background(),
+		config:      cfg,
+		store:       queries,
+		commands:    Commands(seriesConfigs),
+		redemptions: Redemptions(seriesConfigs),
+		triggers:    Triggers(),
+		server:      server,
+		ctx:         context.Background(),
 	}, nil
 }
 
@@ -238,12 +237,6 @@ func (b *Bot) onChannelRaid(event twitch.EventChannelRaid) {
 	b.SendMessage(SendMessageParams{
 		Message: fmt.Sprintf("!so @%s", userName),
 	})
-}
-
-func (b *Bot) BroadcastOverlayEvent(event OverlayEvent) {
-	if b.overlayServer != nil {
-		b.overlayServer.Broadcast(event)
-	}
 }
 
 func (b *Bot) initHelixClient() error {

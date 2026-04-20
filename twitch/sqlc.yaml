@@ -1,16 +1,16 @@
-version: '2'
+version: "2"
 sql:
-  - engine: 'sqlite'
-    queries: 'internal/store/queries/'
-    schema: 'internal/store/migrations/'
+  - engine: "sqlite"
+    queries: "db/queries/"
+    schema: "db/migrations/"
     gen:
       go:
-        package: 'store'
-        out: 'internal/store'
+        package: "db"
+        out: "db"
         emit_json_tags: true
         emit_prepared_queries: true
         emit_empty_slices: true
-        json_tags_case_style: 'camel'
+        json_tags_case_style: "camel"
         rename:
           blind_box_plushy: BlindBoxPlushie
           user_plushy: UserPlushie

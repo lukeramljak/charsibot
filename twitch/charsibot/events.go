@@ -1,4 +1,4 @@
-package bot
+package charsibot
 
 type EventType string
 
@@ -16,9 +16,4 @@ type OverlayEvent struct {
 	Message   string    `json:"message,omitempty"`
 	Data      any       `json:"data,omitempty"`
 	Timestamp string    `json:"timestamp,omitempty"`
-}
-
-// Broadcaster is implemented by any type that can broadcast overlay events.
-type Broadcaster interface {
-	Broadcast(event OverlayEvent)
 }
