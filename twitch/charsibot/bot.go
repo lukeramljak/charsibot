@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"sync/atomic"
+	"time"
 
 	"github.com/joeyak/go-twitch-eventsub/v3"
 	"github.com/nicklaw5/helix/v2"
@@ -27,8 +29,12 @@ type Bot struct {
 	conduitID    string
 	server       *Server
 	ctx          context.Context
+	cancel       context.CancelFunc
 	wg           sync.WaitGroup
+	shuttingDown atomic.Bool
 }
+
+const reconnectDelay = 10 * time.Second
 
 type SendMessageParams struct {
 	Message              string
@@ -52,11 +58,12 @@ func New(cfg Config, queries *db.Queries, server *Server) (*Bot, error) {
 		redemptions: Redemptions(seriesConfigs),
 		triggers:    Triggers(),
 		server:      server,
-		ctx:         context.Background(),
 	}, nil
 }
 
 func (b *Bot) Start() error {
+	b.ctx, b.cancel = context.WithCancel(context.Background())
+
 	if err := b.initHelixClient(); err != nil {
 		return fmt.Errorf("init helix client: %w", err)
 	}
@@ -74,6 +81,24 @@ func (b *Bot) Start() error {
 		url = "ws://localhost:8080/ws"
 	}
 
+	for {
+		if err := b.connectOnce(url); err != nil {
+			if b.shuttingDown.Load() {
+				return nil
+			}
+			slog.Error("eventsub disconnected, reconnecting", "err", err, "delay", reconnectDelay)
+			select {
+			case <-time.After(reconnectDelay):
+			case <-b.ctx.Done():
+				return nil
+			}
+			continue
+		}
+		return nil
+	}
+}
+
+func (b *Bot) connectOnce(url string) error {
 	client := twitch.NewClientWithUrl(url)
 	b.twitchClient = client
 
@@ -101,6 +126,17 @@ func (b *Bot) Start() error {
 		slog.Debug("client reconnected", "msg", message)
 	})
 
+	client.OnEventConduitShardDisabled(func(event twitch.EventConduitShardDisabled) {
+		slog.Warn("conduit shard disabled, reconnecting",
+			"conduit_id", event.ConduitId,
+			"shard_id", event.ShardId,
+			"status", event.Status,
+		)
+		if err := client.Close(); err != nil {
+			slog.Error("error closing client after shard disabled", "err", err)
+		}
+	})
+
 	client.OnEventChannelChatMessage(func(event twitch.EventChannelChatMessage) {
 		b.wg.Go(func() {
 			b.onMessage(event)
@@ -119,18 +155,17 @@ func (b *Bot) Start() error {
 		b.onChannelRaid(event)
 	})
 
-	if err := client.Connect(); err != nil {
-		return fmt.Errorf("connect to twitch: %w", err)
-	}
-	return nil
+	return client.Connect()
 }
 
 func (b *Bot) Shutdown() {
 	slog.Info("shutting down bot")
 
+	b.shuttingDown.Store(true)
+	b.cancel()
 	if b.twitchClient != nil {
 		if err := b.twitchClient.Close(); err != nil {
-			slog.Error("error closing twitch client", "err", err)
+			slog.Debug("error closing twitch client", "err", err)
 		}
 	}
 
@@ -296,6 +331,13 @@ func (b *Bot) subscribeEvents(sessionID string) error {
 			version: "1",
 			condition: map[string]string{
 				"to_broadcaster_user_id": b.config.ChannelUserID,
+			},
+		},
+		{
+			subType: twitch.SubConduitShardDisabled,
+			version: "1",
+			condition: map[string]string{
+				"client_id": b.config.ClientID,
 			},
 		},
 	}
