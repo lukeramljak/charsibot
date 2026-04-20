@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -14,6 +15,9 @@ import (
 
 const (
 	statsCommandMinParts    = 5
+	statsSubCommandAdd      = "add"
+	statsSubCommandSet      = "set"
+	statsSubCommandRm       = "rm"
 	blindBoxCommandMinParts = 2
 )
 
@@ -149,16 +153,18 @@ func Commands(seriesConfigs []SeriesConfig) map[string]Command {
 
 				if len(parts) < statsCommandMinParts {
 					b.SendMessage(SendMessageParams{
-						Message:              "Usage: !stats <add|rm> <@user> <stat> <amount>",
+						Message:              "Usage: !stats <add|set|rm> <@user> <stat> <amount>",
 						ReplyParentMessageID: event.MessageId,
 					})
 					return
 				}
 
+				validSubcommands := []string{statsSubCommandAdd, statsSubCommandSet, statsSubCommandRm}
+
 				subcommand := strings.ToLower(parts[1])
-				if subcommand != "add" && subcommand != "rm" {
+				if !slices.Contains(validSubcommands, subcommand) {
 					b.SendMessage(SendMessageParams{
-						Message:              "Usage: !stats <add|rm> <@user> <stat> <amount>",
+						Message:              "Usage: !stats <add|set|rm> <@user> <stat> <amount>",
 						ReplyParentMessageID: event.MessageId,
 					})
 					return
@@ -183,7 +189,7 @@ func Commands(seriesConfigs []SeriesConfig) map[string]Command {
 					return
 				}
 
-				if subcommand == "rm" {
+				if subcommand == statsSubCommandRm {
 					amount = -amount
 				}
 
@@ -201,17 +207,32 @@ func Commands(seriesConfigs []SeriesConfig) map[string]Command {
 					return
 				}
 
-				if err = b.store.ModifyStatValue(b.ctx, db.ModifyStatValueParams{
-					Value:    amount,
-					UserID:   mentionedUser.UserID,
-					StatName: statColumn,
-				}); err != nil {
-					slog.Error("failed to modify stat", "err", err, "user", mentionedUser.UserLogin)
-					b.SendMessage(SendMessageParams{
-						Message:              "Failed to update stats",
-						ReplyParentMessageID: event.MessageId,
-					})
-					return
+				if subcommand == statsSubCommandSet {
+					if err = b.store.SetStatValue(b.ctx, db.SetStatValueParams{
+						Value:    amount,
+						UserID:   mentionedUser.UserID,
+						StatName: statColumn,
+					}); err != nil {
+						slog.Error("failed to set stat", "err", err, "user", mentionedUser.UserLogin)
+						b.SendMessage(SendMessageParams{
+							Message:              "Failed to update stats",
+							ReplyParentMessageID: event.MessageId,
+						})
+						return
+					}
+				} else {
+					if err = b.store.ModifyStatValue(b.ctx, db.ModifyStatValueParams{
+						Value:    amount,
+						UserID:   mentionedUser.UserID,
+						StatName: statColumn,
+					}); err != nil {
+						slog.Error("failed to modify stat", "err", err, "user", mentionedUser.UserLogin)
+						b.SendMessage(SendMessageParams{
+							Message:              "Failed to update stats",
+							ReplyParentMessageID: event.MessageId,
+						})
+						return
+					}
 				}
 
 				stats, err := b.store.GetUserStats(b.ctx, mentionedUser.UserID)

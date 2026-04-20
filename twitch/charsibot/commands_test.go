@@ -263,7 +263,7 @@ func createTestBot(t *testing.T) *Bot {
 	}
 }
 
-func TestStatsCommandAddRm(t *testing.T) {
+func TestStatsCommandAddSetRm(t *testing.T) {
 	queries, sqlDB := setupStatsTestDB(t)
 	defer sqlDB.Close()
 	ctx := context.Background()
@@ -323,6 +323,14 @@ func TestStatsCommandAddRm(t *testing.T) {
 		after := statValue(t, "target1", "strength")
 		if after != before+5 {
 			t.Errorf("strength = %d, want %d", after, before+5)
+		}
+	})
+
+	t.Run("set sets a stat to a given amount", func(t *testing.T) {
+		b.processCommand(makeEvent("!stats set @targetuser strength 20"))
+		after := statValue(t, "target1", "strength")
+		if after != 20 {
+			t.Errorf("strength = %d, want %d", after, 20)
 		}
 	})
 
