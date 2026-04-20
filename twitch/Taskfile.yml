@@ -23,14 +23,19 @@ tasks:
       - ./bin/charsibot
 
   dev:
-    desc: Run with air (live reload)
+    desc: Run with live reloading
     cmds:
-      - air
+      - gow run ./cmd/charsibot
 
   test:
     desc: Run tests
     cmds:
       - go test ./...
+
+  test-watch:
+    desc: Run tests with live reloading
+    cmds:
+      - gow test ./...
 
   lint:
     desc: Run golangci-lint
