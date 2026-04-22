@@ -31,7 +31,6 @@ func LoadConfig() Config {
 	if dbPath == "" {
 		dbPath = "charsibot.db"
 	}
-	dbPath = "file:" + dbPath + "?_pragma=foreign_keys(1)&_pragma=journal_mode(WAL)"
 
 	redirectURI := os.Getenv("TWITCH_OAUTH_REDIRECT_URI")
 	if redirectURI == "" {

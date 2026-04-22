@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"log"
 	"log/slog"
@@ -25,20 +24,16 @@ func main() {
 func run() error {
 	cfg := charsibot.LoadConfig()
 
-	sqlDB, err := sql.Open("sqlite", cfg.DBPath)
-	if err != nil {
-		return fmt.Errorf("open database: %w", err)
-	}
-	defer sqlDB.Close()
-
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 		Level: cfg.LogLevel,
 	}))
 	slog.SetDefault(logger)
 
-	if err = db.Migrate(context.Background(), sqlDB, "db/migrations", logger); err != nil {
+	sqlDB, err := db.Connect(context.Background(), cfg.DBPath, logger)
+	if err != nil {
 		return err
 	}
+	defer sqlDB.Close()
 
 	queries := db.New(sqlDB)
 
