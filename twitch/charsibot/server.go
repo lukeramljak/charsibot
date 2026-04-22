@@ -147,7 +147,7 @@ func (s *Server) Broadcast(event OverlayEvent) {
 
 func oauthScopes(account string) ([]string, bool) {
 	scopes := map[string][]string{
-		"streamer": {"channel:read:redemptions", "channel:bot"},
+		"streamer": {"channel:manage:redemptions", "channel:read:redemptions", "channel:bot"},
 		"bot":      {"user:read:chat", "user:write:chat", "user:bot"},
 	}
 	s, ok := scopes[account]
