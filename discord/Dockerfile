@@ -1,29 +1,12 @@
-FROM oven/bun:1 AS base
+FROM oven/bun:1 AS build
+
 WORKDIR /app
-
-FROM base AS install
-RUN mkdir -p /temp/dev
-COPY package.json /temp/dev/
-RUN cd /temp/dev && bun install --frozen-lockfile
-
-RUN mkdir -p /temp/prod
-COPY package.json /temp/prod/
-RUN cd /temp/prod && bun install --frozen-lockfile --production
-
-FROM base AS prerelease
-COPY --from=install /temp/dev/node_modules node_modules
 COPY . .
-COPY ../../tsconfig.json ./tsconfig.json
 
-ENV NODE_ENV=production
+RUN bun install --frozen-lockfile
+RUN bun build src/index.ts --compile --outfile charsibot-discord
+RUN /app/charsibot-discord commands register
 
-FROM base AS release
-COPY --from=install /temp/prod/node_modules node_modules
-COPY --from=prerelease /app/src ./src
-COPY --from=prerelease /app/package.json .
-COPY --from=prerelease /app/tsconfig.json ./tsconfig.json
-
-RUN bun run commands:register
-
-USER bun
-ENTRYPOINT [ "bun", "run", "src/index.ts" ]
+FROM gcr.io/distroless/base-debian13
+COPY --from=build /app/charsibot-discord /charsibot-discord
+ENTRYPOINT ["/charsibot-discord"]

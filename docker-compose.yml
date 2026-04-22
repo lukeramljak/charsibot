@@ -1,7 +1,7 @@
 services:
   twitch:
     build:
-      context: .
+      context: ./twitch
       dockerfile: Dockerfile
     container_name: twitch
     restart: unless-stopped
@@ -9,6 +9,9 @@ services:
       - "8081:8081"
     volumes:
       - twitch-data:/data
+    env_file:
+      - path: ./twitch/.env
+        required: false
     environment:
       - LOG_LEVEL
       - SERVER_PORT=8081
@@ -17,6 +20,7 @@ services:
       - TWITCH_CLIENT_SECRET
       - TWITCH_BOT_USER_ID
       - TWITCH_CHANNEL_USER_ID
+      - TWITCH_OAUTH_REDIRECT_URI
     labels:
       - docker-volume-backup.stop-during-backup=true
     healthcheck:
@@ -28,21 +32,39 @@ services:
 
   overlay:
     build:
-      context: ./web/overlay
+      context: ./twitch/web/overlay
       dockerfile: Dockerfile
     container_name: twitch-overlay
     restart: unless-stopped
     ports:
       - "3000:3000"
+    env_file:
+      - path: ./twitch/web/overlay/.env
+        required: false
     environment:
-      - PUBLIC_SERVER_BASE_URL=http://twitch:8081
+      - PUBLIC_SERVER_BASE_URL
     depends_on:
       twitch:
         condition: service_healthy
 
+  discord:
+    build:
+      context: ./discord
+      dockerfile: Dockerfile
+    container_name: discord
+    restart: unless-stopped
+    env_file:
+      - path: ./discord/.env
+        required: false
+    environment:
+      - DISCORD_CLIENT_ID
+      - DISCORD_GUILD_ID
+      - DISCORD_TOKEN
+
   backup:
     image: offen/docker-volume-backup:latest
     restart: always
+    container_name: twitch-backup
     environment:
       - BACKUP_FILENAME=charsibot-db-backup-%Y-%m-%dT%H-%M-%S.tar.gz
       - BACKUP_CRON_EXPRESSION=0 18 * * *
@@ -55,8 +77,6 @@ services:
     volumes:
       - twitch-data:/backup/twitch-data:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
-    exclude_from_hc: true
 
 volumes:
   twitch-data:
-    external: true
