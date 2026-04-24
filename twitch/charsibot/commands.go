@@ -110,26 +110,18 @@ func Commands(seriesConfigs []SeriesConfig) map[string]Command {
 				rows, err := b.store.GetStatLeaderboard(b.ctx)
 				if err != nil {
 					slog.Error("failed to get leaderboard", "err", err)
+					b.SendMessage(SendMessageParams{
+						Message: "Failed to get leaderboard",
+					})
 					return
 				}
 
-				type leaderboardEntry struct {
-					DisplayName string `json:"displayName"`
-					Username    string `json:"username"`
-					Value       int64  `json:"value"`
-				}
-				entries := make([]leaderboardEntry, len(rows))
+				parts := make([]string, len(rows))
 				for i, r := range rows {
-					entries[i] = leaderboardEntry{
-						DisplayName: r.ShortName,
-						Username:    r.Username,
-						Value:       r.Value,
-					}
+					parts[i] = fmt.Sprintf("%s: %s (%d)", r.ShortName, r.Username, r.Value)
 				}
-
-				b.server.Broadcast(OverlayEvent{
-					Type: EventTypeLeaderboard,
-					Data: entries,
+				b.SendMessage(SendMessageParams{
+					Message: strings.Join(parts, " | "),
 				})
 			},
 		},

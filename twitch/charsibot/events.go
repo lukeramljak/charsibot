@@ -7,7 +7,6 @@ const (
 	EventTypeRedemption         EventType = "redemption"
 	EventTypeCollectionDisplay  EventType = "collection_display"
 	EventTypeBlindBoxRedemption EventType = "blindbox_redemption"
-	EventTypeLeaderboard        EventType = "leaderboard"
 	EventTypeConnected          EventType = "connected"
 )
 

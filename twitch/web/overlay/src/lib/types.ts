@@ -2,8 +2,7 @@ export type OverlayEvent =
   | ChatCommandEvent
   | RedemptionEvent
   | CollectionDisplayEvent
-  | BlindBoxRedemptionEvent
-  | LeaderboardEvent;
+  | BlindBoxRedemptionEvent;
 
 export interface ChatCommandEvent {
   type: 'chat_command';
@@ -38,15 +37,4 @@ export interface BlindBoxRedemptionEvent {
     collectionSize: number;
     collection: string[];
   };
-}
-
-export type Leaderboard = Array<{
-  displayName: string;
-  username: string;
-  value: number;
-}>;
-
-export interface LeaderboardEvent {
-  type: 'leaderboard';
-  data: Leaderboard;
 }
