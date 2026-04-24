@@ -264,7 +264,7 @@ func createTestBot(t *testing.T) *Bot {
 }
 
 func TestStatsCommandAddSetRm(t *testing.T) {
-	queries, sqlDB := setupStatsTestDB(t)
+	queries, sqlDB := db.NewTestDB(t)
 	defer sqlDB.Close()
 	ctx := context.Background()
 
@@ -442,7 +442,7 @@ func TestSeriesCommandRegistered(t *testing.T) {
 }
 
 func TestSeriesCommandShowCollection(t *testing.T) {
-	queries, sqlDB := setupBlindBoxTestDB(t)
+	queries, sqlDB := db.NewTestDB(t)
 	defer sqlDB.Close()
 	ctx := context.Background()
 
@@ -489,7 +489,7 @@ func TestSeriesCommandShowCollection(t *testing.T) {
 }
 
 func TestSeriesCommandReset(t *testing.T) {
-	queries, sqlDB := setupBlindBoxTestDB(t)
+	queries, sqlDB := db.NewTestDB(t)
 	defer sqlDB.Close()
 	ctx := context.Background()
 

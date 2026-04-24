@@ -2,58 +2,13 @@ package charsibot
 
 import (
 	"context"
-	"database/sql"
 	"testing"
 
 	"github.com/lukeramljak/charsibot/twitch/db"
-
-	_ "modernc.org/sqlite"
 )
 
-func setupStatsTestDB(t *testing.T) (*db.Queries, *sql.DB) {
-	t.Helper()
-
-	sqlDB, err := sql.Open("sqlite", ":memory:")
-	if err != nil {
-		t.Fatalf("failed to open database: %v", err)
-	}
-
-	schema := `
-	CREATE TABLE stat_definitions (
-		name          TEXT PRIMARY KEY,
-		short_name    TEXT NOT NULL,
-		long_name     TEXT NOT NULL,
-		default_value INTEGER NOT NULL DEFAULT 3,
-		sort_order    INTEGER NOT NULL,
-		emoji         TEXT NOT NULL DEFAULT ''
-	);
-
-	INSERT INTO stat_definitions (name, short_name, long_name, default_value, sort_order, emoji) VALUES
-		('strength',     'STR',   'Strength',     3, 1, '💪'),
-		('intelligence', 'INT',   'Intelligence', 3, 2, '🧠'),
-		('charisma',     'CHA',   'Charisma',     3, 3, '✨'),
-		('luck',         'LUCK',  'Luck',         3, 4, '🍀'),
-		('dexterity',    'DEX',   'Dexterity',    3, 5, '🎯'),
-		('penis',        'PENIS', 'Penis',        3, 6, '🍆');
-
-	CREATE TABLE user_stats (
-		user_id   TEXT NOT NULL,
-		username  TEXT NOT NULL,
-		stat_name TEXT NOT NULL REFERENCES stat_definitions(name),
-		value     INTEGER NOT NULL DEFAULT 3,
-		PRIMARY KEY (user_id, stat_name)
-	);
-	`
-
-	if _, err := sqlDB.Exec(schema); err != nil {
-		t.Fatalf("failed to create schema: %v", err)
-	}
-
-	return db.New(sqlDB), sqlDB
-}
-
 func TestGetOrCreateStats(t *testing.T) {
-	queries, sqlDB := setupStatsTestDB(t)
+	queries, sqlDB := db.NewTestDB(t)
 	defer sqlDB.Close()
 	ctx := context.Background()
 

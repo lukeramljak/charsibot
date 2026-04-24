@@ -2,7 +2,6 @@ package charsibot
 
 import (
 	"context"
-	"database/sql"
 	"testing"
 
 	_ "modernc.org/sqlite"
@@ -10,64 +9,8 @@ import (
 	"github.com/lukeramljak/charsibot/twitch/db"
 )
 
-func setupBlindBoxTestDB(t *testing.T) (*db.Queries, *sql.DB) {
-	t.Helper()
-
-	sqlDB, err := sql.Open("sqlite", ":memory:")
-	if err != nil {
-		t.Fatalf("failed to open database: %v", err)
-	}
-
-	schema := `
-	CREATE TABLE blind_box_series (
-		series           TEXT PRIMARY KEY,
-		redemption_title TEXT NOT NULL,
-		name             TEXT NOT NULL DEFAULT '',
-		reveal_sound     TEXT NOT NULL DEFAULT '',
-		box_front_face   TEXT NOT NULL DEFAULT '',
-		box_side_face    TEXT NOT NULL DEFAULT '',
-		display_color    TEXT NOT NULL DEFAULT '',
-		text_color       TEXT NOT NULL DEFAULT ''
-	);
-
-	CREATE TABLE blind_box_plushies (
-		id          INTEGER PRIMARY KEY AUTOINCREMENT,
-		series      TEXT NOT NULL REFERENCES blind_box_series(series),
-		key         TEXT NOT NULL,
-		sort_order  INTEGER NOT NULL DEFAULT 0,
-		weight      INTEGER NOT NULL DEFAULT 1,
-		name        TEXT NOT NULL DEFAULT '',
-		image       TEXT NOT NULL DEFAULT '',
-		empty_image TEXT NOT NULL DEFAULT '',
-		UNIQUE(series, key)
-	);
-
-	INSERT INTO blind_box_series (series, redemption_title, name) VALUES
-		('coobubu', 'Cooper Series Blind Box', 'Coobubus');
-
-	INSERT INTO blind_box_plushies (series, key, sort_order, weight) VALUES
-		('coobubu', 'cutey',     1, 12),
-		('coobubu', 'blueberry', 2, 12),
-		('coobubu', 'secret',    3,  1);
-
-	CREATE TABLE user_plushies (
-		user_id  TEXT NOT NULL,
-		username TEXT NOT NULL,
-		series   TEXT NOT NULL REFERENCES blind_box_series(series),
-		key      TEXT NOT NULL,
-		PRIMARY KEY (user_id, series, key)
-	);
-	`
-
-	if _, err := sqlDB.Exec(schema); err != nil {
-		t.Fatalf("failed to create schema: %v", err)
-	}
-
-	return db.New(sqlDB), sqlDB
-}
-
 func TestCollections(t *testing.T) {
-	queries, sqlDB := setupBlindBoxTestDB(t)
+	queries, sqlDB := db.NewTestDB(t)
 	defer sqlDB.Close()
 	ctx := context.Background()
 
@@ -177,7 +120,7 @@ func TestCollections(t *testing.T) {
 }
 
 func TestGetCompletedCollections(t *testing.T) {
-	queries, sqlDB := setupBlindBoxTestDB(t)
+	queries, sqlDB := db.NewTestDB(t)
 	defer sqlDB.Close()
 	ctx := context.Background()
 
@@ -203,7 +146,7 @@ func TestGetCompletedCollections(t *testing.T) {
 	})
 
 	t.Run("returns series name not key", func(t *testing.T) {
-		for _, key := range []string{"cutey", "blueberry", "secret"} {
+		for _, key := range []string{"cutey", "blueberry", "lemony", "bibi", "pinky", "minty", "cherry", "secret"} {
 			seed("complete1", "bob", key)
 		}
 
@@ -220,7 +163,7 @@ func TestGetCompletedCollections(t *testing.T) {
 	})
 
 	t.Run("aggregates multiple completers into one row per series", func(t *testing.T) {
-		for _, key := range []string{"cutey", "blueberry", "secret"} {
+		for _, key := range []string{"cutey", "blueberry", "lemony", "bibi", "pinky", "minty", "cherry", "secret"} {
 			seed("complete2", "carol", key)
 			seed("complete3", "dave", key)
 		}
@@ -239,7 +182,7 @@ func TestGetCompletedCollections(t *testing.T) {
 }
 
 func TestGetAllSeriesWithPlushies(t *testing.T) {
-	queries, sqlDB := setupBlindBoxTestDB(t)
+	queries, sqlDB := db.NewTestDB(t)
 	defer sqlDB.Close()
 	ctx := context.Background()
 
@@ -249,15 +192,12 @@ func TestGetAllSeriesWithPlushies(t *testing.T) {
 			t.Fatalf("GetAllSeriesWithPlushies failed: %v", err)
 		}
 
-		if len(rows) != 3 {
-			t.Fatalf("expected 3 rows (one per plushie), got %d", len(rows))
+		if len(rows) != 40 {
+			t.Fatalf("expected 40 rows (one per plushie across all series), got %d", len(rows))
 		}
 		for _, r := range rows {
-			if r.Series != "coobubu" {
-				t.Errorf("Series = %q, want %q", r.Series, "coobubu")
-			}
 			if !r.PlushieKey.Valid {
-				t.Error("expected PlushieKey to be valid")
+				t.Errorf("expected PlushieKey to be valid for series %q", r.Series)
 			}
 		}
 	})
@@ -268,14 +208,17 @@ func TestGetAllSeriesWithPlushies(t *testing.T) {
 			t.Fatalf("GetAllSeriesWithPlushies failed: %v", err)
 		}
 
-		keys := make([]string, len(rows))
-		for i, r := range rows {
-			keys[i] = r.PlushieKey.String
+		// Filter to coobubu rows only
+		var coobubuKeys []string
+		for _, r := range rows {
+			if r.Series == "coobubu" {
+				coobubuKeys = append(coobubuKeys, r.PlushieKey.String)
+			}
 		}
-		want := []string{"cutey", "blueberry", "secret"}
+		want := []string{"cutey", "blueberry", "lemony", "bibi", "pinky", "minty", "cherry", "secret"}
 		for i, k := range want {
-			if keys[i] != k {
-				t.Errorf("plushie[%d] = %q, want %q", i, keys[i], k)
+			if coobubuKeys[i] != k {
+				t.Errorf("coobubu plushie[%d] = %q, want %q", i, coobubuKeys[i], k)
 			}
 		}
 	})

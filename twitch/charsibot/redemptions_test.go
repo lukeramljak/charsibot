@@ -5,10 +5,12 @@ import (
 	"testing"
 
 	"github.com/joeyak/go-twitch-eventsub/v3"
+
+	"github.com/lukeramljak/charsibot/twitch/db"
 )
 
 func TestDrinkAPotionCreatesStatsForNewUser(t *testing.T) {
-	queries, sqlDB := setupStatsTestDB(t)
+	queries, sqlDB := db.NewTestDB(t)
 	defer sqlDB.Close()
 	ctx := context.Background()
 
@@ -51,7 +53,7 @@ func TestDrinkAPotionCreatesStatsForNewUser(t *testing.T) {
 }
 
 func TestDrinkAPotionModifiesStatForExistingUser(t *testing.T) {
-	queries, sqlDB := setupStatsTestDB(t)
+	queries, sqlDB := db.NewTestDB(t)
 	defer sqlDB.Close()
 	ctx := context.Background()
 
