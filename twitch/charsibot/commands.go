@@ -118,7 +118,7 @@ func Commands(seriesConfigs []SeriesConfig) map[string]Command {
 
 				parts := make([]string, len(rows))
 				for i, r := range rows {
-					parts[i] = fmt.Sprintf("%s: %s (%d)", r.ShortName, r.Username, r.Value)
+					parts[i] = fmt.Sprintf("%s %s (%d)", r.Emoji, r.Username, r.Value)
 				}
 				b.SendMessage(SendMessageParams{
 					Message: strings.Join(parts, " | "),

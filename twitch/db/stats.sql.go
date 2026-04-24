@@ -29,7 +29,7 @@ func (q *Queries) EnsureUserStats(ctx context.Context, arg EnsureUserStatsParams
 }
 
 const getRandomStatDefinition = `-- name: GetRandomStatDefinition :one
-SELECT name, short_name, long_name, default_value, sort_order FROM stat_definitions ORDER BY RANDOM() LIMIT 1
+SELECT name, short_name, long_name, default_value, sort_order, emoji FROM stat_definitions ORDER BY RANDOM() LIMIT 1
 `
 
 func (q *Queries) GetRandomStatDefinition(ctx context.Context) (StatDefinition, error) {
@@ -41,12 +41,13 @@ func (q *Queries) GetRandomStatDefinition(ctx context.Context) (StatDefinition, 
 		&i.LongName,
 		&i.DefaultValue,
 		&i.SortOrder,
+		&i.Emoji,
 	)
 	return i, err
 }
 
 const getStatDefinitions = `-- name: GetStatDefinitions :many
-SELECT name, short_name, long_name, default_value, sort_order FROM stat_definitions ORDER BY sort_order
+SELECT name, short_name, long_name, default_value, sort_order, emoji FROM stat_definitions ORDER BY sort_order
 `
 
 func (q *Queries) GetStatDefinitions(ctx context.Context) ([]StatDefinition, error) {
@@ -64,6 +65,7 @@ func (q *Queries) GetStatDefinitions(ctx context.Context) ([]StatDefinition, err
 			&i.LongName,
 			&i.DefaultValue,
 			&i.SortOrder,
+			&i.Emoji,
 		); err != nil {
 			return nil, err
 		}
@@ -79,7 +81,7 @@ func (q *Queries) GetStatDefinitions(ctx context.Context) ([]StatDefinition, err
 }
 
 const getStatLeaderboard = `-- name: GetStatLeaderboard :many
-SELECT sd.short_name, sv.username, CAST(MAX(sv.value) AS INTEGER) AS value
+SELECT sd.emoji, sv.username, CAST(MAX(sv.value) AS INTEGER) AS value
 FROM user_stats sv
 JOIN stat_definitions sd ON sv.stat_name = sd.name
 GROUP BY sv.stat_name
@@ -87,9 +89,9 @@ ORDER BY sd.sort_order
 `
 
 type GetStatLeaderboardRow struct {
-	ShortName string `json:"shortName"`
-	Username  string `json:"username"`
-	Value     int64  `json:"value"`
+	Emoji    string `json:"emoji"`
+	Username string `json:"username"`
+	Value    int64  `json:"value"`
 }
 
 func (q *Queries) GetStatLeaderboard(ctx context.Context) ([]GetStatLeaderboardRow, error) {
@@ -101,7 +103,7 @@ func (q *Queries) GetStatLeaderboard(ctx context.Context) ([]GetStatLeaderboardR
 	items := []GetStatLeaderboardRow{}
 	for rows.Next() {
 		var i GetStatLeaderboardRow
-		if err := rows.Scan(&i.ShortName, &i.Username, &i.Value); err != nil {
+		if err := rows.Scan(&i.Emoji, &i.Username, &i.Value); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

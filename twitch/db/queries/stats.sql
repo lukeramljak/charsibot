@@ -24,7 +24,7 @@ UPDATE user_stats SET value = ?
 WHERE user_id = ? AND stat_name = ?;
 
 -- name: GetStatLeaderboard :many
-SELECT sd.short_name, sv.username, CAST(MAX(sv.value) AS INTEGER) AS value
+SELECT sd.emoji, sv.username, CAST(MAX(sv.value) AS INTEGER) AS value
 FROM user_stats sv
 JOIN stat_definitions sd ON sv.stat_name = sd.name
 GROUP BY sv.stat_name

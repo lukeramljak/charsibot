@@ -24,16 +24,17 @@ func setupStatsTestDB(t *testing.T) (*db.Queries, *sql.DB) {
 		short_name    TEXT NOT NULL,
 		long_name     TEXT NOT NULL,
 		default_value INTEGER NOT NULL DEFAULT 3,
-		sort_order    INTEGER NOT NULL
+		sort_order    INTEGER NOT NULL,
+		emoji         TEXT NOT NULL DEFAULT ''
 	);
 
-	INSERT INTO stat_definitions (name, short_name, long_name, default_value, sort_order) VALUES
-		('strength',     'STR',   'Strength',     3, 1),
-		('intelligence', 'INT',   'Intelligence', 3, 2),
-		('charisma',     'CHA',   'Charisma',     3, 3),
-		('luck',         'LUCK',  'Luck',         3, 4),
-		('dexterity',    'DEX',   'Dexterity',    3, 5),
-		('penis',        'PENIS', 'Penis',        3, 6);
+	INSERT INTO stat_definitions (name, short_name, long_name, default_value, sort_order, emoji) VALUES
+		('strength',     'STR',   'Strength',     3, 1, '💪'),
+		('intelligence', 'INT',   'Intelligence', 3, 2, '🧠'),
+		('charisma',     'CHA',   'Charisma',     3, 3, '✨'),
+		('luck',         'LUCK',  'Luck',         3, 4, '🍀'),
+		('dexterity',    'DEX',   'Dexterity',    3, 5, '🎯'),
+		('penis',        'PENIS', 'Penis',        3, 6, '🍆');
 
 	CREATE TABLE user_stats (
 		user_id   TEXT NOT NULL,

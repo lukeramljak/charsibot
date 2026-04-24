@@ -32,6 +32,7 @@ type StatDefinition struct {
 	LongName     string `json:"longName"`
 	DefaultValue int64  `json:"defaultValue"`
 	SortOrder    int64  `json:"sortOrder"`
+	Emoji        string `json:"emoji"`
 }
 
 type UserPlushie struct {
