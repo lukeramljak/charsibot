@@ -24,6 +24,11 @@ func Redemptions(seriesConfigs []SeriesConfig) map[string]RedemptionFunc {
 			userID := event.UserID
 			username := event.UserName
 
+			if _, err := GetOrCreateStats(b.ctx, b.store, userID, username); err != nil {
+				slog.Error("failed to get or create stats", "err", err, "user", username)
+				return
+			}
+
 			stat, err := b.store.GetRandomStatDefinition(b.ctx)
 			if err != nil {
 				slog.Error("failed to get random stat definition", "err", err)

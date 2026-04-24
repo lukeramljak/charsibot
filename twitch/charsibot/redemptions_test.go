@@ -7,6 +7,91 @@ import (
 	"github.com/joeyak/go-twitch-eventsub/v3"
 )
 
+func TestDrinkAPotionCreatesStatsForNewUser(t *testing.T) {
+	queries, sqlDB := setupStatsTestDB(t)
+	defer sqlDB.Close()
+	ctx := context.Background()
+
+	b := &Bot{
+		config: Config{BotUserID: "bot1", ChannelUserID: "ch1"},
+		ctx:    ctx,
+		store:  queries,
+	}
+	b.redemptions = Redemptions(nil)
+
+	event := twitch.EventChannelChannelPointsCustomRewardRedemptionAdd{
+		User:   twitch.User{UserID: "newuser1", UserName: "newuser"},
+		Reward: twitch.CustomChannelPointReward{Title: "Drink a Potion"},
+	}
+
+	statsBefore, _ := queries.GetUserStats(ctx, "newuser1")
+	if len(statsBefore) != 0 {
+		t.Fatalf("expected no stats before redemption, got %d", len(statsBefore))
+	}
+
+	b.onChannelPointRedemption(event)
+
+	statsAfter, err := queries.GetUserStats(ctx, "newuser1")
+	if err != nil {
+		t.Fatalf("GetUserStats failed: %v", err)
+	}
+	if len(statsAfter) == 0 {
+		t.Fatal("expected stats to be created for new user after Drink a Potion, got none")
+	}
+
+	changed := 0
+	for _, s := range statsAfter {
+		if s.Value != 3 {
+			changed++
+		}
+	}
+	if changed == 0 {
+		t.Error("expected at least one stat to be modified by the potion, but all remain at default")
+	}
+}
+
+func TestDrinkAPotionModifiesStatForExistingUser(t *testing.T) {
+	queries, sqlDB := setupStatsTestDB(t)
+	defer sqlDB.Close()
+	ctx := context.Background()
+
+	if _, err := GetOrCreateStats(ctx, queries, "existinguser1", "existing"); err != nil {
+		t.Fatalf("failed to seed user: %v", err)
+	}
+
+	b := &Bot{
+		config: Config{BotUserID: "bot1", ChannelUserID: "ch1"},
+		ctx:    ctx,
+		store:  queries,
+	}
+	b.redemptions = Redemptions(nil)
+
+	event := twitch.EventChannelChannelPointsCustomRewardRedemptionAdd{
+		User:   twitch.User{UserID: "existinguser1", UserName: "existing"},
+		Reward: twitch.CustomChannelPointReward{Title: "Drink a Potion"},
+	}
+
+	b.onChannelPointRedemption(event)
+
+	stats, err := queries.GetUserStats(ctx, "existinguser1")
+	if err != nil {
+		t.Fatalf("GetUserStats failed: %v", err)
+	}
+	if len(stats) == 0 {
+		t.Fatal("expected stats to exist after redemption")
+	}
+
+	changed := 0
+	for _, s := range stats {
+		if s.Value != 3 {
+			changed++
+		}
+	}
+	if changed == 0 {
+		t.Error("expected at least one stat to be modified by the potion, but all remain at default")
+	}
+}
+
 func TestOnChannelPointRedemption(t *testing.T) {
 	tests := []struct {
 		name           string
