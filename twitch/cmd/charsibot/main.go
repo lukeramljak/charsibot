@@ -30,7 +30,6 @@ func run() error {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 		Level: cfg.LogLevel,
 	}))
-	slog.SetDefault(logger)
 
 	sqlDB, err := db.Connect(context.Background(), cfg.DBPath, logger)
 	if err != nil {
@@ -54,13 +53,13 @@ func run() error {
 		ClientID:         cfg.ClientID,
 		ClientSecret:     cfg.ClientSecret,
 		OAuthRedirectURI: cfg.OAuthRedirectURI,
-	}, blindboxService)
+	}, logger, blindboxService)
 	if err = srv.Start(); err != nil {
 		return fmt.Errorf("start server: %w", err)
 	}
 	defer srv.Stop()
 
-	bot, err := charsibot.New(cfg, statsService, blindboxService, srv.Broadcast)
+	bot, err := charsibot.New(cfg, logger, statsService, blindboxService, srv.Broadcast)
 	if err != nil {
 		return fmt.Errorf("create bot: %w", err)
 	}
@@ -71,7 +70,7 @@ func run() error {
 	done := make(chan struct{})
 	go func() {
 		<-sigChan
-		slog.Info("received shutdown signal")
+		logger.Info("received shutdown signal")
 		bot.Shutdown()
 		close(done)
 	}()
@@ -81,6 +80,6 @@ func run() error {
 	}
 
 	<-done
-	slog.Info("bot shutdown complete")
+	logger.Info("bot shutdown complete")
 	return nil
 }

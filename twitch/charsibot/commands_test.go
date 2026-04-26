@@ -2,6 +2,7 @@ package charsibot
 
 import (
 	"context"
+	"log/slog"
 	"testing"
 
 	"github.com/joeyak/go-twitch-eventsub/v3"
@@ -262,6 +263,7 @@ func createTestBot(t *testing.T) *Bot {
 
 	return &Bot{
 		config: cfg,
+		logger: slog.New(slog.DiscardHandler),
 		ctx:    context.Background(),
 	}
 }
@@ -320,6 +322,7 @@ func TestStatsCommandAddSetRm(t *testing.T) {
 
 	b := &Bot{
 		config:       Config{BotUserID: "bot1", ChannelUserID: "ch1"},
+		logger:       slog.New(slog.DiscardHandler),
 		ctx:          ctx,
 		statsService: svc,
 		commands:     Commands(nil),
@@ -378,6 +381,7 @@ func TestStatsCommandValidation(t *testing.T) {
 	makeBot := func() *Bot {
 		return &Bot{
 			config:   Config{BotUserID: "bot1", ChannelUserID: "ch1"},
+			logger:   slog.New(slog.DiscardHandler),
 			ctx:      context.Background(),
 			commands: Commands(nil),
 		}
@@ -468,6 +472,7 @@ func TestSeriesCommandShowCollection(t *testing.T) {
 
 	b := &Bot{
 		config:          Config{BotUserID: "bot1", ChannelUserID: "ch1"},
+		logger:          slog.New(slog.DiscardHandler),
 		ctx:             ctx,
 		blindboxService: svc,
 		commands:        Commands([]blindbox.SeriesConfig{cfg}),
@@ -521,6 +526,7 @@ func TestSeriesCommandReset(t *testing.T) {
 
 	b := &Bot{
 		config:          Config{BotUserID: "bot1", ChannelUserID: "ch1"},
+		logger:          slog.New(slog.DiscardHandler),
 		ctx:             ctx,
 		blindboxService: svc,
 		commands:        Commands([]blindbox.SeriesConfig{cfg}),
@@ -571,6 +577,7 @@ func TestBlindboxModGuard(t *testing.T) {
 	makeBot := func() *Bot {
 		return &Bot{
 			config:   Config{BotUserID: "bot1", ChannelUserID: "ch1"},
+			logger:   slog.New(slog.DiscardHandler),
 			ctx:      context.Background(),
 			commands: Commands([]blindbox.SeriesConfig{cfg}),
 		}

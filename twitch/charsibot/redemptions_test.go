@@ -2,6 +2,7 @@ package charsibot
 
 import (
 	"context"
+	"log/slog"
 	"testing"
 
 	"github.com/joeyak/go-twitch-eventsub/v3"
@@ -23,6 +24,7 @@ func TestDrinkAPotionCreatesStatsForNewUser(t *testing.T) {
 
 	b := &Bot{
 		config:       Config{BotUserID: "bot1", ChannelUserID: "ch1"},
+		logger:       slog.New(slog.DiscardHandler),
 		ctx:          ctx,
 		statsService: svc,
 	}
@@ -75,6 +77,7 @@ func TestDrinkAPotionModifiesStatForExistingUser(t *testing.T) {
 
 	b := &Bot{
 		config:       Config{BotUserID: "bot1", ChannelUserID: "ch1"},
+		logger:       slog.New(slog.DiscardHandler),
 		ctx:          ctx,
 		statsService: svc,
 	}
@@ -222,6 +225,7 @@ func createTestBotForRedemption(t *testing.T) *Bot {
 
 	return &Bot{
 		config: cfg,
+		logger: slog.New(slog.DiscardHandler),
 		ctx:    context.Background(),
 	}
 }

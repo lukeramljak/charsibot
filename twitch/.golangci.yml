@@ -81,6 +81,7 @@ linters:
     - reassign
     - recvcheck
     - revive
+    - sloglint
     - staticcheck
     - testableexamples
     - testifylint
@@ -200,6 +201,9 @@ linters:
       rules:
         - name: package-comments
           disabled: true
+
+    sloglint:
+      key-naming-case: snake
 
     staticcheck:
       checks:

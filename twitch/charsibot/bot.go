@@ -21,6 +21,7 @@ import (
 
 type Bot struct {
 	config          Config
+	logger          *slog.Logger
 	commands        map[string]Command
 	redemptions     map[string]RedemptionFunc
 	triggers        []Trigger
@@ -47,6 +48,7 @@ type SendMessageParams struct {
 // and redemptions. broadcast is called for each overlay event the bot emits.
 func New(
 	cfg Config,
+	logger *slog.Logger,
 	statsService *stats.Service,
 	blindboxService *blindbox.Service,
 	broadcast func(server.OverlayEvent),
@@ -58,6 +60,7 @@ func New(
 
 	return &Bot{
 		config:          cfg,
+		logger:          logger,
 		commands:        Commands(seriesConfigs),
 		redemptions:     Redemptions(seriesConfigs),
 		triggers:        Triggers(),
@@ -79,7 +82,7 @@ func (b *Bot) Start() error {
 		return fmt.Errorf("get or create conduit: %w", err)
 	}
 	b.conduitID = conduitID
-	slog.Info("conduit ready", "conduit_id", conduitID)
+	b.logger.Info("conduit ready", "conduit_id", conduitID)
 
 	url := "wss://eventsub.wss.twitch.tv/ws"
 
@@ -92,7 +95,7 @@ func (b *Bot) Start() error {
 			if b.shuttingDown.Load() {
 				return nil
 			}
-			slog.Error("eventsub disconnected, reconnecting", "err", err, "delay", reconnectDelay)
+			b.logger.Error("eventsub disconnected, reconnecting", "err", err, "delay", reconnectDelay)
 			select {
 			case <-time.After(reconnectDelay):
 			case <-b.ctx.Done():
@@ -109,37 +112,37 @@ func (b *Bot) connectOnce(url string) error {
 	b.twitchClient = client
 
 	client.OnError(func(err error) {
-		slog.Error("twitch client error", "err", err)
+		b.logger.Error("twitch client error", "err", err)
 	})
 
 	client.OnWelcome(func(message twitch.WelcomeMessage) {
-		slog.Info("connected to twitch eventsub", "session_id", message.Payload.Session.ID)
+		b.logger.Info("connected to twitch eventsub", "session_id", message.Payload.Session.ID)
 		if err := b.subscribeEvents(message.Payload.Session.ID); err != nil {
-			slog.Error("failed to subscribe to events", "err", err)
+			b.logger.Error("failed to subscribe to events", "err", err)
 			b.Shutdown()
 		}
 	})
 
 	client.OnNotification(func(message twitch.NotificationMessage) {
-		slog.Debug("eventsub notification", "type", message.Payload.Subscription.Type)
+		b.logger.Debug("eventsub notification", "type", message.Payload.Subscription.Type)
 	})
 
 	client.OnRevoke(func(message twitch.RevokeMessage) {
-		slog.Warn("subscription revoked", "subscription", message.Payload.Subscription)
+		b.logger.Warn("subscription revoked", "subscription", message.Payload.Subscription)
 	})
 
 	client.OnReconnect(func(message twitch.ReconnectMessage) {
-		slog.Debug("client reconnected", "msg", message)
+		b.logger.Debug("client reconnected", "msg", message)
 	})
 
 	client.OnEventConduitShardDisabled(func(event twitch.EventConduitShardDisabled) {
-		slog.Warn("conduit shard disabled, reconnecting",
+		b.logger.Warn("conduit shard disabled, reconnecting",
 			"conduit_id", event.ConduitId,
 			"shard_id", event.ShardId,
 			"status", event.Status,
 		)
 		if err := client.Close(); err != nil {
-			slog.Error("error closing client after shard disabled", "err", err)
+			b.logger.Error("error closing client after shard disabled", "err", err)
 		}
 	})
 
@@ -165,18 +168,18 @@ func (b *Bot) connectOnce(url string) error {
 }
 
 func (b *Bot) Shutdown() {
-	slog.Info("shutting down bot")
+	b.logger.Info("shutting down bot")
 
 	b.shuttingDown.Store(true)
 	b.cancel()
 	if b.twitchClient != nil {
 		if err := b.twitchClient.Close(); err != nil {
-			slog.Debug("error closing twitch client", "err", err)
+			b.logger.Debug("error closing twitch client", "err", err)
 		}
 	}
 
 	b.wg.Wait()
-	slog.Info("bot stopped")
+	b.logger.Info("bot stopped")
 }
 
 func (b *Bot) onMessage(event twitch.EventChannelChatMessage) {
@@ -184,7 +187,7 @@ func (b *Bot) onMessage(event twitch.EventChannelChatMessage) {
 		return
 	}
 
-	slog.Debug("processing message",
+	b.logger.Debug("processing message",
 		"user", event.ChatterUserName,
 		"message", event.Message.Text,
 	)
@@ -213,14 +216,14 @@ func (b *Bot) processCommand(event twitch.EventChannelChatMessage) {
 		return
 	}
 
-	slog.Info("chat command received",
+	b.logger.Info("chat command received",
 		"command", cmd,
 		"user", event.ChatterUserName,
 		"message", event.Message.Text,
 	)
 
 	if command.ModeratorOnly && !IsModerator(event) {
-		slog.Warn("non-moderator attempted mod command",
+		b.logger.Warn("non-moderator attempted mod command",
 			"user", event.ChatterUserName,
 			"command", cmd,
 		)
@@ -231,7 +234,7 @@ func (b *Bot) processCommand(event twitch.EventChannelChatMessage) {
 		return
 	}
 
-	slog.Info("executing command", "command", cmd, "user", event.ChatterUserName)
+	b.logger.Info("executing command", "command", cmd, "user", event.ChatterUserName)
 	command.Execute(b, event)
 }
 
@@ -246,12 +249,12 @@ func (b *Bot) processTriggers(event twitch.EventChannelChatMessage) {
 		if chance := t.Chance; chance > 0 && chance < 100 {
 			roll := rand.IntN(percentMax) + 1
 			if roll > chance {
-				slog.Debug("trigger failed chance roll", "roll", roll, "chance", chance)
+				b.logger.Debug("trigger failed chance roll", "roll", roll, "chance", chance)
 				continue
 			}
 		}
 
-		slog.Info("executing trigger",
+		b.logger.Info("executing trigger",
 			"user", event.ChatterUserName,
 			"message", event.Message.Text,
 		)
@@ -260,7 +263,7 @@ func (b *Bot) processTriggers(event twitch.EventChannelChatMessage) {
 }
 
 func (b *Bot) onChannelPointRedemption(event twitch.EventChannelChannelPointsCustomRewardRedemptionAdd) {
-	slog.Info("channel point redemption",
+	b.logger.Info("channel point redemption",
 		"user", event.UserName,
 		"reward", event.Reward.Title,
 	)
@@ -349,7 +352,7 @@ func (b *Bot) subscribeEvents(sessionID string) error {
 	}
 
 	for _, s := range subs {
-		slog.Info("subscribing to event via conduit", "type", s.subType)
+		b.logger.Info("subscribing to event via conduit", "type", s.subType)
 		if err := createConduitSubscription(
 			b.config.ClientID,
 			appToken,
@@ -386,13 +389,13 @@ func (b *Bot) SendMessage(params SendMessageParams) {
 		if resp != nil {
 			statusCode = resp.StatusCode
 		}
-		slog.Error("failed to send message", "err", err, "status_code", statusCode, "message", params.Message)
+		b.logger.Error("failed to send message", "err", err, "status_code", statusCode, "message", params.Message)
 		return
 	}
 
 	if resp.Error != "" {
-		slog.Warn("message send warning", "error", resp.Error, "message", params.Message)
+		b.logger.Warn("message send warning", "error", resp.Error, "message", params.Message)
 	}
 
-	slog.Debug("message sent", "message", params.Message)
+	b.logger.Debug("message sent", "message", params.Message)
 }

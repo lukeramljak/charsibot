@@ -2,6 +2,7 @@ package charsibot
 
 import (
 	"context"
+	"log/slog"
 	"testing"
 
 	"github.com/joeyak/go-twitch-eventsub/v3"
@@ -294,6 +295,7 @@ func createTestBotForTrigger(t *testing.T) *Bot {
 
 	return &Bot{
 		config: cfg,
+		logger: slog.New(slog.DiscardHandler),
 		ctx:    context.Background(),
 	}
 }

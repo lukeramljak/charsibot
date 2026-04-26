@@ -37,15 +37,17 @@ type ServerConfig struct {
 // Server handles SSE streaming, OAuth, and API routes.
 type Server struct {
 	cfg             ServerConfig
+	logger          *slog.Logger
 	server          *http.Server
 	clients         map[chan OverlayEvent]struct{}
 	mu              sync.RWMutex
 	blindboxService *blindbox.Service
 }
 
-func NewServer(cfg ServerConfig, blindboxService *blindbox.Service) *Server {
+func NewServer(cfg ServerConfig, logger *slog.Logger, blindboxService *blindbox.Service) *Server {
 	return &Server{
 		cfg:             cfg,
+		logger:          logger,
 		clients:         make(map[chan OverlayEvent]struct{}),
 		blindboxService: blindboxService,
 	}
@@ -72,10 +74,10 @@ func (s *Server) Start() error {
 		WriteTimeout: 0, // No timeout for SSE connections
 	}
 
-	slog.Info("server started", "port", s.cfg.Port)
+	s.logger.Info("server started", "port", s.cfg.Port)
 	go func() {
 		if err := s.server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			slog.Error("server error", "err", err)
+			s.logger.Error("server error", "err", err)
 		}
 	}()
 
@@ -87,7 +89,7 @@ func (s *Server) Stop() {
 		ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 		defer cancel()
 		if err := s.server.Shutdown(ctx); err != nil {
-			slog.Error("error shutting down server", "err", err)
+			s.logger.Error("error shutting down server", "err", err)
 		}
 	}
 }
@@ -116,7 +118,7 @@ func (s *Server) handleSSE(w http.ResponseWriter, r *http.Request) {
 		s.mu.Unlock()
 	}()
 
-	slog.Info("SSE client connected", "remote_addr", r.RemoteAddr)
+	s.logger.Info("SSE client connected", "remote_addr", r.RemoteAddr)
 
 	s.Broadcast(OverlayEvent{
 		Type:      EventTypeConnected,
@@ -126,12 +128,12 @@ func (s *Server) handleSSE(w http.ResponseWriter, r *http.Request) {
 	for {
 		select {
 		case <-r.Context().Done():
-			slog.Debug("SSE client disconnected")
+			s.logger.Debug("SSE client disconnected")
 			return
 		case event := <-ch:
 			data, err := json.Marshal(event)
 			if err != nil {
-				slog.Error("failed to marshal event", "err", err)
+				s.logger.Error("failed to marshal event", "err", err)
 				continue
 			}
 			fmt.Fprintf(w, "data: %s\n\n", data)
@@ -148,7 +150,7 @@ func (s *Server) Broadcast(event OverlayEvent) {
 		select {
 		case ch <- event:
 		default:
-			slog.Warn("SSE client buffer full, dropping event", "type", event.Type)
+			s.logger.Warn("SSE client buffer full, dropping event", "type", event.Type)
 		}
 	}
 }
@@ -175,7 +177,7 @@ func (s *Server) handleOAuthStart(w http.ResponseWriter, r *http.Request) {
 		RedirectURI: s.cfg.OAuthRedirectURI,
 	})
 	if err != nil {
-		slog.Error("failed to create helix client", "err", err)
+		s.logger.Error("failed to create helix client", "err", err)
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
@@ -213,19 +215,19 @@ func (s *Server) handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
 		RedirectURI:  s.cfg.OAuthRedirectURI,
 	})
 	if err != nil {
-		slog.Error("failed to create helix client", "err", err)
+		s.logger.Error("failed to create helix client", "err", err)
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
 
 	tokenResp, err := helixClient.RequestUserAccessToken(code)
 	if err != nil {
-		slog.Error("token exchange request failed", "account", account, "err", err)
+		s.logger.Error("token exchange request failed", "account", account, "err", err)
 		http.Error(w, "token exchange failed", http.StatusInternalServerError)
 		return
 	}
 	if tokenResp.ErrorMessage != "" {
-		slog.Error(
+		s.logger.Error(
 			"twitch returned error during token exchange",
 			"account", account,
 			"error", tokenResp.Error,
@@ -235,7 +237,7 @@ func (s *Server) handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	slog.Info("OAuth authorization complete", "account", account)
+	s.logger.Info("OAuth authorization complete", "account", account)
 	accountLabel := strings.ToUpper(account[:1]) + account[1:]
 	fmt.Fprintf(w, "%s authorization complete.", accountLabel)
 }
@@ -243,7 +245,7 @@ func (s *Server) handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	if _, err := w.Write([]byte("OK")); err != nil {
-		slog.Error("failed to write health response", "err", err)
+		s.logger.Error("failed to write health response", "err", err)
 	}
 }
 
@@ -257,6 +259,6 @@ func (s *Server) handleBlindBox(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	if err := json.NewEncoder(w).Encode(series); err != nil {
-		slog.Error("failed to encode series response", "err", err)
+		s.logger.Error("failed to encode series response", "err", err)
 	}
 }
