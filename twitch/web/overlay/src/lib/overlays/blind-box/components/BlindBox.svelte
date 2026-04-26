@@ -31,7 +31,7 @@
   let currentPlushie = $state<PlushieData | null>(null);
   let currentConfig = $state<BlindBoxOverlayConfig>();
   let displayMessage = $state('');
-  let userCollection = $state<string[]>([]);
+  let collection = $state<string[]>([]);
   let audioElement: HTMLAudioElement | undefined = $state();
   let lastProcessedMessage: unknown = null;
 
@@ -66,10 +66,10 @@
 
   async function playReveal(item: PlushieRedemptionQueueItem) {
     currentConfig = item.config;
-    userCollection = item.collection;
+    collection = item.collection;
     currentPlushie = item.plushie;
     displayMessage = `${item.username} just got <strong>${item.plushie.name}</strong>${
-      item.isDuplicate ? ' (duplicate)' : ''
+      !item.isNew ? ' (duplicate)' : ''
     }`;
     await playAudio(item.config.revealSound);
     await playAnimation('reveal');
@@ -77,7 +77,7 @@
 
   async function playCollection(item: PlushieDisplayQueueItem) {
     currentConfig = item.config;
-    userCollection = item.collection;
+    collection = item.collection;
     currentPlushie = null;
     displayMessage = `${item.username}'s ${item.config.name}`;
     await playAnimation('collection');
@@ -111,7 +111,7 @@
       type: 'redemption',
       username: event.data.username,
       plushie,
-      isDuplicate: !event.data.isNew,
+      isNew: event.data.isNew,
       collection: event.data.collection,
       config: config,
     });
@@ -209,7 +209,7 @@
 
           <CollectionDisplay
             plushies={currentConfig.plushies}
-            {userCollection}
+            {collection}
             visible={mode !== 'idle'}
           />
         </div>

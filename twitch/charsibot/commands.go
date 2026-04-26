@@ -282,11 +282,9 @@ func Commands(seriesConfigs []blindbox.SeriesConfig) map[string]Command {
 					b.broadcast(server.OverlayEvent{
 						Type: server.EventTypeCollectionDisplay,
 						Data: server.CollectionDisplayData{
-							UserID:         userID,
-							Username:       username,
-							Series:         cfg.Series,
-							Collection:     slots,
-							CollectionSize: len(slots),
+							Username:   username,
+							Series:     cfg.Series,
+							Collection: slots,
 						},
 					})
 
@@ -312,14 +310,11 @@ func redeemBlindBox(b *Bot, userID, username string, cfg blindbox.SeriesConfig) 
 	b.broadcast(server.OverlayEvent{
 		Type: server.EventTypeBlindBoxRedemption,
 		Data: server.BlindBoxRedemptionData{
-			UserID:         result.UserID,
-			Username:       result.Username,
-			Series:         result.Series,
-			SeriesName:     cfg.RedemptionTitle,
-			Plushie:        result.Plushie,
-			IsNew:          result.IsNew,
-			Collection:     result.Collection,
-			CollectionSize: len(result.Collection),
+			Username:   result.Username,
+			Series:     result.Series,
+			Plushie:    result.Plushie,
+			IsNew:      result.IsNew,
+			Collection: result.Collection,
 		},
 	})
 

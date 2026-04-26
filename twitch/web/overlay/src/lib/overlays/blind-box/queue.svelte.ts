@@ -11,7 +11,7 @@ export interface PlushieRedemptionQueueItem {
   type: 'redemption';
   username: string;
   plushie: PlushieData;
-  isDuplicate: boolean;
+  isNew: boolean;
   collection: string[];
   config: BlindBoxOverlayConfig;
 }

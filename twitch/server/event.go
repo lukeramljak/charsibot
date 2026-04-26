@@ -17,20 +17,15 @@ type OverlayEvent struct {
 }
 
 type CollectionDisplayData struct {
-	UserID         string   `json:"userId"`
-	Username       string   `json:"username"`
-	Series         string   `json:"series"`
-	Collection     []string `json:"collection"`
-	CollectionSize int      `json:"collectionSize"`
+	Username   string   `json:"username"`
+	Series     string   `json:"series"`
+	Collection []string `json:"collection"`
 }
 
 type BlindBoxRedemptionData struct {
-	UserID         string   `json:"userId"`
-	Username       string   `json:"username"`
-	Series         string   `json:"series"`
-	SeriesName     string   `json:"seriesName"`
-	Plushie        string   `json:"plushie"`
-	IsNew          bool     `json:"isNew"`
-	Collection     []string `json:"collection"`
-	CollectionSize int      `json:"collectionSize"`
+	Username   string   `json:"username"`
+	Series     string   `json:"series"`
+	Plushie    string   `json:"plushie"`
+	IsNew      bool     `json:"isNew"`
+	Collection []string `json:"collection"`
 }
