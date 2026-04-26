@@ -10,7 +10,9 @@ import (
 
 	"github.com/joeyak/go-twitch-eventsub/v3"
 
-	"github.com/lukeramljak/charsibot/twitch/db"
+	"github.com/lukeramljak/charsibot/twitch/blindbox"
+	"github.com/lukeramljak/charsibot/twitch/server"
+	"github.com/lukeramljak/charsibot/twitch/stats"
 )
 
 const (
@@ -29,11 +31,11 @@ type Command struct {
 // Commands returns the full map of chat commands keyed by trigger word.
 //
 //nolint:cyclop // Commands is a registry mapping every command.
-func Commands(seriesConfigs []SeriesConfig) map[string]Command {
+func Commands(seriesConfigs []blindbox.SeriesConfig) map[string]Command {
 	cmds := map[string]Command{
 		"collections": {
 			Execute: func(b *Bot, _ twitch.EventChannelChatMessage) {
-				collections, err := b.store.GetCompletedCollections(b.ctx)
+				collections, err := b.blindboxService.GetCompletedCollections(b.ctx)
 				if err != nil {
 					slog.Error("failed to get completed collections", "err", err)
 					return
@@ -62,9 +64,8 @@ func Commands(seriesConfigs []SeriesConfig) map[string]Command {
 					return
 				}
 
-				if _, err = GetOrCreateStats(
+				if _, err = b.statsService.GetOrCreateStats(
 					b.ctx,
-					b.store,
 					mentionedUser.UserID,
 					mentionedUser.UserLogin,
 				); err != nil {
@@ -76,11 +77,7 @@ func Commands(seriesConfigs []SeriesConfig) map[string]Command {
 					return
 				}
 
-				if err = b.store.ModifyStatValue(b.ctx, db.ModifyStatValueParams{
-					Value:    -1003,
-					UserID:   mentionedUser.UserID,
-					StatName: "penis",
-				}); err != nil {
+				if err = b.statsService.ModifyStatValue(b.ctx, mentionedUser.UserID, "penis", -1003); err != nil {
 					slog.Error("failed to modify stat", "err", err, "user", mentionedUser.UserLogin)
 					b.SendMessage(SendMessageParams{
 						Message:              "Failed to update stats",
@@ -89,7 +86,7 @@ func Commands(seriesConfigs []SeriesConfig) map[string]Command {
 					return
 				}
 
-				stats, err := b.store.GetUserStats(b.ctx, mentionedUser.UserID)
+				userStats, err := b.statsService.GetUserStats(b.ctx, mentionedUser.UserID)
 				if err != nil {
 					slog.Error("failed to get stats", "err", err, "user", mentionedUser.UserLogin)
 					b.SendMessage(SendMessageParams{
@@ -99,7 +96,7 @@ func Commands(seriesConfigs []SeriesConfig) map[string]Command {
 					return
 				}
 				b.SendMessage(SendMessageParams{
-					Message:              FormatStats(mentionedUser.UserLogin, stats),
+					Message:              stats.FormatStats(mentionedUser.UserLogin, userStats),
 					ReplyParentMessageID: event.MessageId,
 				})
 			},
@@ -107,7 +104,7 @@ func Commands(seriesConfigs []SeriesConfig) map[string]Command {
 
 		"leaderboard": {
 			Execute: func(b *Bot, _ twitch.EventChannelChatMessage) {
-				rows, err := b.store.GetStatLeaderboard(b.ctx)
+				rows, err := b.statsService.GetStatLeaderboard(b.ctx)
 				if err != nil {
 					slog.Error("failed to get leaderboard", "err", err)
 					b.SendMessage(SendMessageParams{
@@ -131,13 +128,13 @@ func Commands(seriesConfigs []SeriesConfig) map[string]Command {
 				parts := strings.Fields(event.Message.Text)
 
 				if len(parts) == 1 || !IsModerator(event) {
-					stats, err := GetOrCreateStats(b.ctx, b.store, event.ChatterUserId, event.ChatterUserName)
+					userStats, err := b.statsService.GetOrCreateStats(b.ctx, event.ChatterUserId, event.ChatterUserName)
 					if err != nil {
 						slog.Error("failed to get stats", "err", err, "user", event.ChatterUserName)
 						return
 					}
 					b.SendMessage(SendMessageParams{
-						Message:              FormatStats(event.ChatterUserName, stats),
+						Message:              stats.FormatStats(event.ChatterUserName, userStats),
 						ReplyParentMessageID: event.MessageId,
 					})
 					return
@@ -185,9 +182,8 @@ func Commands(seriesConfigs []SeriesConfig) map[string]Command {
 					amount = -amount
 				}
 
-				if _, err = GetOrCreateStats(
+				if _, err = b.statsService.GetOrCreateStats(
 					b.ctx,
-					b.store,
 					mentionedUser.UserID,
 					mentionedUser.UserLogin,
 				); err != nil {
@@ -200,11 +196,7 @@ func Commands(seriesConfigs []SeriesConfig) map[string]Command {
 				}
 
 				if subcommand == statsSubCommandSet {
-					if err = b.store.SetStatValue(b.ctx, db.SetStatValueParams{
-						Value:    amount,
-						UserID:   mentionedUser.UserID,
-						StatName: statColumn,
-					}); err != nil {
+					if err = b.statsService.SetStatValue(b.ctx, mentionedUser.UserID, statColumn, amount); err != nil {
 						slog.Error("failed to set stat", "err", err, "user", mentionedUser.UserLogin)
 						b.SendMessage(SendMessageParams{
 							Message:              "Failed to update stats",
@@ -213,11 +205,12 @@ func Commands(seriesConfigs []SeriesConfig) map[string]Command {
 						return
 					}
 				} else {
-					if err = b.store.ModifyStatValue(b.ctx, db.ModifyStatValueParams{
-						Value:    amount,
-						UserID:   mentionedUser.UserID,
-						StatName: statColumn,
-					}); err != nil {
+					if err = b.statsService.ModifyStatValue(
+						b.ctx,
+						mentionedUser.UserID,
+						statColumn,
+						amount,
+					); err != nil {
 						slog.Error("failed to modify stat", "err", err, "user", mentionedUser.UserLogin)
 						b.SendMessage(SendMessageParams{
 							Message:              "Failed to update stats",
@@ -227,7 +220,7 @@ func Commands(seriesConfigs []SeriesConfig) map[string]Command {
 					}
 				}
 
-				stats, err := b.store.GetUserStats(b.ctx, mentionedUser.UserID)
+				userStats, err := b.statsService.GetUserStats(b.ctx, mentionedUser.UserID)
 				if err != nil {
 					slog.Error("failed to get stats", "err", err, "user", mentionedUser.UserLogin)
 					b.SendMessage(SendMessageParams{
@@ -236,7 +229,7 @@ func Commands(seriesConfigs []SeriesConfig) map[string]Command {
 					})
 					return
 				}
-				b.SendMessage(SendMessageParams{Message: FormatStats(mentionedUser.UserLogin, stats)})
+				b.SendMessage(SendMessageParams{Message: stats.FormatStats(mentionedUser.UserLogin, userStats)})
 			},
 		},
 	}
@@ -259,7 +252,7 @@ func Commands(seriesConfigs []SeriesConfig) map[string]Command {
 						})
 						return
 					}
-					RedeemBlindBox(b, event.ChatterUserId, event.ChatterUserName, cfg)
+					redeemBlindBox(b, event.ChatterUserId, event.ChatterUserName, cfg)
 				case "reset":
 					if !IsModerator(event) {
 						b.SendMessage(SendMessageParams{
@@ -268,10 +261,7 @@ func Commands(seriesConfigs []SeriesConfig) map[string]Command {
 						})
 						return
 					}
-					if err := b.store.ResetUserPlushies(b.ctx, db.ResetUserPlushiesParams{
-						UserID: event.ChatterUserId,
-						Series: cfg.Series,
-					}); err != nil {
+					if err := b.blindboxService.ResetCollection(b.ctx, event.ChatterUserId, cfg.Series); err != nil {
 						slog.Error("failed to reset collection", "err", err, "user", event.ChatterUserName)
 						return
 					}
@@ -280,10 +270,7 @@ func Commands(seriesConfigs []SeriesConfig) map[string]Command {
 					userID := event.ChatterUserId
 					username := event.ChatterUserName
 
-					slots, err := b.store.GetCollectedPlushies(b.ctx, db.GetCollectedPlushiesParams{
-						UserID: userID,
-						Series: cfg.Series,
-					})
+					slots, err := b.blindboxService.GetCollection(b.ctx, userID, cfg.Series)
 					if err != nil {
 						slog.Error("failed to get collection", "err", err, "user", username)
 						b.SendMessage(SendMessageParams{
@@ -292,8 +279,8 @@ func Commands(seriesConfigs []SeriesConfig) map[string]Command {
 						return
 					}
 
-					b.server.Broadcast(OverlayEvent{
-						Type: EventTypeCollectionDisplay,
+					b.broadcast(server.OverlayEvent{
+						Type: server.EventTypeCollectionDisplay,
 						Data: map[string]any{
 							"userId":         userID,
 							"username":       username,
@@ -312,6 +299,38 @@ func Commands(seriesConfigs []SeriesConfig) map[string]Command {
 	return cmds
 }
 
+// redeemBlindBox picks a random plushie, records it, and broadcasts the SSE event.
+func redeemBlindBox(b *Bot, userID, username string, cfg blindbox.SeriesConfig) {
+	key := blindbox.PickPlushie(cfg.Plushies)
+
+	result, err := b.blindboxService.Redeem(b.ctx, userID, username, cfg.Series, key)
+	if err != nil {
+		slog.Error("failed to redeem blind box", "err", err, "user", username)
+		return
+	}
+
+	b.broadcast(server.OverlayEvent{
+		Type: server.EventTypeBlindBoxRedemption,
+		Data: map[string]any{
+			"userId":         result.UserID,
+			"username":       result.Username,
+			"series":         result.Series,
+			"seriesName":     cfg.RedemptionTitle,
+			"plushie":        result.Plushie,
+			"isNew":          result.IsNew,
+			"collectionSize": len(result.Collection),
+			"collection":     result.Collection,
+		},
+	})
+
+	slog.Info("blind box redeemed",
+		"user", username,
+		"series", cfg.Series,
+		"plushie", key,
+		"isNew", result.IsNew,
+	)
+}
+
 func extractMentionedUserFromFragments(
 	fragments []twitch.ChatMessageFragment,
 ) (*twitch.ChatMessageFragmentMention, error) {
@@ -323,6 +342,8 @@ func extractMentionedUserFromFragments(
 	return nil, errors.New("no user mention found")
 }
 
+// IsModerator reports whether the event sender has broadcaster, moderator, or
+// lead_moderator badge.
 func IsModerator(event twitch.EventChannelChatMessage) bool {
 	for _, badge := range event.Badges {
 		switch badge.SetId {

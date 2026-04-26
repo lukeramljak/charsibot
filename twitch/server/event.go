@@ -1,4 +1,4 @@
-package charsibot
+package server
 
 type EventType string
 

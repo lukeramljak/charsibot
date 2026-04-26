@@ -2,7 +2,6 @@ package charsibot
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"math/rand/v2"
@@ -15,23 +14,26 @@ import (
 	"github.com/joeyak/go-twitch-eventsub/v3"
 	"github.com/nicklaw5/helix/v2"
 
-	"github.com/lukeramljak/charsibot/twitch/db"
+	"github.com/lukeramljak/charsibot/twitch/blindbox"
+	"github.com/lukeramljak/charsibot/twitch/server"
+	"github.com/lukeramljak/charsibot/twitch/stats"
 )
 
 type Bot struct {
-	config       Config
-	store        *db.Queries
-	commands     map[string]Command
-	redemptions  map[string]RedemptionFunc
-	triggers     []Trigger
-	twitchClient *twitch.Client
-	helixClient  *helix.Client
-	conduitID    string
-	server       *Server
-	ctx          context.Context
-	cancel       context.CancelFunc
-	wg           sync.WaitGroup
-	shuttingDown atomic.Bool
+	config          Config
+	commands        map[string]Command
+	redemptions     map[string]RedemptionFunc
+	triggers        []Trigger
+	statsService    *stats.Service
+	blindboxService *blindbox.Service
+	twitchClient    *twitch.Client
+	helixClient     *helix.Client
+	conduitID       string
+	broadcast       func(server.OverlayEvent)
+	ctx             context.Context
+	cancel          context.CancelFunc
+	wg              sync.WaitGroup
+	shuttingDown    atomic.Bool
 }
 
 const reconnectDelay = 10 * time.Second
@@ -41,23 +43,27 @@ type SendMessageParams struct {
 	ReplyParentMessageID string
 }
 
-func New(cfg Config, queries *db.Queries, server *Server) (*Bot, error) {
-	if queries == nil {
-		return nil, errors.New("store queries cannot be nil")
-	}
-
-	seriesConfigs, err := LoadAllSeries(context.Background(), queries)
+// New creates a Bot, loading blind box series from the DB to register commands
+// and redemptions. broadcast is called for each overlay event the bot emits.
+func New(
+	cfg Config,
+	statsService *stats.Service,
+	blindboxService *blindbox.Service,
+	broadcast func(server.OverlayEvent),
+) (*Bot, error) {
+	seriesConfigs, err := blindboxService.LoadAllSeries(context.Background())
 	if err != nil {
 		return nil, fmt.Errorf("load blind box series: %w", err)
 	}
 
 	return &Bot{
-		config:      cfg,
-		store:       queries,
-		commands:    Commands(seriesConfigs),
-		redemptions: Redemptions(seriesConfigs),
-		triggers:    Triggers(),
-		server:      server,
+		config:          cfg,
+		commands:        Commands(seriesConfigs),
+		redemptions:     Redemptions(seriesConfigs),
+		triggers:        Triggers(),
+		statsService:    statsService,
+		blindboxService: blindboxService,
+		broadcast:       broadcast,
 	}, nil
 }
 

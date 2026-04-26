@@ -1,4 +1,4 @@
-package charsibot
+package server
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 
 	helix "github.com/nicklaw5/helix/v2"
 
-	"github.com/lukeramljak/charsibot/twitch/db"
+	"github.com/lukeramljak/charsibot/twitch/blindbox"
 )
 
 const (
@@ -22,26 +22,27 @@ const (
 	eventChannelBuffer = 10
 )
 
-// Server handles SSE streaming, OAuth, and API routes.
-type Server struct {
-	port         int
-	clientID     string
-	clientSecret string
-	redirectURI  string
-	server       *http.Server
-	clients      map[chan OverlayEvent]struct{}
-	mu           sync.RWMutex
-	queries      *db.Queries
+type ServerConfig struct {
+	Port             int
+	ClientID         string
+	ClientSecret     string
+	OAuthRedirectURI string
 }
 
-func NewServer(port int, clientID, clientSecret, redirectURI string, queries *db.Queries) *Server {
+// Server handles SSE streaming, OAuth, and API routes.
+type Server struct {
+	cfg             ServerConfig
+	server          *http.Server
+	clients         map[chan OverlayEvent]struct{}
+	mu              sync.RWMutex
+	blindboxService *blindbox.Service
+}
+
+func NewServer(cfg ServerConfig, blindboxService *blindbox.Service) *Server {
 	return &Server{
-		port:         port,
-		clientID:     clientID,
-		clientSecret: clientSecret,
-		redirectURI:  redirectURI,
-		clients:      make(map[chan OverlayEvent]struct{}),
-		queries:      queries,
+		cfg:             cfg,
+		clients:         make(map[chan OverlayEvent]struct{}),
+		blindboxService: blindboxService,
 	}
 }
 
@@ -54,13 +55,13 @@ func (s *Server) Start() error {
 	mux.HandleFunc("GET /api/blindbox", s.handleBlindBox)
 
 	s.server = &http.Server{
-		Addr:         fmt.Sprintf(":%d", s.port),
+		Addr:         fmt.Sprintf(":%d", s.cfg.Port),
 		Handler:      mux,
 		ReadTimeout:  serverReadTimeout,
 		WriteTimeout: 0, // No timeout for SSE connections
 	}
 
-	slog.Info("server started", "port", s.port)
+	slog.Info("server started", "port", s.cfg.Port)
 	go func() {
 		if err := s.server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			slog.Error("server error", "err", err)
@@ -163,8 +164,8 @@ func (s *Server) handleOAuthStart(w http.ResponseWriter, r *http.Request) {
 	}
 
 	helixClient, err := helix.NewClient(&helix.Options{
-		ClientID:    s.clientID,
-		RedirectURI: s.redirectURI,
+		ClientID:    s.cfg.ClientID,
+		RedirectURI: s.cfg.OAuthRedirectURI,
 	})
 	if err != nil {
 		slog.Error("failed to create helix client", "err", err)
@@ -200,9 +201,9 @@ func (s *Server) handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	helixClient, err := helix.NewClient(&helix.Options{
-		ClientID:     s.clientID,
-		ClientSecret: s.clientSecret,
-		RedirectURI:  s.redirectURI,
+		ClientID:     s.cfg.ClientID,
+		ClientSecret: s.cfg.ClientSecret,
+		RedirectURI:  s.cfg.OAuthRedirectURI,
 	})
 	if err != nil {
 		slog.Error("failed to create helix client", "err", err)
@@ -240,7 +241,7 @@ func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (s *Server) handleBlindBox(w http.ResponseWriter, r *http.Request) {
-	series, err := LoadAllSeries(r.Context(), s.queries)
+	series, err := s.blindboxService.LoadAllSeries(r.Context())
 	if err != nil {
 		http.Error(w, "failed to load series", http.StatusInternalServerError)
 		return

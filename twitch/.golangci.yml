@@ -12,12 +12,12 @@ formatters:
   # All settings can be found here https://github.com/golangci/golangci-lint/blob/HEAD/.golangci.reference.yml
   settings:
     gofumpt:
-      module-path: github.com/lukeramljak/charsibot
+      module-path: github.com/lukeramljak/charsibot/twitch
       extra-rules: true
 
     goimports:
       local-prefixes:
-        - github.com/lukeramljak/charsibot
+        - github.com/lukeramljak/charsibot/twitch
 
     golines:
       max-len: 120

@@ -1,11 +1,13 @@
-package charsibot
+package blindbox_test
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	_ "modernc.org/sqlite"
 
+	"github.com/lukeramljak/charsibot/twitch/blindbox"
 	"github.com/lukeramljak/charsibot/twitch/db"
 )
 
@@ -13,6 +15,11 @@ func TestCollections(t *testing.T) {
 	queries, sqlDB := db.NewTestDB(t)
 	defer sqlDB.Close()
 	ctx := context.Background()
+
+	svc, err := blindbox.NewService(queries)
+	if err != nil {
+		t.Fatalf("failed to create blindbox service: %v", err)
+	}
 
 	t.Run("resets collection", func(t *testing.T) {
 		for _, key := range []string{"cutey", "blueberry", "secret"} {
@@ -54,7 +61,7 @@ func TestCollections(t *testing.T) {
 			Key:      "cutey",
 		})
 
-		isNew, collection, err := addPlushieToCollection(ctx, queries, "user1", "alice", "coobubu", "blueberry")
+		isNew, collection, err := svc.AddPlushieToCollection(ctx, "user1", "alice", "coobubu", "blueberry")
 		if err != nil {
 			t.Fatalf("AddPlushieToCollection failed: %v", err)
 		}
@@ -76,7 +83,7 @@ func TestCollections(t *testing.T) {
 			Key:      "cutey",
 		})
 
-		isNew, _, err := addPlushieToCollection(ctx, queries, "user2", "bob", "coobubu", "cutey")
+		isNew, _, err := svc.AddPlushieToCollection(ctx, "user2", "bob", "coobubu", "cutey")
 		if err != nil {
 			t.Fatalf("AddPlushieToCollection failed: %v", err)
 		}
@@ -94,7 +101,7 @@ func TestCollections(t *testing.T) {
 			Key:      "cutey",
 		})
 
-		isNew, _, err := addPlushieToCollection(ctx, queries, "user3", "newname", "coobubu", "cutey")
+		isNew, _, err := svc.AddPlushieToCollection(ctx, "user3", "newname", "coobubu", "cutey")
 		if err != nil {
 			t.Fatalf("addPlushieToCollection failed: %v", err)
 		}
@@ -175,7 +182,7 @@ func TestGetCompletedCollections(t *testing.T) {
 		if len(rows) != 1 {
 			t.Fatalf("expected 1 row for series, got %d", len(rows))
 		}
-		if !containsAll(rows[0].Usernames, "carol", "dave") {
+		if !strings.Contains(rows[0].Usernames, "carol") || !strings.Contains(rows[0].Usernames, "dave") {
 			t.Errorf("Usernames = %q, want both carol and dave", rows[0].Usernames)
 		}
 	})
@@ -195,11 +202,7 @@ func TestGetAllSeriesWithPlushies(t *testing.T) {
 		if len(rows) != 40 {
 			t.Fatalf("expected 40 rows (one per plushie across all series), got %d", len(rows))
 		}
-		for _, r := range rows {
-			if !r.PlushieKey.Valid {
-				t.Errorf("expected PlushieKey to be valid for series %q", r.Series)
-			}
-		}
+		assertAllPlushieKeysValid(t, rows)
 	})
 
 	t.Run("plushies are ordered by sort_order within a series", func(t *testing.T) {
@@ -207,20 +210,7 @@ func TestGetAllSeriesWithPlushies(t *testing.T) {
 		if err != nil {
 			t.Fatalf("GetAllSeriesWithPlushies failed: %v", err)
 		}
-
-		// Filter to coobubu rows only
-		var coobubuKeys []string
-		for _, r := range rows {
-			if r.Series == "coobubu" {
-				coobubuKeys = append(coobubuKeys, r.PlushieKey.String)
-			}
-		}
-		want := []string{"cutey", "blueberry", "lemony", "bibi", "pinky", "minty", "cherry", "secret"}
-		for i, k := range want {
-			if coobubuKeys[i] != k {
-				t.Errorf("coobubu plushie[%d] = %q, want %q", i, coobubuKeys[i], k)
-			}
-		}
+		assertCoobubuOrder(t, rows)
 	})
 
 	t.Run("series with no plushies returns one row with null plushie fields", func(t *testing.T) {
@@ -271,19 +261,29 @@ func TestGetAllSeriesWithPlushies(t *testing.T) {
 	})
 }
 
-// containsAll reports whether s contains all the given substrings.
-func containsAll(s string, substrings ...string) bool {
-	for _, sub := range substrings {
-		found := false
-		for i := 0; i <= len(s)-len(sub); i++ {
-			if s[i:i+len(sub)] == sub {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return false
+// assertAllPlushieKeysValid checks that every row has a valid PlushieKey.
+func assertAllPlushieKeysValid(t *testing.T, rows []db.GetAllSeriesWithPlushiesRow) {
+	t.Helper()
+	for _, r := range rows {
+		if !r.PlushieKey.Valid {
+			t.Errorf("expected PlushieKey to be valid for series %q", r.Series)
 		}
 	}
-	return true
+}
+
+// assertCoobubuOrder checks that coobubu plushies are returned in the expected sort order.
+func assertCoobubuOrder(t *testing.T, rows []db.GetAllSeriesWithPlushiesRow) {
+	t.Helper()
+	var coobubuKeys []string
+	for _, r := range rows {
+		if r.Series == "coobubu" {
+			coobubuKeys = append(coobubuKeys, r.PlushieKey.String)
+		}
+	}
+	want := []string{"cutey", "blueberry", "lemony", "bibi", "pinky", "minty", "cherry", "secret"}
+	for i, k := range want {
+		if coobubuKeys[i] != k {
+			t.Errorf("coobubu plushie[%d] = %q, want %q", i, coobubuKeys[i], k)
+		}
+	}
 }

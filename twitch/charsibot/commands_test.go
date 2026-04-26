@@ -6,7 +6,10 @@ import (
 
 	"github.com/joeyak/go-twitch-eventsub/v3"
 
+	"github.com/lukeramljak/charsibot/twitch/blindbox"
 	"github.com/lukeramljak/charsibot/twitch/db"
+	"github.com/lukeramljak/charsibot/twitch/server"
+	"github.com/lukeramljak/charsibot/twitch/stats"
 )
 
 func TestIsModerator(t *testing.T) {
@@ -268,7 +271,12 @@ func TestStatsCommandAddSetRm(t *testing.T) {
 	defer sqlDB.Close()
 	ctx := context.Background()
 
-	if _, err := GetOrCreateStats(ctx, queries, "target1", "targetuser"); err != nil {
+	svc, err := stats.NewService(queries)
+	if err != nil {
+		t.Fatalf("failed to create stats service: %v", err)
+	}
+
+	if _, err := svc.GetOrCreateStats(ctx, "target1", "targetuser"); err != nil {
 		t.Fatalf("failed to seed user: %v", err)
 	}
 
@@ -311,10 +319,10 @@ func TestStatsCommandAddSetRm(t *testing.T) {
 	}
 
 	b := &Bot{
-		config:   Config{BotUserID: "bot1", ChannelUserID: "ch1"},
-		ctx:      ctx,
-		store:    queries,
-		commands: Commands(nil),
+		config:       Config{BotUserID: "bot1", ChannelUserID: "ch1"},
+		ctx:          ctx,
+		statsService: svc,
+		commands:     Commands(nil),
 	}
 
 	t.Run("add increases stat by given amount", func(t *testing.T) {
@@ -410,15 +418,13 @@ func TestStatsCommandValidation(t *testing.T) {
 	})
 }
 
-func newTestServer() (*Server, chan OverlayEvent) {
-	s := &Server{clients: make(map[chan OverlayEvent]struct{})}
-	ch := make(chan OverlayEvent, 10)
-	s.clients[ch] = struct{}{}
-	return s, ch
+func newBroadcast() (func(server.OverlayEvent), chan server.OverlayEvent) {
+	ch := make(chan server.OverlayEvent, 10)
+	return func(e server.OverlayEvent) { ch <- e }, ch
 }
 
-func drainEvents(ch chan OverlayEvent) []OverlayEvent {
-	var events []OverlayEvent
+func drainEvents(ch chan server.OverlayEvent) []server.OverlayEvent {
+	var events []server.OverlayEvent
 	for {
 		select {
 		case e := <-ch:
@@ -430,11 +436,11 @@ func drainEvents(ch chan OverlayEvent) []OverlayEvent {
 }
 
 func TestSeriesCommandRegistered(t *testing.T) {
-	cfg := SeriesConfig{
+	cfg := blindbox.SeriesConfig{
 		BlindBoxSeries: db.BlindBoxSeries{Series: "coobubu", RedemptionTitle: "Cooper Series Blind Box"},
 	}
 
-	cmds := Commands([]SeriesConfig{cfg})
+	cmds := Commands([]blindbox.SeriesConfig{cfg})
 
 	if _, ok := cmds["coobubu"]; !ok {
 		t.Error("expected command \"coobubu\" to be registered")
@@ -446,21 +452,26 @@ func TestSeriesCommandShowCollection(t *testing.T) {
 	defer sqlDB.Close()
 	ctx := context.Background()
 
+	svc, err := blindbox.NewService(queries)
+	if err != nil {
+		t.Fatalf("failed to create blindbox service: %v", err)
+	}
+
 	queries.UpsertUserPlushie(ctx, db.UpsertUserPlushieParams{
 		UserID: "user1", Username: "alice", Series: "coobubu", Key: "cutey",
 	})
 
-	srv, ch := newTestServer()
-	cfg := SeriesConfig{
+	broadcast, ch := newBroadcast()
+	cfg := blindbox.SeriesConfig{
 		BlindBoxSeries: db.BlindBoxSeries{Series: "coobubu", RedemptionTitle: "Cooper Series Blind Box"},
 	}
 
 	b := &Bot{
-		config:   Config{BotUserID: "bot1", ChannelUserID: "ch1"},
-		ctx:      ctx,
-		store:    queries,
-		commands: Commands([]SeriesConfig{cfg}),
-		server:   srv,
+		config:          Config{BotUserID: "bot1", ChannelUserID: "ch1"},
+		ctx:             ctx,
+		blindboxService: svc,
+		commands:        Commands([]blindbox.SeriesConfig{cfg}),
+		broadcast:       broadcast,
 	}
 
 	tests := []struct {
@@ -481,8 +492,8 @@ func TestSeriesCommandShowCollection(t *testing.T) {
 			if len(events) != 1 {
 				t.Fatalf("expected 1 overlay event, got %d", len(events))
 			}
-			if events[0].Type != EventTypeCollectionDisplay {
-				t.Errorf("event type = %q, want %q", events[0].Type, EventTypeCollectionDisplay)
+			if events[0].Type != server.EventTypeCollectionDisplay {
+				t.Errorf("event type = %q, want %q", events[0].Type, server.EventTypeCollectionDisplay)
 			}
 		})
 	}
@@ -493,21 +504,26 @@ func TestSeriesCommandReset(t *testing.T) {
 	defer sqlDB.Close()
 	ctx := context.Background()
 
+	svc, err := blindbox.NewService(queries)
+	if err != nil {
+		t.Fatalf("failed to create blindbox service: %v", err)
+	}
+
 	for _, key := range []string{"cutey", "blueberry", "secret"} {
 		queries.UpsertUserPlushie(ctx, db.UpsertUserPlushieParams{
 			UserID: "user1", Username: "alice", Series: "coobubu", Key: key,
 		})
 	}
 
-	cfg := SeriesConfig{
+	cfg := blindbox.SeriesConfig{
 		BlindBoxSeries: db.BlindBoxSeries{Series: "coobubu", RedemptionTitle: "Cooper Series Blind Box"},
 	}
 
 	b := &Bot{
-		config:   Config{BotUserID: "bot1", ChannelUserID: "ch1"},
-		ctx:      ctx,
-		store:    queries,
-		commands: Commands([]SeriesConfig{cfg}),
+		config:          Config{BotUserID: "bot1", ChannelUserID: "ch1"},
+		ctx:             ctx,
+		blindboxService: svc,
+		commands:        Commands([]blindbox.SeriesConfig{cfg}),
 	}
 
 	b.processCommand(twitch.EventChannelChatMessage{
@@ -548,7 +564,7 @@ func TestBlindboxModGuard(t *testing.T) {
 	// store access. Using a nil store: if the guard is missing the code calls
 	// b.store and panics, so no panic = guard is in place.
 
-	cfg := SeriesConfig{
+	cfg := blindbox.SeriesConfig{
 		BlindBoxSeries: db.BlindBoxSeries{Series: "test", RedemptionTitle: "Test"},
 	}
 
@@ -556,7 +572,7 @@ func TestBlindboxModGuard(t *testing.T) {
 		return &Bot{
 			config:   Config{BotUserID: "bot1", ChannelUserID: "ch1"},
 			ctx:      context.Background(),
-			commands: Commands([]SeriesConfig{cfg}),
+			commands: Commands([]blindbox.SeriesConfig{cfg}),
 		}
 	}
 

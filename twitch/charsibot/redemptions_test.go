@@ -5,8 +5,10 @@ import (
 	"testing"
 
 	"github.com/joeyak/go-twitch-eventsub/v3"
+	_ "modernc.org/sqlite"
 
 	"github.com/lukeramljak/charsibot/twitch/db"
+	"github.com/lukeramljak/charsibot/twitch/stats"
 )
 
 func TestDrinkAPotionCreatesStatsForNewUser(t *testing.T) {
@@ -14,10 +16,15 @@ func TestDrinkAPotionCreatesStatsForNewUser(t *testing.T) {
 	defer sqlDB.Close()
 	ctx := context.Background()
 
+	svc, err := stats.NewService(queries)
+	if err != nil {
+		t.Fatalf("failed to create stats service: %v", err)
+	}
+
 	b := &Bot{
-		config: Config{BotUserID: "bot1", ChannelUserID: "ch1"},
-		ctx:    ctx,
-		store:  queries,
+		config:       Config{BotUserID: "bot1", ChannelUserID: "ch1"},
+		ctx:          ctx,
+		statsService: svc,
 	}
 	b.redemptions = Redemptions(nil)
 
@@ -57,14 +64,19 @@ func TestDrinkAPotionModifiesStatForExistingUser(t *testing.T) {
 	defer sqlDB.Close()
 	ctx := context.Background()
 
-	if _, err := GetOrCreateStats(ctx, queries, "existinguser1", "existing"); err != nil {
+	svc, err := stats.NewService(queries)
+	if err != nil {
+		t.Fatalf("failed to create stats service: %v", err)
+	}
+
+	if _, err = svc.GetOrCreateStats(ctx, "existinguser1", "existing"); err != nil {
 		t.Fatalf("failed to seed user: %v", err)
 	}
 
 	b := &Bot{
-		config: Config{BotUserID: "bot1", ChannelUserID: "ch1"},
-		ctx:    ctx,
-		store:  queries,
+		config:       Config{BotUserID: "bot1", ChannelUserID: "ch1"},
+		ctx:          ctx,
+		statsService: svc,
 	}
 	b.redemptions = Redemptions(nil)
 
