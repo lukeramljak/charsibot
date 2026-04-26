@@ -8,15 +8,18 @@ import (
 )
 
 type Config struct {
-	ClientID         string
-	ClientSecret     string
-	BotUserID        string
-	ChannelUserID    string
+	ClientID     string
+	ClientSecret string
+
+	BotUserID     string
+	ChannelUserID string
+
 	OAuthRedirectURI string
 	DBPath           string
-	UseMockServer    bool
-	ServerPort       int
-	LogLevel         slog.Level
+
+	UseMockServer bool
+	ServerPort    int
+	LogLevel      slog.Level
 }
 
 func LoadConfig() Config {

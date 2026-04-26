@@ -20,20 +20,24 @@ import (
 )
 
 type Bot struct {
-	config          Config
-	logger          *slog.Logger
-	commands        map[string]Command
-	redemptions     map[string]RedemptionFunc
-	triggers        []Trigger
+	config Config
+	logger *slog.Logger
+
+	commands    map[string]Command
+	redemptions map[string]RedemptionFunc
+	triggers    []Trigger
+
 	statsService    *stats.Service
 	blindboxService *blindbox.Service
-	twitchClient    *twitch.Client
-	helixClient     *helix.Client
-	conduitID       string
-	broadcast       func(server.OverlayEvent)
-	cancel          context.CancelFunc
-	wg              sync.WaitGroup
-	shuttingDown    atomic.Bool
+
+	twitchClient *twitch.Client
+	helixClient  *helix.Client
+	conduitID    string
+
+	broadcast    func(server.OverlayEvent)
+	cancel       context.CancelFunc
+	wg           sync.WaitGroup
+	shuttingDown atomic.Bool
 }
 
 const (
