@@ -1,3 +1,8 @@
 .env
+.env.*
+!.env.example
 tmp/
 charsibot.db*
+bin/
+server/web/
+.DS_Store

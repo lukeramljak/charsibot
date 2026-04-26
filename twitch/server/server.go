@@ -2,9 +2,11 @@ package server
 
 import (
 	"context"
+	"embed"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -15,6 +17,9 @@ import (
 
 	"github.com/lukeramljak/charsibot/twitch/blindbox"
 )
+
+//go:embed all:web
+var webFS embed.FS
 
 const (
 	serverReadTimeout  = 10 * time.Second
@@ -48,11 +53,17 @@ func NewServer(cfg ServerConfig, blindboxService *blindbox.Service) *Server {
 
 func (s *Server) Start() error {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/events", s.handleSSE)
-	mux.HandleFunc("/health", s.handleHealth)
+	mux.HandleFunc("GET /events", s.handleSSE)
+	mux.HandleFunc("GET /health", s.handleHealth)
 	mux.HandleFunc("GET /oauth/start", s.handleOAuthStart)
 	mux.HandleFunc("GET /oauth/callback", s.handleOAuthCallback)
 	mux.HandleFunc("GET /api/blindbox", s.handleBlindBox)
+
+	webContent, err := fs.Sub(webFS, "web")
+	if err != nil {
+		return fmt.Errorf("create web sub-filesystem: %w", err)
+	}
+	mux.Handle("GET /", http.FileServerFS(webContent))
 
 	s.server = &http.Server{
 		Addr:         fmt.Sprintf(":%d", s.cfg.Port),

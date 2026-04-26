@@ -10,9 +10,18 @@ tasks:
     cmds:
       - go vet ./...
 
+  build:web:
+    desc: Build the web frontend
+    dir: web
+    cmds:
+      - pnpm install --frozen-lockfile
+      - pnpm run build
+      - rm -rf ../server/web
+      - cp -r build ../server/web
+
   build:
     desc: Build the binary
-    deps: [vet]
+    deps: [vet, build:web]
     cmds:
       - go build -o bin/charsibot ./cmd/charsibot
 

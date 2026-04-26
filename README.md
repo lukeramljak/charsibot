@@ -3,17 +3,17 @@
 [![Go Version](https://img.shields.io/github/go-mod/go-version/lukeramljak/charsibot?filename=twitch%2Fgo.mod)](https://github.com/lukeramljak/charsibot/blob/main/twitch/go.mod)
 [![Go Report Card](https://goreportcard.com/badge/github.com/lukeramljak/charsibot/twitch)](https://goreportcard.com/report/github.com/lukeramljak/charsibot/twitch)
 [![Twitch Bot](https://github.com/lukeramljak/charsibot/actions/workflows/twitch.yml/badge.svg)](https://github.com/lukeramljak/charsibot/actions/workflows/twitch.yml)
-[![Twitch Overlay](https://github.com/lukeramljak/charsibot/actions/workflows/twitch-overlay.yml/badge.svg)](https://github.com/lukeramljak/charsibot/actions/workflows/twitch-overlay.yml)
 
 A multi-service bot application for [Charsibel](https://twitch.tv/charsibel)'s Discord server and Twitch channel.
 
 ## Architecture
 
-This project contains three services:
+This project contains two services:
 
 - **Discord Bot** (`discord/`) - Handles Discord server interactions and commands (Node.js/Bun)
-- **Twitch Bot** (`twitch/`) - Manages Twitch chat commands, channel point redemptions, and API server (Go)
-- **Twitch Overlay** (`twitch/web/overlay/`) - Stream overlay SPA for OBS (SvelteKit)
+- **Twitch Bot** (`twitch/`) - Manages Twitch chat commands, channel point redemptions, API server, and stream overlay (Go)
+
+The web frontend (`twitch/web/`) is a SvelteKit SPA embedded directly in the Go binary at build time.
 
 ## Prerequisites
 
@@ -48,15 +48,15 @@ This project contains three services:
 
    This will start the Go backend and API server on port 8081.
 
-4. **Twitch Overlay**:
+4. **Twitch Web Frontend**:
 
    ```bash
-   cd twitch/web/overlay
-   bun install
-   bun run dev
+   cd twitch/web
+   pnpm install
+   pnpm dev
    ```
 
-   Access the overlay at `http://localhost:5173`
+   Access the frontend at `http://localhost:5173`. The Vite dev server proxies `/events` and `/api` to the Go server at `localhost:8081`.
 
 ## Environment Variables
 
@@ -69,11 +69,6 @@ This project contains three services:
 2. **Twitch**:
    ```bash
    cp twitch/.env.example twitch/.env
-   ```
-
-3. **Twitch Overlay**:
-   ```bash
-   cp twitch/web/overlay/.env.example twitch/web/overlay/.env
    ```
 
 ## Database

@@ -1,4 +1,3 @@
-import { env } from '$env/dynamic/public';
 import type { OverlayEvent } from '$lib/types';
 
 type SSEEvent = OverlayEvent | { type: 'connected'; timestamp: string };
@@ -11,8 +10,7 @@ class Charsibot {
   connect() {
     if (this.eventSource) return;
 
-    const url = `${env.PUBLIC_SERVER_BASE_URL}/events`;
-    this.eventSource = new EventSource(url);
+    this.eventSource = new EventSource('/events');
 
     this.eventSource.onopen = () => {
       this.isConnected = true;

@@ -13,14 +13,8 @@ services:
       - path: ./twitch/.env
         required: false
     environment:
-      - LOG_LEVEL
       - SERVER_PORT=8081
       - DB_PATH=/data/charsibot.db
-      - TWITCH_CLIENT_ID
-      - TWITCH_CLIENT_SECRET
-      - TWITCH_BOT_USER_ID
-      - TWITCH_CHANNEL_USER_ID
-      - TWITCH_OAUTH_REDIRECT_URI
     labels:
       - docker-volume-backup.stop-during-backup=true
     healthcheck:
@@ -29,23 +23,6 @@ services:
       timeout: 5s
       retries: 3
       start_period: 20s
-
-  overlay:
-    build:
-      context: ./twitch/web/overlay
-      dockerfile: Dockerfile
-    container_name: twitch-overlay
-    restart: unless-stopped
-    ports:
-      - "3000:3000"
-    env_file:
-      - path: ./twitch/web/overlay/.env
-        required: false
-    environment:
-      - PUBLIC_SERVER_BASE_URL
-    depends_on:
-      twitch:
-        condition: service_healthy
 
   discord:
     build:
@@ -56,10 +33,6 @@ services:
     env_file:
       - path: ./discord/.env
         required: false
-    environment:
-      - DISCORD_CLIENT_ID
-      - DISCORD_GUILD_ID
-      - DISCORD_TOKEN
 
   backup:
     image: offen/docker-volume-backup:latest
