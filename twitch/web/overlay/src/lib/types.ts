@@ -1,7 +1,4 @@
-export type OverlayEvent =
-  | ChatCommandEvent
-  | CollectionDisplayEvent
-  | BlindBoxRedemptionEvent;
+export type OverlayEvent = ChatCommandEvent | CollectionDisplayEvent | BlindBoxRedemptionEvent;
 
 export interface ChatCommandEvent {
   type: 'chat_command';

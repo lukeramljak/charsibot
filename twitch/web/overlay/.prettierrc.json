@@ -6,8 +6,8 @@
   "useTabs": false,
   "plugins": [
     "prettier-plugin-organize-imports",
-    "prettier-plugin-svelte",
-    "prettier-plugin-tailwindcss"
+    "prettier-plugin-tailwindcss",
+    "prettier-plugin-svelte"
   ],
   "overrides": [
     {
