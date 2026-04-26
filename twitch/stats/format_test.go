@@ -45,7 +45,7 @@ func TestFormatStatsNegative(t *testing.T) {
 
 func TestFormatStatsEmpty(t *testing.T) {
 	formatted := stats.FormatStats("testuser", []db.GetUserStatsRow{})
-	expected := "testuser's stats: "
+	expected := "No stats found for testuser"
 
 	if formatted != expected {
 		t.Errorf("FormatStats() = %q, want %q", formatted, expected)
