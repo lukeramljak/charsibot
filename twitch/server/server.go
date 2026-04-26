@@ -107,14 +107,10 @@ func (s *Server) handleSSE(w http.ResponseWriter, r *http.Request) {
 
 	slog.Info("SSE client connected", "remote_addr", r.RemoteAddr)
 
-	connectedEvent := map[string]any{
-		"type":      "connected",
-		"timestamp": time.Now().Format(time.RFC3339),
-	}
-	if data, err := json.Marshal(connectedEvent); err == nil {
-		fmt.Fprintf(w, "data: %s\n\n", data)
-		flusher.Flush()
-	}
+	s.Broadcast(OverlayEvent{
+		Type:      EventTypeConnected,
+		Timestamp: time.Now().Format(time.RFC3339),
+	})
 
 	for {
 		select {
