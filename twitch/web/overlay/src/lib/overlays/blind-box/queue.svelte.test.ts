@@ -161,6 +161,53 @@ describe('BlindBoxQueue', () => {
     expect(onRedemption).toHaveBeenCalledOnce();
   });
 
+  it('picks up items added to the queue while a handler is executing', async () => {
+    let resolveFirst!: () => void;
+    onRedemption = vi
+      .fn()
+      .mockImplementationOnce(
+        () =>
+          new Promise<void>((r) => {
+            resolveFirst = r;
+          }),
+      )
+      .mockResolvedValue(undefined);
+    queue = new BlindBoxQueue({ onRedemption, onDisplay });
+
+    queue.addRedemption(makeRedemption({ username: 'first' }));
+    const processing = queue.processNext();
+
+    // Add a second item while the first handler is still running
+    queue.addRedemption(makeRedemption({ username: 'second' }));
+    resolveFirst();
+    await processing;
+
+    expect(onRedemption).toHaveBeenCalledTimes(2);
+  });
+
+  it('is a no-op if the queue is empty', async () => {
+    await queue.processNext();
+    expect(onRedemption).not.toHaveBeenCalled();
+    expect(onDisplay).not.toHaveBeenCalled();
+  });
+
+  it('processes display items after all redemptions are drained', async () => {
+    const order: string[] = [];
+    onRedemption = vi.fn().mockImplementation(async () => {
+      order.push('redemption');
+    });
+    onDisplay = vi.fn().mockImplementation(async () => {
+      order.push('display');
+    });
+    queue = new BlindBoxQueue({ onRedemption, onDisplay });
+
+    queue.addRedemption(makeRedemption());
+    queue.addDisplay(makeDisplay());
+    await queue.processNext();
+
+    expect(order).toEqual(['redemption', 'display']);
+  });
+
   it('clears both queues and allows processing again', async () => {
     queue.addRedemption(makeRedemption());
     queue.addDisplay(makeDisplay());

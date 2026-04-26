@@ -44,35 +44,32 @@ export class BlindBoxQueue {
 
   async processNext(): Promise<void> {
     if (this.isProcessing) return;
-
-    let item: QueueItem | undefined;
-
-    if (this.redemptionQueue.length > 0) {
-      item = this.redemptionQueue.shift();
-    } else if (this.displayQueue.length > 0) {
-      item = this.displayQueue.shift();
-    } else {
-      return;
-    }
-
-    if (!item) return;
-
     this.isProcessing = true;
 
     try {
-      if (item.type === 'redemption') {
-        await this.handlers.onRedemption(item);
-      } else {
-        await this.handlers.onDisplay(item);
+      while (this.hasItems) {
+        let item: QueueItem | undefined;
+
+        if (this.redemptionQueue.length > 0) {
+          item = this.redemptionQueue.shift();
+        } else if (this.displayQueue.length > 0) {
+          item = this.displayQueue.shift();
+        }
+
+        if (!item) break;
+
+        try {
+          if (item.type === 'redemption') {
+            await this.handlers.onRedemption(item);
+          } else {
+            await this.handlers.onDisplay(item);
+          }
+        } catch (error) {
+          console.error('Error processing event:', error);
+        }
       }
-    } catch (error) {
-      console.error('Error processing event:', error);
     } finally {
       this.isProcessing = false;
-
-      if (this.hasItems) {
-        this.processNext();
-      }
     }
   }
 
