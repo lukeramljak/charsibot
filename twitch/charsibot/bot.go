@@ -76,7 +76,7 @@ func (b *Bot) Start() error {
 
 	conduitID, err := getOrCreateConduit(b.config.ClientID, b.helixClient.GetAppAccessToken())
 	if err != nil {
-		return fmt.Errorf("get/create conduit: %w", err)
+		return fmt.Errorf("get or create conduit: %w", err)
 	}
 	b.conduitID = conduitID
 	slog.Info("conduit ready", "conduit_id", conduitID)

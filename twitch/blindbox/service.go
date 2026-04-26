@@ -45,7 +45,7 @@ func NewService(queries *db.Queries) (*Service, error) {
 func (s *Service) LoadAllSeries(ctx context.Context) ([]SeriesConfig, error) {
 	rows, err := s.queries.GetAllSeriesWithPlushies(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("load blind box series: %w", err)
+		return nil, fmt.Errorf("query series with plushies: %w", err)
 	}
 	return groupSeriesRows(rows), nil
 }

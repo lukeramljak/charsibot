@@ -77,7 +77,7 @@ func run() error {
 	}()
 
 	if err := bot.Start(); err != nil {
-		return fmt.Errorf("bot: %w", err)
+		return fmt.Errorf("run bot: %w", err)
 	}
 
 	<-done
