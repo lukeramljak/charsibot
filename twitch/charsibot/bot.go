@@ -31,13 +31,15 @@ type Bot struct {
 	helixClient     *helix.Client
 	conduitID       string
 	broadcast       func(server.OverlayEvent)
-	ctx             context.Context
 	cancel          context.CancelFunc
 	wg              sync.WaitGroup
 	shuttingDown    atomic.Bool
 }
 
-const reconnectDelay = 10 * time.Second
+const (
+	reconnectDelay = 10 * time.Second
+	handlerTimeout = 10 * time.Second
+)
 
 type SendMessageParams struct {
 	Message              string
@@ -71,7 +73,8 @@ func New(
 }
 
 func (b *Bot) Start() error {
-	b.ctx, b.cancel = context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
+	b.cancel = cancel
 
 	if err := b.initHelixClient(); err != nil {
 		return fmt.Errorf("init helix client: %w", err)
@@ -98,7 +101,7 @@ func (b *Bot) Start() error {
 			b.logger.Error("eventsub disconnected, reconnecting", "err", err, "delay", reconnectDelay)
 			select {
 			case <-time.After(reconnectDelay):
-			case <-b.ctx.Done():
+			case <-ctx.Done():
 				return nil
 			}
 			continue
@@ -235,7 +238,9 @@ func (b *Bot) processCommand(event twitch.EventChannelChatMessage) {
 	}
 
 	b.logger.Info("executing command", "command", cmd, "user", event.ChatterUserName)
-	command.Execute(b, event)
+	ctx, cancel := context.WithTimeout(context.Background(), handlerTimeout)
+	defer cancel()
+	command.Execute(ctx, b, event)
 }
 
 func (b *Bot) processTriggers(event twitch.EventChannelChatMessage) {
@@ -258,7 +263,9 @@ func (b *Bot) processTriggers(event twitch.EventChannelChatMessage) {
 			"user", event.ChatterUserName,
 			"message", event.Message.Text,
 		)
-		t.Execute(b, event)
+		ctx, cancel := context.WithTimeout(context.Background(), handlerTimeout)
+		t.Execute(ctx, b, event)
+		cancel()
 	}
 }
 
@@ -273,7 +280,9 @@ func (b *Bot) onChannelPointRedemption(event twitch.EventChannelChannelPointsCus
 		return
 	}
 
-	fn(b, event)
+	ctx, cancel := context.WithTimeout(context.Background(), handlerTimeout)
+	defer cancel()
+	fn(ctx, b, event)
 }
 
 func (b *Bot) onChannelRaid(event twitch.EventChannelRaid) {

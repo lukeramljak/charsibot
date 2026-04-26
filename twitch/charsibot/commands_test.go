@@ -106,7 +106,7 @@ func TestProcessCommand(t *testing.T) {
 			message: "hello world",
 			badges:  []twitch.ChatMessageUserBadge{},
 			commands: map[string]Command{
-				"test": {Execute: func(_ *Bot, _ twitch.EventChannelChatMessage) {}},
+				"test": {Execute: func(_ context.Context, _ *Bot, _ twitch.EventChannelChatMessage) {}},
 			},
 		},
 		{
@@ -114,7 +114,7 @@ func TestProcessCommand(t *testing.T) {
 			message: "!",
 			badges:  []twitch.ChatMessageUserBadge{},
 			commands: map[string]Command{
-				"test": {Execute: func(_ *Bot, _ twitch.EventChannelChatMessage) {}},
+				"test": {Execute: func(_ context.Context, _ *Bot, _ twitch.EventChannelChatMessage) {}},
 			},
 		},
 		{
@@ -194,7 +194,7 @@ func TestProcessCommand(t *testing.T) {
 				k := key
 				commands[k] = Command{
 					ModeratorOnly: cmd.ModeratorOnly,
-					Execute: func(_ *Bot, _ twitch.EventChannelChatMessage) {
+					Execute: func(_ context.Context, _ *Bot, _ twitch.EventChannelChatMessage) {
 						executed[k] = true
 					},
 				}
@@ -264,7 +264,6 @@ func createTestBot(t *testing.T) *Bot {
 	return &Bot{
 		config: cfg,
 		logger: slog.New(slog.DiscardHandler),
-		ctx:    context.Background(),
 	}
 }
 
@@ -323,7 +322,6 @@ func TestStatsCommandAddSetRm(t *testing.T) {
 	b := &Bot{
 		config:       Config{BotUserID: "bot1", ChannelUserID: "ch1"},
 		logger:       slog.New(slog.DiscardHandler),
-		ctx:          ctx,
 		statsService: svc,
 		commands:     Commands(nil),
 	}
@@ -382,7 +380,6 @@ func TestStatsCommandValidation(t *testing.T) {
 		return &Bot{
 			config:   Config{BotUserID: "bot1", ChannelUserID: "ch1"},
 			logger:   slog.New(slog.DiscardHandler),
-			ctx:      context.Background(),
 			commands: Commands(nil),
 		}
 	}
@@ -473,7 +470,6 @@ func TestSeriesCommandShowCollection(t *testing.T) {
 	b := &Bot{
 		config:          Config{BotUserID: "bot1", ChannelUserID: "ch1"},
 		logger:          slog.New(slog.DiscardHandler),
-		ctx:             ctx,
 		blindboxService: svc,
 		commands:        Commands([]blindbox.SeriesConfig{cfg}),
 		broadcast:       broadcast,
@@ -527,7 +523,6 @@ func TestSeriesCommandReset(t *testing.T) {
 	b := &Bot{
 		config:          Config{BotUserID: "bot1", ChannelUserID: "ch1"},
 		logger:          slog.New(slog.DiscardHandler),
-		ctx:             ctx,
 		blindboxService: svc,
 		commands:        Commands([]blindbox.SeriesConfig{cfg}),
 	}
@@ -578,7 +573,6 @@ func TestBlindboxModGuard(t *testing.T) {
 		return &Bot{
 			config:   Config{BotUserID: "bot1", ChannelUserID: "ch1"},
 			logger:   slog.New(slog.DiscardHandler),
-			ctx:      context.Background(),
 			commands: Commands([]blindbox.SeriesConfig{cfg}),
 		}
 	}

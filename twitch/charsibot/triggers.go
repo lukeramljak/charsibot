@@ -1,6 +1,7 @@
 package charsibot
 
 import (
+	"context"
 	"slices"
 	"strings"
 
@@ -10,7 +11,7 @@ import (
 type Trigger struct {
 	Chance        int
 	ShouldTrigger func(event twitch.EventChannelChatMessage) bool
-	Execute       func(b *Bot, event twitch.EventChannelChatMessage)
+	Execute       func(ctx context.Context, b *Bot, event twitch.EventChannelChatMessage)
 }
 
 // Triggers returns all chat message triggers.
@@ -38,7 +39,7 @@ func Triggers() []Trigger {
 				}
 				return false
 			},
-			Execute: func(b *Bot, event twitch.EventChannelChatMessage) {
+			Execute: func(_ context.Context, b *Bot, event twitch.EventChannelChatMessage) {
 				b.SendMessage(SendMessageParams{
 					Message:              "no coming",
 					ReplyParentMessageID: event.MessageId,

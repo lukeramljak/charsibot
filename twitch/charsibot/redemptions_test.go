@@ -25,7 +25,6 @@ func TestDrinkAPotionCreatesStatsForNewUser(t *testing.T) {
 	b := &Bot{
 		config:       Config{BotUserID: "bot1", ChannelUserID: "ch1"},
 		logger:       slog.New(slog.DiscardHandler),
-		ctx:          ctx,
 		statsService: svc,
 	}
 	b.redemptions = Redemptions(nil)
@@ -78,7 +77,6 @@ func TestDrinkAPotionModifiesStatForExistingUser(t *testing.T) {
 	b := &Bot{
 		config:       Config{BotUserID: "bot1", ChannelUserID: "ch1"},
 		logger:       slog.New(slog.DiscardHandler),
-		ctx:          ctx,
 		statsService: svc,
 	}
 	b.redemptions = Redemptions(nil)
@@ -150,7 +148,7 @@ func TestOnChannelPointRedemption(t *testing.T) {
 			redemptions := make(map[string]RedemptionFunc, len(tt.redemptions))
 			for key := range tt.redemptions {
 				k := key
-				redemptions[k] = func(_ *Bot, _ twitch.EventChannelChannelPointsCustomRewardRedemptionAdd) {
+				redemptions[k] = func(_ context.Context, _ *Bot, _ twitch.EventChannelChannelPointsCustomRewardRedemptionAdd) {
 					executed[k] = true
 				}
 			}
@@ -187,7 +185,7 @@ func TestRedemptionTitleMatching(t *testing.T) {
 
 	executed := false
 	b.redemptions = map[string]RedemptionFunc{
-		"Special Reward": func(_ *Bot, _ twitch.EventChannelChannelPointsCustomRewardRedemptionAdd) {
+		"Special Reward": func(_ context.Context, _ *Bot, _ twitch.EventChannelChannelPointsCustomRewardRedemptionAdd) {
 			executed = true
 		},
 	}
@@ -226,6 +224,5 @@ func createTestBotForRedemption(t *testing.T) *Bot {
 	return &Bot{
 		config: cfg,
 		logger: slog.New(slog.DiscardHandler),
-		ctx:    context.Background(),
 	}
 }

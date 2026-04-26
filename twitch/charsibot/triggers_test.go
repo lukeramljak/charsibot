@@ -101,7 +101,7 @@ func TestProcessTriggers(t *testing.T) {
 					ShouldTrigger: func(_ twitch.EventChannelChatMessage) bool {
 						return trigger
 					},
-					Execute: func(_ *Bot, _ twitch.EventChannelChatMessage) {
+					Execute: func(_ context.Context, _ *Bot, _ twitch.EventChannelChatMessage) {
 						executed[idx] = true
 					},
 				}
@@ -144,7 +144,7 @@ func TestProcessTriggers_ProbabilityDistribution(t *testing.T) {
 		b.triggers = []Trigger{{
 			Chance:        50,
 			ShouldTrigger: func(_ twitch.EventChannelChatMessage) bool { return true },
-			Execute:       func(_ *Bot, _ twitch.EventChannelChatMessage) { count++ },
+			Execute:       func(_ context.Context, _ *Bot, _ twitch.EventChannelChatMessage) { count++ },
 		}}
 		b.processTriggers(event)
 		executionCounts += count
@@ -181,7 +181,7 @@ func TestProcessTriggers_ProbabilityLowChance(t *testing.T) {
 		b.triggers = []Trigger{{
 			Chance:        1,
 			ShouldTrigger: func(_ twitch.EventChannelChatMessage) bool { return true },
-			Execute:       func(_ *Bot, _ twitch.EventChannelChatMessage) { count++ },
+			Execute:       func(_ context.Context, _ *Bot, _ twitch.EventChannelChatMessage) { count++ },
 		}}
 		b.processTriggers(event)
 		executionCounts += count
@@ -215,7 +215,7 @@ func TestProcessTriggers_ProbabilityHighChance(t *testing.T) {
 		b.triggers = []Trigger{{
 			Chance:        99,
 			ShouldTrigger: func(_ twitch.EventChannelChatMessage) bool { return true },
-			Execute:       func(_ *Bot, _ twitch.EventChannelChatMessage) { count++ },
+			Execute:       func(_ context.Context, _ *Bot, _ twitch.EventChannelChatMessage) { count++ },
 		}}
 		b.processTriggers(event)
 		executionCounts += count
@@ -261,7 +261,7 @@ func TestProcessTriggers_MessageContent(t *testing.T) {
 		ShouldTrigger: func(event twitch.EventChannelChatMessage) bool {
 			return event.Message.Text == "trigger me"
 		},
-		Execute: func(_ *Bot, _ twitch.EventChannelChatMessage) {
+		Execute: func(_ context.Context, _ *Bot, _ twitch.EventChannelChatMessage) {
 			executed = true
 		},
 	}}
@@ -296,6 +296,5 @@ func createTestBotForTrigger(t *testing.T) *Bot {
 	return &Bot{
 		config: cfg,
 		logger: slog.New(slog.DiscardHandler),
-		ctx:    context.Background(),
 	}
 }

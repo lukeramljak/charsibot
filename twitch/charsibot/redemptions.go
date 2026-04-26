@@ -1,6 +1,7 @@
 package charsibot
 
 import (
+	"context"
 	"math/rand/v2"
 
 	"github.com/joeyak/go-twitch-eventsub/v3"
@@ -10,12 +11,12 @@ import (
 )
 
 // RedemptionFunc handles a channel point redemption event.
-type RedemptionFunc func(b *Bot, event twitch.EventChannelChannelPointsCustomRewardRedemptionAdd)
+type RedemptionFunc func(ctx context.Context, b *Bot, event twitch.EventChannelChannelPointsCustomRewardRedemptionAdd)
 
 // Redemptions returns the full map of channel point redemptions keyed by reward title.
 func Redemptions(seriesConfigs []blindbox.SeriesConfig) map[string]RedemptionFunc {
 	redemptions := map[string]RedemptionFunc{
-		"Drink a Potion": func(b *Bot, event twitch.EventChannelChannelPointsCustomRewardRedemptionAdd) {
+		"Drink a Potion": func(ctx context.Context, b *Bot, event twitch.EventChannelChannelPointsCustomRewardRedemptionAdd) {
 			const (
 				negativePercent = 5
 				percentMax      = 100
@@ -24,12 +25,12 @@ func Redemptions(seriesConfigs []blindbox.SeriesConfig) map[string]RedemptionFun
 			userID := event.UserID
 			username := event.UserName
 
-			if _, err := b.statsService.GetOrCreateStats(b.ctx, userID, username); err != nil {
+			if _, err := b.statsService.GetOrCreateStats(ctx, userID, username); err != nil {
 				b.logger.Error("failed to get or create stats", "err", err, "user", username)
 				return
 			}
 
-			stat, err := b.statsService.GetRandomStatDefinition(b.ctx)
+			stat, err := b.statsService.GetRandomStatDefinition(ctx)
 			if err != nil {
 				b.logger.Error("failed to get random stat definition", "err", err)
 				return
@@ -43,7 +44,7 @@ func Redemptions(seriesConfigs []blindbox.SeriesConfig) map[string]RedemptionFun
 				outcome = "lost"
 			}
 
-			if err = b.statsService.ModifyStatValue(b.ctx, userID, stat.Name, delta); err != nil {
+			if err = b.statsService.ModifyStatValue(ctx, userID, stat.Name, delta); err != nil {
 				b.logger.Error("failed to modify stat", "err", err, "user", username)
 				return
 			}
@@ -53,7 +54,7 @@ func Redemptions(seriesConfigs []blindbox.SeriesConfig) map[string]RedemptionFun
 					username + " " + outcome + " " + stat.LongName,
 			})
 
-			userStats, err := b.statsService.GetUserStats(b.ctx, userID)
+			userStats, err := b.statsService.GetUserStats(ctx, userID)
 			if err != nil {
 				b.logger.Error("failed to get stats", "err", err, "user", username)
 				return
@@ -61,7 +62,7 @@ func Redemptions(seriesConfigs []blindbox.SeriesConfig) map[string]RedemptionFun
 			b.SendMessage(SendMessageParams{Message: stats.FormatStats(username, userStats)})
 		},
 
-		"Tempt the Dice": func(b *Bot, event twitch.EventChannelChannelPointsCustomRewardRedemptionAdd) {
+		"Tempt the Dice": func(ctx context.Context, b *Bot, event twitch.EventChannelChannelPointsCustomRewardRedemptionAdd) {
 			userID := event.UserID
 			username := event.UserName
 
@@ -69,7 +70,7 @@ func Redemptions(seriesConfigs []blindbox.SeriesConfig) map[string]RedemptionFun
 				Message: username + " has rolled with initiative.",
 			})
 
-			userStats, err := b.statsService.GetOrCreateStats(b.ctx, userID, username)
+			userStats, err := b.statsService.GetOrCreateStats(ctx, userID, username)
 			if err != nil {
 				b.logger.Error("failed to get stats", "err", err, "user", username)
 				return
@@ -79,8 +80,8 @@ func Redemptions(seriesConfigs []blindbox.SeriesConfig) map[string]RedemptionFun
 	}
 
 	for _, cfg := range seriesConfigs {
-		redemptions[cfg.RedemptionTitle] = func(b *Bot, event twitch.EventChannelChannelPointsCustomRewardRedemptionAdd) {
-			redeemBlindBox(b, event.UserID, event.UserName, cfg)
+		redemptions[cfg.RedemptionTitle] = func(ctx context.Context, b *Bot, event twitch.EventChannelChannelPointsCustomRewardRedemptionAdd) {
+			redeemBlindBox(ctx, b, event.UserID, event.UserName, cfg)
 		}
 	}
 
