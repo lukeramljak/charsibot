@@ -1,10 +1,5 @@
 <script lang="ts">
-  import type {
-    BlindBoxRedemptionEvent,
-    CollectionDisplayEvent,
-    BlindBoxOverlayConfig,
-    PlushieData,
-  } from '$lib/types';
+  import type { BlindBoxOverlayConfig, PlushieData } from '$lib/types';
   import Box3D from './Box3D.svelte';
   import PlushieReveal from './PlushieReveal.svelte';
   import DisplayBanner from './DisplayBanner.svelte';
@@ -57,7 +52,7 @@
   }
 
   const queue = new BlindBoxQueue({
-    onRedemption: async (item: BlindBoxRedemptionEvent) => {
+    onRedemption: async (item) => {
       currentItem = {
         config: item.config,
         collection: item.collection,
@@ -69,7 +64,7 @@
       await playAudio(item.config.revealSound);
       await playAnimation('reveal');
     },
-    onDisplay: async (item: CollectionDisplayEvent) => {
+    onDisplay: async (item) => {
       currentItem = {
         config: item.config,
         collection: item.collection,
