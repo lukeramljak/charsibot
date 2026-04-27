@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { PlushieData } from '../types';
+  import type { PlushieData } from '$lib/types';
 
   interface Props {
     plushie: PlushieData | null;

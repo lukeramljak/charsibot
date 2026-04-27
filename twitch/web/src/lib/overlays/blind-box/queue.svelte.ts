@@ -31,6 +31,8 @@ export class BlindBoxQueue {
       default:
         throw new Error(`Unexpected queue item type: ${type}`);
     }
+
+    this.processNext();
   }
 
   async processNext(): Promise<void> {

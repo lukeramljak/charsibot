@@ -1,6 +1,5 @@
 <script lang="ts">
   import type {
-    OverlayEvent,
     BlindBoxRedemptionEvent,
     CollectionDisplayEvent,
     BlindBoxOverlayConfig,
@@ -18,12 +17,16 @@
 
   type AnimationMode = 'idle' | 'reveal' | 'collection';
 
+  interface CurrentItem {
+    plushie: PlushieData | null;
+    config: BlindBoxOverlayConfig;
+    message: string;
+    collection: string[];
+  }
+
   let mode = $state<AnimationMode>('idle');
   let animationKey = $state(0);
-  let currentPlushie = $state<PlushieData | null>(null);
-  let currentConfig = $state<BlindBoxOverlayConfig>();
-  let displayMessage = $state('');
-  let collection = $state<string[]>([]);
+  let currentItem = $state<CurrentItem | null>(null);
   let audioElement: HTMLAudioElement | undefined = $state();
 
   async function playAudio(sound: string) {
@@ -48,55 +51,42 @@
 
       setTimeout(() => {
         mode = 'idle';
-        currentConfig = undefined;
-        currentPlushie = null;
+        currentItem = null;
         resolve();
       }, 6500);
     });
   }
 
-  async function playReveal(item: BlindBoxRedemptionEvent) {
-    currentConfig = item.config;
-    collection = item.collection;
-    currentPlushie = item.plushie;
-    displayMessage = `${item.username} just got <strong>${item.plushie.name}</strong>${
-      !item.isNew ? ' (duplicate)' : ''
-    }`;
-    await playAudio(item.config.revealSound);
-    await playAnimation('reveal');
-  }
-
-  async function playCollection(item: CollectionDisplayEvent) {
-    currentConfig = item.config;
-    collection = item.collection;
-    currentPlushie = null;
-    displayMessage = `${item.username}'s ${item.config.name}`;
-    await playAnimation('collection');
-  }
-
-  const handlers = {
+  const queue = new BlindBoxQueue({
     onRedemption: async (item: BlindBoxRedemptionEvent) => {
-      await playReveal(item);
+      currentItem = {
+        config: item.config,
+        collection: item.collection,
+        plushie: item.plushie,
+        message: `${item.username} just got <strong>${item.plushie.name}</strong>${
+          !item.isNew ? ' (duplicate)' : ''
+        }`,
+      };
+      await playAudio(item.config.revealSound);
+      await playAnimation('reveal');
     },
     onDisplay: async (item: CollectionDisplayEvent) => {
-      await playCollection(item);
+      currentItem = {
+        config: item.config,
+        collection: item.collection,
+        plushie: null,
+        message: `${item.username}'s ${item.config.name}`,
+      };
+      await playAnimation('collection');
     },
-  };
-
-  const queue = new BlindBoxQueue(handlers);
-
-  function handleMessage(message: OverlayEvent) {
-    if (message.type !== 'blindbox_display' && message.type !== 'blindbox_redemption') {
-      return;
-    }
-
-    queue.add(message);
-    queue.processNext();
-  }
+  });
 
   onMount(() => {
     charsibot.connect();
-    const unsubscribe = charsibot.onMessage(handleMessage);
+    const unsubscribe = charsibot.onMessage((message) => {
+      if (message.type !== 'blindbox_display' && message.type !== 'blindbox_redemption') return;
+      queue.add(message);
+    });
 
     return () => {
       unsubscribe();
@@ -115,21 +105,21 @@
   />
 {/if}
 
-{#if currentConfig && charsibot.isConnected}
+{#if currentItem && charsibot.isConnected}
   {#key animationKey}
     <div class="scene" class:reveal={mode === 'reveal'} class:collection={mode === 'collection'}>
       <BackgroundEffects show={mode !== 'idle'} />
 
-      <div class="content-wrapper" class:with-plushie={currentPlushie !== null}>
+      <div class="content-wrapper" class:with-plushie={currentItem.plushie !== null}>
         <Box3D
-          boxFrontFace={currentConfig.boxFrontFace}
-          boxSideFace={currentConfig.boxSideFace}
+          boxFrontFace={currentItem.config.boxFrontFace}
+          boxSideFace={currentItem.config.boxSideFace}
           isAnimating={mode === 'reveal'}
           visible={mode !== 'idle'}
         >
           <div class="plushie-container">
             <PlushieReveal
-              plushie={currentPlushie}
+              plushie={currentItem.plushie}
               isAnimating={mode === 'reveal'}
               visible={mode !== 'idle'}
             />
@@ -138,15 +128,15 @@
 
         <div class="text-collection-container">
           <DisplayBanner
-            message={displayMessage}
-            displayColor={currentConfig.displayColor}
-            textColor={currentConfig.textColor}
+            message={currentItem.message}
+            displayColor={currentItem.config.displayColor}
+            textColor={currentItem.config.textColor}
             visible={mode !== 'idle'}
           />
 
           <CollectionDisplay
-            plushies={currentConfig.plushies}
-            {collection}
+            plushies={currentItem.config.plushies}
+            collection={currentItem.collection}
             visible={mode !== 'idle'}
           />
         </div>
