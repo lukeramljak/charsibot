@@ -23,6 +23,11 @@
 
   onMount(() => {
     charsibot.connect();
+
+    return () => {
+      queue.clear();
+      audioElement?.pause();
+    };
   });
 
   type AnimationMode = 'idle' | 'reveal' | 'collection';
@@ -148,13 +153,6 @@
     } else if (lastMsg.type === 'collection_display') {
       handleDisplayEvent(lastMsg as CollectionDisplayEvent);
     }
-  });
-
-  $effect(() => {
-    return () => {
-      queue.clear();
-      audioElement?.pause();
-    };
   });
 </script>
 
