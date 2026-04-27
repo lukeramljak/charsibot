@@ -25,6 +25,11 @@
 </div>
 
 <style>
+  :root {
+    --purple-glow: rgba(138, 43, 226, 0.4);
+    --purple-glow-subtle: rgba(138, 43, 226, 0.3);
+  }
+
   .not-connected-overlay {
     position: fixed;
     inset: 0;
@@ -56,14 +61,14 @@
     top: 16px;
     left: 20px;
     animation: twinkle 1.5s ease-in-out infinite;
-  }
 
-  .sparkles-bottom {
-    top: auto;
-    bottom: 16px;
-    left: auto;
-    right: 20px;
-    animation-delay: 0.75s;
+    &.sparkles-bottom {
+      top: auto;
+      bottom: 16px;
+      left: auto;
+      right: 20px;
+      animation-delay: 0.75s;
+    }
   }
 
   .sleeping-icon {
@@ -71,13 +76,13 @@
     height: 64px;
     margin: 0 auto 12px;
     color: #c084c0;
-    filter: drop-shadow(0 2px 8px rgba(138, 43, 226, 0.4));
+    filter: drop-shadow(0 2px 8px var(--purple-glow));
     animation: gentle-bob 2s ease-in-out infinite;
-  }
 
-  .sleeping-icon svg {
-    width: 100%;
-    height: 100%;
+    svg {
+      width: 100%;
+      height: 100%;
+    }
   }
 
   .not-connected-title {
@@ -85,7 +90,7 @@
     font-weight: 700;
     color: #ffffff;
     margin: 0 0 10px 0;
-    text-shadow: 0 2px 8px rgba(138, 43, 226, 0.4);
+    text-shadow: 0 2px 8px var(--purple-glow);
     letter-spacing: 0.5px;
   }
 
@@ -94,7 +99,7 @@
     font-weight: 600;
     color: rgba(255, 255, 255, 0.98);
     margin: 0;
-    text-shadow: 0 1px 4px rgba(138, 43, 226, 0.3);
+    text-shadow: 0 1px 4px var(--purple-glow-subtle);
   }
 
   @keyframes float-gentle {

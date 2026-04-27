@@ -48,10 +48,10 @@
     text-align: center;
     opacity: 0;
     transition: opacity 0.3s;
-  }
 
-  .displayText.visible {
-    opacity: 1;
+    &.visible {
+      opacity: 1;
+    }
   }
 
   .nameText {

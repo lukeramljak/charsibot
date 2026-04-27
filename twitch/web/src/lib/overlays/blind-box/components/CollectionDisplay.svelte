@@ -40,15 +40,15 @@
     flex-wrap: wrap;
     gap: 10px;
     justify-content: center;
-  }
 
-  .collection-items img {
-    width: 40px;
-    object-fit: contain;
-    transition: transform 0.2s;
-  }
+    img {
+      width: 40px;
+      object-fit: contain;
+      transition: transform 0.2s;
 
-  .collection-items img.collected {
-    transform: scale(1.1);
+      &.collected {
+        transform: scale(1.1);
+      }
+    }
   }
 </style>

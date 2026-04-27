@@ -28,6 +28,13 @@
     transform-style: preserve-3d;
     will-change: transform;
     transition: opacity 0.3s;
+
+    &:global(.animate-plushie) {
+      animation:
+        1.4s cubic-bezier(0.5, -0.2, 0.3, 1.3) 1.2s forwards plushieReveal,
+        1.2s ease-in-out 3s 2 alternate plushieSwing,
+        1s cubic-bezier(0.5, -0.2, 0.3, 1.3) 5s forwards plushieExit;
+    }
   }
 
   /* ANIMATIONS - PLUSHIE */
@@ -78,12 +85,5 @@
       transform: translateY(100px) scale(0);
       opacity: 0.5;
     }
-  }
-
-  .plushie:global(.animate-plushie) {
-    animation:
-      1.4s cubic-bezier(0.5, -0.2, 0.3, 1.3) 1.2s forwards plushieReveal,
-      1.2s ease-in-out 3s 2 alternate plushieSwing,
-      1s cubic-bezier(0.5, -0.2, 0.3, 1.3) 5s forwards plushieExit;
   }
 </style>

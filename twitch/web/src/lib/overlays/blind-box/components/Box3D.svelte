@@ -35,6 +35,8 @@
     --bw: 220px;
     --bh: 260px;
     --bd: 220px;
+    --box-face-color: #ededed;
+    --box-shadow-color: rgba(0, 0, 0, 0.1);
   }
 
   .box {
@@ -46,43 +48,49 @@
     will-change: transform;
     opacity: 0;
     pointer-events: none;
+
+    &:global(.animate-box) {
+      animation:
+        0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards boxEnter,
+        0.8s ease-in 6s forwards boxExit;
+    }
   }
 
   .face {
     position: absolute;
     width: var(--bw);
     height: var(--bh);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 12px var(--box-shadow-color);
     border-radius: 4px;
-    background: center/cover #ededed;
+    background: center/cover var(--box-face-color);
     pointer-events: none;
-  }
 
-  .face::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(0, 0, 0, 0.1));
-  }
+    &::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(0, 0, 0, 0.1));
+    }
 
-  /* Face positioning */
-  .front {
-    transform: translateZ(calc(var(--bd) / 2));
-  }
+    /* Face positioning */
+    &.front {
+      transform: translateZ(calc(var(--bd) / 2));
+    }
 
-  .back {
-    transform: rotateY(180deg) translateZ(calc(var(--bd) / 2));
-    background-color: #e1e1e5;
-  }
+    &.back {
+      transform: rotateY(180deg) translateZ(calc(var(--bd) / 2));
+      background-color: #e1e1e5;
+    }
 
-  .left {
-    width: var(--bd);
-    transform: rotateY(-90deg) translateZ(calc(var(--bw) / 2));
-  }
+    &.left {
+      width: var(--bd);
+      transform: rotateY(-90deg) translateZ(calc(var(--bw) / 2));
+    }
 
-  .right {
-    width: var(--bd);
-    transform: rotateY(90deg) translateZ(calc(var(--bw) / 2));
+    &.right {
+      width: var(--bd);
+      transform: rotateY(90deg) translateZ(calc(var(--bw) / 2));
+    }
   }
 
   /* Box flaps */
@@ -94,23 +102,35 @@
     background-size: cover;
     background-position: center;
     border-radius: 2px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  }
+    box-shadow: 0 4px 12px var(--box-shadow-color);
 
-  .front-flap {
-    top: 0;
-    left: 0;
-    transform-origin: top center;
-    background-color: #ededed;
-    transform: translateZ(calc(var(--bd) / 2)) rotateX(270deg);
-  }
+    &.front-flap {
+      top: 0;
+      left: 0;
+      transform-origin: top center;
+      background-color: var(--box-face-color);
+      transform: translateZ(calc(var(--bd) / 2)) rotateX(270deg);
 
-  .back-flap {
-    background: #ededed;
-    top: 0;
-    left: 0;
-    transform-origin: top center;
-    transform: rotateY(180deg) translateZ(calc(var(--bd) / 2)) rotateX(-90deg);
+      &:global(.animate-front-flap) {
+        animation:
+          0.8s ease-out 1s forwards frontFlapOpen,
+          0.6s ease-in 5.8s forwards frontFlapClose;
+      }
+    }
+
+    &.back-flap {
+      background: var(--box-face-color);
+      top: 0;
+      left: 0;
+      transform-origin: top center;
+      transform: rotateY(180deg) translateZ(calc(var(--bd) / 2)) rotateX(-90deg);
+
+      &:global(.animate-back-flap) {
+        animation:
+          0.8s ease-out 1s forwards backFlapOpen,
+          0.6s ease-in 5.8s forwards backFlapClose;
+      }
+    }
   }
 
   .box-shadow {
@@ -142,12 +162,6 @@
     }
   }
 
-  .box:global(.animate-box) {
-    animation:
-      0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards boxEnter,
-      0.8s ease-in 6s forwards boxExit;
-  }
-
   /* ANIMATIONS - FLAPS */
   @keyframes frontFlapOpen {
     to {
@@ -164,12 +178,6 @@
     }
   }
 
-  .front-flap:global(.animate-front-flap) {
-    animation:
-      0.8s ease-out 1s forwards frontFlapOpen,
-      0.6s ease-in 5.8s forwards frontFlapClose;
-  }
-
   @keyframes backFlapOpen {
     to {
       transform: rotateY(180deg) translateZ(calc(var(--bd) / 2)) rotateX(-280deg);
@@ -183,11 +191,5 @@
     to {
       transform: rotateY(180deg) translateZ(calc(var(--bd) / 2)) rotateX(-90deg);
     }
-  }
-
-  .back-flap:global(.animate-back-flap) {
-    animation:
-      0.8s ease-out 1s forwards backFlapOpen,
-      0.6s ease-in 5.8s forwards backFlapClose;
   }
 </style>

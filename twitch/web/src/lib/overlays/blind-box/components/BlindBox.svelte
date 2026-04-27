@@ -155,6 +155,23 @@
     padding: 0;
     width: 100vw;
     height: 100vh;
+
+    &.reveal,
+    &.collection {
+      .text-collection-container {
+        animation:
+          fadeInText 0.6s ease-out var(--text-delay, 1.5s) forwards,
+          fadeOutText 0.6s ease-out 6s forwards;
+      }
+    }
+
+    &.reveal {
+      --text-delay: 1.5s;
+    }
+
+    &.collection {
+      --text-delay: 0.05s;
+    }
   }
 
   .content-wrapper {
@@ -188,18 +205,6 @@
     opacity: 0;
     transform: translateY(20px);
     pointer-events: none;
-  }
-
-  .scene.reveal .text-collection-container {
-    animation:
-      fadeInText 0.6s ease-out 1.5s forwards,
-      fadeOutText 0.6s ease-out 6s forwards;
-  }
-
-  .scene.collection .text-collection-container {
-    animation:
-      fadeInText 0.6s ease-out 0.05s forwards,
-      fadeOutText 0.6s ease-out 6s forwards;
   }
 
   @keyframes fadeInText {

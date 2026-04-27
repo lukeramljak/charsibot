@@ -21,18 +21,20 @@
     width: 100%;
     height: 100%;
     overflow: visible;
-  }
 
-  .background-effects .light-beam,
-  .background-effects .stars {
-    opacity: 0;
-    transition: opacity 0.5s ease-in-out;
-    pointer-events: none;
-  }
+    & .light-beam,
+    & .stars {
+      opacity: 0;
+      transition: opacity 0.5s ease-in-out;
+      pointer-events: none;
+    }
 
-  .background-effects:global(.animate) .light-beam,
-  .background-effects:global(.animate) .stars {
-    opacity: 1;
+    &:global(.animate) {
+      & .light-beam,
+      & .stars {
+        opacity: 1;
+      }
+    }
   }
 
   .light-beam {
@@ -61,7 +63,6 @@
       transparent 330deg 360deg
     );
     mask-image: radial-gradient(circle, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0) 70%);
-    -webkit-mask-image: radial-gradient(circle, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0) 70%);
     border-radius: 50%;
     animation: 40s linear infinite rotateRays;
   }
@@ -73,24 +74,24 @@
     background: #fff;
     clip-path: polygon(50% 0%, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0% 50%, 40% 40%);
     animation: 4s ease-in-out infinite twinkle;
-  }
 
-  .star-1 {
-    top: 50%;
-    left: 40%;
-    animation-delay: 0s;
-  }
+    &.star-1 {
+      top: 50%;
+      left: 40%;
+      animation-delay: 0s;
+    }
 
-  .star-2 {
-    top: 30%;
-    right: 40%;
-    animation-delay: 1s;
-  }
+    &.star-2 {
+      top: 30%;
+      right: 40%;
+      animation-delay: 1s;
+    }
 
-  .star-3 {
-    bottom: 34%;
-    left: 40%;
-    animation-delay: 2s;
+    &.star-3 {
+      bottom: 34%;
+      left: 40%;
+      animation-delay: 2s;
+    }
   }
 
   @keyframes rotateRays {
