@@ -1,32 +1,16 @@
-import type { BlindBoxOverlayConfig, PlushieData } from './types';
+import type { BlindBoxRedemptionEvent, CollectionDisplayEvent } from '$lib/types';
 
-export interface PlushieDisplayQueueItem {
-  type: 'display';
-  username: string;
-  collection: string[];
-  config: BlindBoxOverlayConfig;
-}
-
-export interface PlushieRedemptionQueueItem {
-  type: 'redemption';
-  username: string;
-  plushie: PlushieData;
-  isNew: boolean;
-  collection: string[];
-  config: BlindBoxOverlayConfig;
-}
-
-type QueueItem = PlushieDisplayQueueItem | PlushieRedemptionQueueItem;
+export type QueueItem = CollectionDisplayEvent | BlindBoxRedemptionEvent;
 
 export class BlindBoxQueue {
-  private redemptionQueue = $state<PlushieRedemptionQueueItem[]>([]);
-  private displayQueue = $state<PlushieDisplayQueueItem[]>([]);
+  private redemptionQueue = $state<BlindBoxRedemptionEvent[]>([]);
+  private displayQueue = $state<CollectionDisplayEvent[]>([]);
   private isProcessing = $state(false);
 
   constructor(
     private handlers: {
-      onRedemption: (item: PlushieRedemptionQueueItem) => Promise<void>;
-      onDisplay: (item: PlushieDisplayQueueItem) => Promise<void>;
+      onRedemption: (item: BlindBoxRedemptionEvent) => Promise<void>;
+      onDisplay: (item: CollectionDisplayEvent) => Promise<void>;
     },
   ) {}
 
@@ -34,12 +18,19 @@ export class BlindBoxQueue {
     return this.redemptionQueue.length > 0 || this.displayQueue.length > 0;
   }
 
-  addRedemption(item: PlushieRedemptionQueueItem): void {
-    this.redemptionQueue.push(item);
-  }
+  add(item: QueueItem): void {
+    const { type } = item;
 
-  addDisplay(item: PlushieDisplayQueueItem): void {
-    this.displayQueue.push(item);
+    switch (type) {
+      case 'blindbox_display':
+        this.displayQueue.push(item);
+        break;
+      case 'blindbox_redemption':
+        this.redemptionQueue.push(item);
+        break;
+      default:
+        throw new Error(`Unexpected queue item type: ${type}`);
+    }
   }
 
   async processNext(): Promise<void> {
@@ -59,7 +50,7 @@ export class BlindBoxQueue {
         if (!item) break;
 
         try {
-          if (item.type === 'redemption') {
+          if (item.type === 'blindbox_redemption') {
             await this.handlers.onRedemption(item);
           } else {
             await this.handlers.onDisplay(item);

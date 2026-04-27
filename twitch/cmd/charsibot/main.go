@@ -53,7 +53,7 @@ func run() error {
 		ClientID:         cfg.ClientID,
 		ClientSecret:     cfg.ClientSecret,
 		OAuthRedirectURI: cfg.OAuthRedirectURI,
-	}, logger, blindboxService)
+	}, logger)
 	if err = srv.Start(); err != nil {
 		return fmt.Errorf("start server: %w", err)
 	}

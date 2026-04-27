@@ -1,11 +1,14 @@
-import type { OverlayEvent } from '$lib/types';
+import type { OverlayEvent, OverlayEventType } from '$lib/types';
 
-type SSEEvent = OverlayEvent | { type: 'connected'; timestamp: string };
+type MessageHandler = (message: OverlayEvent) => void;
+
+const eventTypes: OverlayEventType[] = ['chat_command', 'blindbox_display', 'blindbox_redemption'];
 
 class Charsibot {
   private eventSource: EventSource | null = null;
+  private messageHandlers = new Set<MessageHandler>();
+
   isConnected = $state(false);
-  lastMessage = $state<SSEEvent | null>(null);
 
   connect() {
     if (this.eventSource) return;
@@ -16,16 +19,25 @@ class Charsibot {
       this.isConnected = true;
     };
 
-    this.eventSource.onmessage = (event) => {
-      const data: SSEEvent = JSON.parse(event.data);
-      this.lastMessage = data;
-    };
+    for (const type of eventTypes) {
+      this.eventSource.addEventListener(type, (event) => {
+        const data = JSON.parse(event.data);
+        for (const handler of this.messageHandlers) {
+          handler({ type, ...data } as OverlayEvent);
+        }
+      });
+    }
 
     this.eventSource.onerror = () => {
       this.isConnected = false;
       this.disconnect();
       setTimeout(() => this.connect(), 5000);
     };
+  }
+
+  onMessage(fn: MessageHandler) {
+    this.messageHandlers.add(fn);
+    return () => this.messageHandlers.delete(fn);
   }
 
   disconnect() {

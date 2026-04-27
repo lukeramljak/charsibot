@@ -1,34 +1,20 @@
 <script lang="ts">
-  import type { BlindBoxRedemptionEvent, CollectionDisplayEvent } from '$lib/types';
-  import type { BlindBoxOverlayConfig, PlushieData } from '../types';
+  import type {
+    OverlayEvent,
+    BlindBoxRedemptionEvent,
+    CollectionDisplayEvent,
+    BlindBoxOverlayConfig,
+    PlushieData,
+  } from '$lib/types';
   import Box3D from './Box3D.svelte';
   import PlushieReveal from './PlushieReveal.svelte';
   import DisplayBanner from './DisplayBanner.svelte';
   import CollectionDisplay from './CollectionDisplay.svelte';
   import BackgroundEffects from './BackgroundEffects.svelte';
-  import {
-    BlindBoxQueue,
-    type PlushieDisplayQueueItem,
-    type PlushieRedemptionQueueItem,
-  } from '../queue.svelte';
+  import { BlindBoxQueue } from '../queue.svelte';
   import { charsibot } from '$lib/charsibot.svelte';
   import { onMount } from 'svelte';
   import DisconnectedBanner from '$lib/overlays/components/DisconnectedBanner.svelte';
-
-  interface Props {
-    configs: BlindBoxOverlayConfig[];
-  }
-
-  let { configs }: Props = $props();
-
-  onMount(() => {
-    charsibot.connect();
-
-    return () => {
-      queue.clear();
-      audioElement?.pause();
-    };
-  });
 
   type AnimationMode = 'idle' | 'reveal' | 'collection';
 
@@ -39,7 +25,6 @@
   let displayMessage = $state('');
   let collection = $state<string[]>([]);
   let audioElement: HTMLAudioElement | undefined = $state();
-  let lastProcessedMessage: unknown = null;
 
   async function playAudio(sound: string) {
     if (!audioElement) return;
@@ -70,7 +55,7 @@
     });
   }
 
-  async function playReveal(item: PlushieRedemptionQueueItem) {
+  async function playReveal(item: BlindBoxRedemptionEvent) {
     currentConfig = item.config;
     collection = item.collection;
     currentPlushie = item.plushie;
@@ -81,7 +66,7 @@
     await playAnimation('reveal');
   }
 
-  async function playCollection(item: PlushieDisplayQueueItem) {
+  async function playCollection(item: CollectionDisplayEvent) {
     currentConfig = item.config;
     collection = item.collection;
     currentPlushie = null;
@@ -90,69 +75,34 @@
   }
 
   const handlers = {
-    onRedemption: async (item: PlushieRedemptionQueueItem) => {
+    onRedemption: async (item: BlindBoxRedemptionEvent) => {
       await playReveal(item);
     },
-    onDisplay: async (item: PlushieDisplayQueueItem) => {
+    onDisplay: async (item: CollectionDisplayEvent) => {
       await playCollection(item);
     },
   };
 
   const queue = new BlindBoxQueue(handlers);
 
-  function handleRedemptionEvent(event: BlindBoxRedemptionEvent) {
-    const config = configs.find((c) => c.series === event.data.series);
-    if (!config) {
-      console.warn('Config not found for series:', event.data.series);
+  function handleMessage(message: OverlayEvent) {
+    if (message.type !== 'blindbox_display' && message.type !== 'blindbox_redemption') {
       return;
     }
 
-    const plushie = config.plushies.find((p) => p.key === event.data.plushie);
-    if (!plushie) {
-      console.warn('Plushie not found for reward key:', event.data.plushie);
-      return;
-    }
-
-    queue.addRedemption({
-      type: 'redemption',
-      username: event.data.username,
-      plushie,
-      isNew: event.data.isNew,
-      collection: event.data.collection,
-      config: config,
-    });
-
+    queue.add(message);
     queue.processNext();
   }
 
-  function handleDisplayEvent(event: CollectionDisplayEvent) {
-    const config = configs.find((c) => c.series === event.data.series);
-    if (!config) {
-      console.warn('Config not found for series:', event.data.series);
-      return;
-    }
+  onMount(() => {
+    charsibot.connect();
+    const unsubscribe = charsibot.onMessage(handleMessage);
 
-    queue.addDisplay({
-      type: 'display',
-      username: event.data.username,
-      collection: event.data.collection,
-      config: config,
-    });
-
-    queue.processNext();
-  }
-
-  $effect(() => {
-    const lastMsg = charsibot.lastMessage;
-    if (!lastMsg || lastMsg === lastProcessedMessage) return;
-
-    lastProcessedMessage = lastMsg;
-
-    if (lastMsg.type === 'blindbox_redemption') {
-      handleRedemptionEvent(lastMsg as BlindBoxRedemptionEvent);
-    } else if (lastMsg.type === 'collection_display') {
-      handleDisplayEvent(lastMsg as CollectionDisplayEvent);
-    }
+    return () => {
+      unsubscribe();
+      queue.clear();
+      audioElement?.pause();
+    };
   });
 </script>
 

@@ -1,20 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-  BlindBoxQueue,
-  type PlushieDisplayQueueItem,
-  type PlushieRedemptionQueueItem,
-} from './queue.svelte';
+import { BlindBoxQueue } from './queue.svelte';
+import type { BlindBoxRedemptionEvent, CollectionDisplayEvent } from '$lib/types';
 
-function makeRedemption(
-  overrides: Partial<PlushieRedemptionQueueItem> = {},
-): PlushieRedemptionQueueItem {
+function makeRedemption(overrides: Partial<BlindBoxRedemptionEvent> = {}): BlindBoxRedemptionEvent {
   return {
-    type: 'redemption',
+    type: 'blindbox_redemption',
     username: 'user',
-    plushie: { key: 'plushie-01', name: 'Plushie', image: '', emptyImage: '' },
+    plushie: { id: 1, series: 'test', key: 'plushie-01', sortOrder: 0, weight: 1, name: 'Plushie', image: '', emptyImage: '' },
     isNew: true,
     collection: [],
     config: {
+      redemptionTitle: '',
       series: 'test',
       name: 'Test Series',
       plushies: [],
@@ -28,12 +24,13 @@ function makeRedemption(
   };
 }
 
-function makeDisplay(overrides: Partial<PlushieDisplayQueueItem> = {}): PlushieDisplayQueueItem {
+function makeDisplay(overrides: Partial<CollectionDisplayEvent> = {}): CollectionDisplayEvent {
   return {
-    type: 'display',
+    type: 'blindbox_display',
     username: 'user',
     collection: [],
     config: {
+      redemptionTitle: '',
       series: 'test',
       name: 'Test Series',
       plushies: [],
@@ -48,8 +45,8 @@ function makeDisplay(overrides: Partial<PlushieDisplayQueueItem> = {}): PlushieD
 }
 
 describe('BlindBoxQueue', () => {
-  let onRedemption: (item: PlushieRedemptionQueueItem) => Promise<void>;
-  let onDisplay: (item: PlushieDisplayQueueItem) => Promise<void>;
+  let onRedemption: (item: BlindBoxRedemptionEvent) => Promise<void>;
+  let onDisplay: (item: CollectionDisplayEvent) => Promise<void>;
   let queue: BlindBoxQueue;
 
   beforeEach(() => {
@@ -60,7 +57,7 @@ describe('BlindBoxQueue', () => {
 
   it('calls onRedemption for a redemption item', async () => {
     const item = makeRedemption();
-    queue.addRedemption(item);
+    queue.add(item);
     await queue.processNext();
     expect(onRedemption).toHaveBeenCalledOnce();
     expect(onRedemption).toHaveBeenCalledWith(item);
@@ -68,7 +65,7 @@ describe('BlindBoxQueue', () => {
 
   it('calls onDisplay for a display item', async () => {
     const item = makeDisplay();
-    queue.addDisplay(item);
+    queue.add(item);
     await queue.processNext();
     expect(onDisplay).toHaveBeenCalledOnce();
     expect(onDisplay).toHaveBeenCalledWith(item);
@@ -84,8 +81,8 @@ describe('BlindBoxQueue', () => {
     });
     queue = new BlindBoxQueue({ onRedemption, onDisplay });
 
-    queue.addDisplay(makeDisplay());
-    queue.addRedemption(makeRedemption());
+    queue.add(makeDisplay());
+    queue.add(makeRedemption());
     await queue.processNext();
 
     expect(order[0]).toBe('redemption');
@@ -93,13 +90,13 @@ describe('BlindBoxQueue', () => {
 
   it('processes redemptions in FIFO order', async () => {
     const order: string[] = [];
-    onRedemption = vi.fn().mockImplementation(async (item: PlushieRedemptionQueueItem) => {
+    onRedemption = vi.fn().mockImplementation(async (item: BlindBoxRedemptionEvent) => {
       order.push(item.username);
     });
     queue = new BlindBoxQueue({ onRedemption, onDisplay });
 
-    queue.addRedemption(makeRedemption({ username: 'first' }));
-    queue.addRedemption(makeRedemption({ username: 'second' }));
+    queue.add(makeRedemption({ username: 'first' }));
+    queue.add(makeRedemption({ username: 'second' }));
     await queue.processNext();
 
     expect(order).toEqual(['first', 'second']);
@@ -107,13 +104,13 @@ describe('BlindBoxQueue', () => {
 
   it('processes display items in FIFO order', async () => {
     const order: string[] = [];
-    onDisplay = vi.fn().mockImplementation(async (item: PlushieDisplayQueueItem) => {
+    onDisplay = vi.fn().mockImplementation(async (item: CollectionDisplayEvent) => {
       order.push(item.username);
     });
     queue = new BlindBoxQueue({ onRedemption, onDisplay });
 
-    queue.addDisplay(makeDisplay({ username: 'first' }));
-    queue.addDisplay(makeDisplay({ username: 'second' }));
+    queue.add(makeDisplay({ username: 'first' }));
+    queue.add(makeDisplay({ username: 'second' }));
     await queue.processNext();
 
     expect(order).toEqual(['first', 'second']);
@@ -128,8 +125,8 @@ describe('BlindBoxQueue', () => {
     );
     queue = new BlindBoxQueue({ onRedemption, onDisplay });
 
-    queue.addRedemption(makeRedemption());
-    queue.addRedemption(makeRedemption());
+    queue.add(makeRedemption());
+    queue.add(makeRedemption());
 
     const first = queue.processNext();
     await queue.processNext(); // should be a no-op
@@ -140,8 +137,8 @@ describe('BlindBoxQueue', () => {
   });
 
   it('automatically processes the next item after the current one finishes', async () => {
-    queue.addRedemption(makeRedemption({ username: 'first' }));
-    queue.addRedemption(makeRedemption({ username: 'second' }));
+    queue.add(makeRedemption({ username: 'first' }));
+    queue.add(makeRedemption({ username: 'second' }));
     await queue.processNext();
     expect(onRedemption).toHaveBeenCalledTimes(2);
   });
@@ -150,13 +147,13 @@ describe('BlindBoxQueue', () => {
     onRedemption = vi.fn().mockRejectedValue(new Error('handler error'));
     queue = new BlindBoxQueue({ onRedemption, onDisplay });
 
-    queue.addRedemption(makeRedemption());
+    queue.add(makeRedemption());
     await queue.processNext();
 
     // Should be able to process again after the error
     onRedemption = vi.fn().mockResolvedValue(undefined);
     queue = new BlindBoxQueue({ onRedemption, onDisplay });
-    queue.addRedemption(makeRedemption());
+    queue.add(makeRedemption());
     await queue.processNext();
     expect(onRedemption).toHaveBeenCalledOnce();
   });
@@ -174,11 +171,11 @@ describe('BlindBoxQueue', () => {
       .mockResolvedValue(undefined);
     queue = new BlindBoxQueue({ onRedemption, onDisplay });
 
-    queue.addRedemption(makeRedemption({ username: 'first' }));
+    queue.add(makeRedemption({ username: 'first' }));
     const processing = queue.processNext();
 
     // Add a second item while the first handler is still running
-    queue.addRedemption(makeRedemption({ username: 'second' }));
+    queue.add(makeRedemption({ username: 'second' }));
     resolveFirst();
     await processing;
 
@@ -201,16 +198,16 @@ describe('BlindBoxQueue', () => {
     });
     queue = new BlindBoxQueue({ onRedemption, onDisplay });
 
-    queue.addRedemption(makeRedemption());
-    queue.addDisplay(makeDisplay());
+    queue.add(makeRedemption());
+    queue.add(makeDisplay());
     await queue.processNext();
 
     expect(order).toEqual(['redemption', 'display']);
   });
 
   it('clears both queues and allows processing again', async () => {
-    queue.addRedemption(makeRedemption());
-    queue.addDisplay(makeDisplay());
+    queue.add(makeRedemption());
+    queue.add(makeDisplay());
     queue.clear();
 
     await queue.processNext();

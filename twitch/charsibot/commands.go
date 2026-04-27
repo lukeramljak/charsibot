@@ -281,10 +281,10 @@ func Commands(seriesConfigs []blindbox.SeriesConfig) map[string]Command {
 
 					b.broadcast(server.OverlayEvent{
 						Type: server.EventTypeCollectionDisplay,
-						Data: server.CollectionDisplayData{
+						Data: blindbox.BlindBoxDisplayData{
 							Username:   username,
-							Series:     cfg.Series,
 							Collection: slots,
+							Config:     cfg,
 						},
 					})
 
@@ -299,29 +299,39 @@ func Commands(seriesConfigs []blindbox.SeriesConfig) map[string]Command {
 
 // redeemBlindBox picks a random plushie, records it, and broadcasts the SSE event.
 func redeemBlindBox(ctx context.Context, b *Bot, userID, username string, cfg blindbox.SeriesConfig) {
-	key := blindbox.PickPlushie(cfg.Plushies)
+	plushie, err := blindbox.PickPlushie(cfg.Plushies)
+	if err != nil {
+		b.logger.Error("failed to pick plushie", "err", err, "series", cfg.Series)
+		b.SendMessage(SendMessageParams{
+			Message: fmt.Sprintf("@%s sorry, the redemption failed. Please ping @modservo.", username),
+		})
+		return
+	}
 
-	result, err := b.blindboxService.Redeem(ctx, userID, username, cfg.Series, key)
+	result, err := b.blindboxService.Redeem(ctx, userID, username, cfg.Series, plushie.Key)
 	if err != nil {
 		b.logger.Error("failed to redeem blind box", "err", err, "user", username)
+		b.SendMessage(SendMessageParams{
+			Message: fmt.Sprintf("@%s sorry, the redemption failed. Please ping @modservo.", username),
+		})
 		return
 	}
 
 	b.broadcast(server.OverlayEvent{
 		Type: server.EventTypeBlindBoxRedemption,
-		Data: server.BlindBoxRedemptionData{
+		Data: blindbox.BlindBoxRedemptionData{
 			Username:   result.Username,
-			Series:     result.Series,
-			Plushie:    result.Plushie,
+			Plushie:    plushie,
 			IsNew:      result.IsNew,
 			Collection: result.Collection,
+			Config:     cfg,
 		},
 	})
 
 	b.logger.Info("blind box redeemed",
 		"user", username,
 		"series", cfg.Series,
-		"plushie", key,
+		"plushie", plushie.Key,
 		"isNew", result.IsNew,
 	)
 }

@@ -14,8 +14,6 @@ import (
 	"time"
 
 	helix "github.com/nicklaw5/helix/v2"
-
-	"github.com/lukeramljak/charsibot/twitch/blindbox"
 )
 
 //go:embed all:web
@@ -25,6 +23,7 @@ const (
 	serverReadTimeout  = 10 * time.Second
 	shutdownTimeout    = 5 * time.Second
 	eventChannelBuffer = 10
+	pingInterval       = 30 * time.Second
 )
 
 type ServerConfig struct {
@@ -34,22 +33,20 @@ type ServerConfig struct {
 	OAuthRedirectURI string
 }
 
-// Server handles SSE streaming, OAuth, and API routes.
+// Server handles SSE streaming and OAuth.
 type Server struct {
-	cfg             ServerConfig
-	logger          *slog.Logger
-	server          *http.Server
-	clients         map[chan OverlayEvent]struct{}
-	mu              sync.RWMutex
-	blindboxService *blindbox.Service
+	cfg     ServerConfig
+	logger  *slog.Logger
+	server  *http.Server
+	clients map[chan OverlayEvent]struct{}
+	mu      sync.RWMutex
 }
 
-func NewServer(cfg ServerConfig, logger *slog.Logger, blindboxService *blindbox.Service) *Server {
+func NewServer(cfg ServerConfig, logger *slog.Logger) *Server {
 	return &Server{
-		cfg:             cfg,
-		logger:          logger,
-		clients:         make(map[chan OverlayEvent]struct{}),
-		blindboxService: blindboxService,
+		cfg:     cfg,
+		logger:  logger,
+		clients: make(map[chan OverlayEvent]struct{}),
 	}
 }
 
@@ -59,7 +56,6 @@ func (s *Server) Start() error {
 	mux.HandleFunc("GET /health", s.handleHealth)
 	mux.HandleFunc("GET /oauth/start", s.handleOAuthStart)
 	mux.HandleFunc("GET /oauth/callback", s.handleOAuthCallback)
-	mux.HandleFunc("GET /api/blindbox", s.handleBlindBox)
 
 	webContent, err := fs.Sub(webFS, "web")
 	if err != nil {
@@ -99,6 +95,7 @@ func (s *Server) handleSSE(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("X-Accel-Buffering", "no")
 
 	flusher, ok := w.(http.Flusher)
 	if !ok {
@@ -120,23 +117,27 @@ func (s *Server) handleSSE(w http.ResponseWriter, r *http.Request) {
 
 	s.logger.Info("SSE client connected", "remote_addr", r.RemoteAddr)
 
-	s.Broadcast(OverlayEvent{
-		Type:      EventTypeConnected,
-		Timestamp: time.Now().Format(time.RFC3339),
-	})
+	fmt.Fprintf(w, ": ping\n\n")
+	flusher.Flush()
+
+	ping := time.NewTicker(pingInterval)
+	defer ping.Stop()
 
 	for {
 		select {
 		case <-r.Context().Done():
 			s.logger.Debug("SSE client disconnected")
 			return
+		case <-ping.C:
+			fmt.Fprintf(w, ": ping\n\n")
+			flusher.Flush()
 		case event := <-ch:
-			data, err := json.Marshal(event)
+			data, err := json.Marshal(event.Data)
 			if err != nil {
 				s.logger.Error("failed to marshal event", "err", err)
 				continue
 			}
-			fmt.Fprintf(w, "data: %s\n\n", data)
+			fmt.Fprintf(w, "event: %s\ndata: %s\n\n", event.Type, data)
 			flusher.Flush()
 		}
 	}
@@ -246,19 +247,5 @@ func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	if _, err := w.Write([]byte("OK")); err != nil {
 		s.logger.Error("failed to write health response", "err", err)
-	}
-}
-
-func (s *Server) handleBlindBox(w http.ResponseWriter, r *http.Request) {
-	series, err := s.blindboxService.LoadAllSeries(r.Context())
-	if err != nil {
-		http.Error(w, "failed to load series", http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	if err := json.NewEncoder(w).Encode(series); err != nil {
-		s.logger.Error("failed to encode series response", "err", err)
 	}
 }

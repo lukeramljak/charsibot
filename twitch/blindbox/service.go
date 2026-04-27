@@ -138,19 +138,19 @@ func (s *Service) ResetCollection(ctx context.Context, userID, series string) er
 	})
 }
 
-// PickPlushie selects a random plushie key from the given plushies using
-// weighted random selection. Returns "secret" if the list is empty.
-func PickPlushie(plushies []db.BlindBoxPlushie) string {
-	weighted := []string{}
+// PickPlushie selects a random plushie using weighted random selection.
+// Returns an error if no plushies have a positive weight.
+func PickPlushie(plushies []db.BlindBoxPlushie) (db.BlindBoxPlushie, error) {
+	weighted := []db.BlindBoxPlushie{}
 	for _, p := range plushies {
 		for range p.Weight {
-			weighted = append(weighted, p.Key)
+			weighted = append(weighted, p)
 		}
 	}
 	if len(weighted) == 0 {
-		return "secret"
+		return db.BlindBoxPlushie{}, errors.New("no plushies with positive weight")
 	}
-	return weighted[rand.IntN(len(weighted))]
+	return weighted[rand.IntN(len(weighted))], nil
 }
 
 func groupSeriesRows(rows []db.GetAllSeriesWithPlushiesRow) []SeriesConfig {
