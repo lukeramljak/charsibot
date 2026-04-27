@@ -13,7 +13,6 @@
   import { BlindBoxQueue } from '../queue.svelte';
   import { charsibot } from '$lib/charsibot.svelte';
   import { onMount } from 'svelte';
-  import DisconnectedBanner from '$lib/overlays/components/DisconnectedBanner.svelte';
 
   type AnimationMode = 'idle' | 'reveal' | 'collection';
 
@@ -97,13 +96,6 @@
 </script>
 
 <audio bind:this={audioElement}></audio>
-
-{#if !charsibot.isConnected}
-  <DisconnectedBanner
-    title="Blind Box Overlay is Sleeping"
-    subtitle="Please wait before redeeming! ♡"
-  />
-{/if}
 
 {#if currentItem && charsibot.isConnected}
   {#key animationKey}
