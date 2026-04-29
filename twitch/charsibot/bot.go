@@ -291,6 +291,10 @@ func (b *Bot) onChannelPointRedemption(event twitch.EventChannelChannelPointsCus
 
 func (b *Bot) onChannelRaid(event twitch.EventChannelRaid) {
 	userName := event.FromBroadcasterUserName
+
+	const msgDelay = 5 * time.Second
+	time.Sleep(msgDelay)
+
 	b.SendMessage(SendMessageParams{
 		Message: fmt.Sprintf("!so @%s", userName),
 	})
