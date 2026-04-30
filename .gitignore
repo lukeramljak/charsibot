@@ -1,63 +1,8 @@
-# Build artifacts
-tmp/
-*/tmp/
-bin
-
-# Dependencies
-node_modules
-
-# Build outputs
-.output
-.vercel
-.netlify
-.wrangler
-.svelte-kit
-build
-dist
-
-# Environment files
 .env
-*/.env
 .env.*
 !.env.example
-!.env.test
-
-# IDE files
-.vscode
-.idea
-*.swp
-*.swo
-*~
-
-# OS files
+tmp/
+charsibot.db*
+bin/
+server/web/
 .DS_Store
-Thumbs.db
-
-# Logs
-logs
-*.log
-npm-debug.log*
-pnpm-debug.log*
-bun-debug.log*
-
-# Vite
-vite.config.js.timestamp-*
-vite.config.ts.timestamp-*
-
-# Development files
-.air.toml
-air_tmp/
-
-# Go binaries
-vendor/
-*.exe
-*.exe~
-*.dll
-*.so
-*.dylib
-*.test
-*.out
-
-# Database files (for local dev only)
-*.db
-*.db-*

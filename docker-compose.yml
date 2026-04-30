@@ -1,17 +1,13 @@
 services:
-  twitch:
+  charsibot:
     build:
-      context: ./twitch
       dockerfile: Dockerfile
-    container_name: twitch
+    container_name: charsibot
     restart: unless-stopped
     ports:
       - "8081:8081"
     volumes:
       - twitch-data:/data
-    env_file:
-      - path: ./twitch/.env
-        required: false
     environment:
       - SERVER_PORT=8081
       - DB_PATH=/data/charsibot.db
@@ -24,20 +20,10 @@ services:
       retries: 3
       start_period: 20s
 
-  discord:
-    build:
-      context: ./discord
-      dockerfile: Dockerfile
-    container_name: discord
-    restart: unless-stopped
-    env_file:
-      - path: ./discord/.env
-        required: false
-
   backup:
     image: offen/docker-volume-backup:latest
     restart: always
-    container_name: twitch-backup
+    container_name: charsibot-backup
     environment:
       - BACKUP_FILENAME=charsibot-db-backup-%Y-%m-%dT%H-%M-%S.tar.gz
       - BACKUP_CRON_EXPRESSION=0 18 * * *
