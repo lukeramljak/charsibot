@@ -35,7 +35,7 @@ export class BlindBoxQueue {
     this.processNext();
   }
 
-  async processNext(): Promise<void> {
+  private async processNext(): Promise<void> {
     if (this.isProcessing) return;
     this.isProcessing = true;
 
