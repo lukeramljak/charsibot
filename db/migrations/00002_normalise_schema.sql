@@ -37,67 +37,67 @@ CREATE TABLE blind_box_plushies (
 
 -- Seed blind_box_series from hardcoded config.go and configs.ts values
 INSERT INTO blind_box_series (series, redemption_title, name, reveal_sound, box_front_face, box_side_face, display_color, text_color) VALUES
-  ('coobubu',    'Cooper Series Blind Box',       'Coobubus',    '/blind-box/coobubu/reveal.mp3',    '/blind-box/coobubu/box-front.png',    '/blind-box/coobubu/box-side.png',    '#ff8c82', '#ffffff'),
-  ('olliepop',   'Ollie Series Blind Box',        'Olliepops',   '/blind-box/olliepops/reveal.mp3',   '/blind-box/olliepops/box-front.png',  '/blind-box/olliepops/box-side.png',  '#ff8c82', '#ffffff'),
-  ('xmas',       'Christmas Series Blind Box',    'Lil Helpers', '/blind-box/xmas/reveal.mp3',   '/blind-box/xmas/box-front.png',  '/blind-box/xmas/box-side.png',  '#9e0000', '#ffffff'),
-  ('valentines', 'Valentine''s Series Blind Box', 'Valentines',  '/blind-box/valentines/reveal.mp3',  '/blind-box/valentines/box-front.png', '/blind-box/valentines/box-side.png', '#ffa7c3', '#ffffff'),
-  ('easter',     'Easter Series Blind Box',       'Chocopups',   '/blind-box/easter/reveal.mp3',      '/blind-box/easter/box-front.png',     '/blind-box/easter/box-side.png',     '#ff81a9', '#ffffff');
+  ('coobubu',    'Cooper Series Blind Box',       'Coobubus',    '/assets/blind-box/coobubu/reveal.mp3',    '/assets/blind-box/coobubu/box-front.png',    '/assets/blind-box/coobubu/box-side.png',    '#ff8c82', '#ffffff'),
+  ('olliepop',   'Ollie Series Blind Box',        'Olliepops',   '/assets/blind-box/olliepops/reveal.mp3',   '/assets/blind-box/olliepops/box-front.png',  '/assets/blind-box/olliepops/box-side.png',  '#ff8c82', '#ffffff'),
+  ('xmas',       'Christmas Series Blind Box',    'Lil Helpers', '/assets/blind-box/xmas/reveal.mp3',   '/assets/blind-box/xmas/box-front.png',  '/assets/blind-box/xmas/box-side.png',  '#9e0000', '#ffffff'),
+  ('valentines', 'Valentine''s Series Blind Box', 'Valentines',  '/assets/blind-box/valentines/reveal.mp3',  '/assets/blind-box/valentines/box-front.png', '/assets/blind-box/valentines/box-side.png', '#ffa7c3', '#ffffff'),
+  ('easter',     'Easter Series Blind Box',       'Chocopups',   '/assets/blind-box/easter/reveal.mp3',      '/assets/blind-box/easter/box-front.png',     '/assets/blind-box/easter/box-side.png',     '#ff81a9', '#ffffff');
 
 -- Seed blind_box_plushies from hardcoded config.go weights and configs.ts display data
 -- coobubu: rewards 1-7 weight 12, secret weight 1
 INSERT INTO blind_box_plushies (series, key, sort_order, weight, name, image, empty_image) VALUES
-  ('coobubu', 'cutey',     1, 12, 'Cutey',     '/blind-box/coobubu/cutey.png',     '/blind-box/coobubu/empty-slot.png'),
-  ('coobubu', 'blueberry', 2, 12, 'Blueberry', '/blind-box/coobubu/blueberry.png', '/blind-box/coobubu/empty-slot.png'),
-  ('coobubu', 'lemony',    3, 12, 'Lemony',    '/blind-box/coobubu/lemony.png',    '/blind-box/coobubu/empty-slot.png'),
-  ('coobubu', 'bibi',      4, 12, 'Bibi',      '/blind-box/coobubu/bibi.png',      '/blind-box/coobubu/empty-slot.png'),
-  ('coobubu', 'pinky',     5, 12, 'Pinky',     '/blind-box/coobubu/pinky.png',     '/blind-box/coobubu/empty-slot.png'),
-  ('coobubu', 'minty',     6, 12, 'Minty',     '/blind-box/coobubu/minty.png',     '/blind-box/coobubu/empty-slot.png'),
-  ('coobubu', 'cherry',    7, 12, 'Cherry',    '/blind-box/coobubu/cherry.png',    '/blind-box/coobubu/empty-slot.png'),
-  ('coobubu', 'secret',    8,  1, 'Secret',    '/blind-box/coobubu/secret.png',    '/blind-box/coobubu/empty-slot.png');
+  ('coobubu', 'cutey',     1, 12, 'Cutey',     '/assets/blind-box/coobubu/cutey.png',     '/assets/blind-box/coobubu/empty-slot.png'),
+  ('coobubu', 'blueberry', 2, 12, 'Blueberry', '/assets/blind-box/coobubu/blueberry.png', '/assets/blind-box/coobubu/empty-slot.png'),
+  ('coobubu', 'lemony',    3, 12, 'Lemony',    '/assets/blind-box/coobubu/lemony.png',    '/assets/blind-box/coobubu/empty-slot.png'),
+  ('coobubu', 'bibi',      4, 12, 'Bibi',      '/assets/blind-box/coobubu/bibi.png',      '/assets/blind-box/coobubu/empty-slot.png'),
+  ('coobubu', 'pinky',     5, 12, 'Pinky',     '/assets/blind-box/coobubu/pinky.png',     '/assets/blind-box/coobubu/empty-slot.png'),
+  ('coobubu', 'minty',     6, 12, 'Minty',     '/assets/blind-box/coobubu/minty.png',     '/assets/blind-box/coobubu/empty-slot.png'),
+  ('coobubu', 'cherry',    7, 12, 'Cherry',    '/assets/blind-box/coobubu/cherry.png',    '/assets/blind-box/coobubu/empty-slot.png'),
+  ('coobubu', 'secret',    8,  1, 'Secret',    '/assets/blind-box/coobubu/secret.png',    '/assets/blind-box/coobubu/empty-slot.png');
 
 -- olliepop: same weights as coobubu
 INSERT INTO blind_box_plushies (series, key, sort_order, weight, name, image, empty_image) VALUES
-  ('olliepop', 'berry',     1, 12, 'Berry',     '/blind-box/olliepops/berry.png',     '/blind-box/olliepops/empty-slot.png'),
-  ('olliepop', 'tangerine', 2, 12, 'Tangerine', '/blind-box/olliepops/tangerine.png', '/blind-box/olliepops/empty-slot.png'),
-  ('olliepop', 'bibble',    3, 12, 'Bibble',    '/blind-box/olliepops/bibble.png',    '/blind-box/olliepops/empty-slot.png'),
-  ('olliepop', 'kiwi',      4, 12, 'Kiwi',      '/blind-box/olliepops/kiwi.png',      '/blind-box/olliepops/empty-slot.png'),
-  ('olliepop', 'crunchy',   5, 12, 'Crunchy',   '/blind-box/olliepops/crunchy.png',   '/blind-box/olliepops/empty-slot.png'),
-  ('olliepop', 'caramel',   6, 12, 'Caramel',   '/blind-box/olliepops/caramel.png',   '/blind-box/olliepops/empty-slot.png'),
-  ('olliepop', 'grape',     7, 12, 'Grape',     '/blind-box/olliepops/grape.png',     '/blind-box/olliepops/empty-slot.png'),
-  ('olliepop', 'secret',    8,  1, 'Secret',    '/blind-box/olliepops/secret.png',    '/blind-box/olliepops/empty-slot.png');
+  ('olliepop', 'berry',     1, 12, 'Berry',     '/assets/blind-box/olliepops/berry.png',     '/assets/blind-box/olliepops/empty-slot.png'),
+  ('olliepop', 'tangerine', 2, 12, 'Tangerine', '/assets/blind-box/olliepops/tangerine.png', '/assets/blind-box/olliepops/empty-slot.png'),
+  ('olliepop', 'bibble',    3, 12, 'Bibble',    '/assets/blind-box/olliepops/bibble.png',    '/assets/blind-box/olliepops/empty-slot.png'),
+  ('olliepop', 'kiwi',      4, 12, 'Kiwi',      '/assets/blind-box/olliepops/kiwi.png',      '/assets/blind-box/olliepops/empty-slot.png'),
+  ('olliepop', 'crunchy',   5, 12, 'Crunchy',   '/assets/blind-box/olliepops/crunchy.png',   '/assets/blind-box/olliepops/empty-slot.png'),
+  ('olliepop', 'caramel',   6, 12, 'Caramel',   '/assets/blind-box/olliepops/caramel.png',   '/assets/blind-box/olliepops/empty-slot.png'),
+  ('olliepop', 'grape',     7, 12, 'Grape',     '/assets/blind-box/olliepops/grape.png',     '/assets/blind-box/olliepops/empty-slot.png'),
+  ('olliepop', 'secret',    8,  1, 'Secret',    '/assets/blind-box/olliepops/secret.png',    '/assets/blind-box/olliepops/empty-slot.png');
 
 -- xmas: rewards 1-7 weight 3, secret weight 1
 INSERT INTO blind_box_plushies (series, key, sort_order, weight, name, image, empty_image) VALUES
-  ('xmas', 'snowy',  1, 3, 'Snowy',  '/blind-box/xmas/snowy.png',  '/blind-box/xmas/snowy-blank.png'),
-  ('xmas', 'piney',  2, 3, 'Piney',  '/blind-box/xmas/piney.png',  '/blind-box/xmas/piney-blank.png'),
-  ('xmas', 'starry', 3, 3, 'Starry', '/blind-box/xmas/starry.png', '/blind-box/xmas/starry-blank.png'),
-  ('xmas', 'socky',  4, 3, 'Socky',  '/blind-box/xmas/socky.png',  '/blind-box/xmas/socky-blank.png'),
-  ('xmas', 'gingey', 5, 3, 'Gingey', '/blind-box/xmas/gingey.png', '/blind-box/xmas/gingey-blank.png'),
-  ('xmas', 'nicky',  6, 3, 'Nicky',  '/blind-box/xmas/nicky.png',  '/blind-box/xmas/nicky-blank.png'),
-  ('xmas', 'dancey', 7, 3, 'Dancey', '/blind-box/xmas/dancey.png', '/blind-box/xmas/dancey-blank.png'),
-  ('xmas', 'secret', 8, 1, 'Secret', '/blind-box/xmas/secret.png', '/blind-box/xmas/secret-blank.png');
+  ('xmas', 'snowy',  1, 3, 'Snowy',  '/assets/blind-box/xmas/snowy.png',  '/assets/blind-box/xmas/snowy-blank.png'),
+  ('xmas', 'piney',  2, 3, 'Piney',  '/assets/blind-box/xmas/piney.png',  '/assets/blind-box/xmas/piney-blank.png'),
+  ('xmas', 'starry', 3, 3, 'Starry', '/assets/blind-box/xmas/starry.png', '/assets/blind-box/xmas/starry-blank.png'),
+  ('xmas', 'socky',  4, 3, 'Socky',  '/assets/blind-box/xmas/socky.png',  '/assets/blind-box/xmas/socky-blank.png'),
+  ('xmas', 'gingey', 5, 3, 'Gingey', '/assets/blind-box/xmas/gingey.png', '/assets/blind-box/xmas/gingey-blank.png'),
+  ('xmas', 'nicky',  6, 3, 'Nicky',  '/assets/blind-box/xmas/nicky.png',  '/assets/blind-box/xmas/nicky-blank.png'),
+  ('xmas', 'dancey', 7, 3, 'Dancey', '/assets/blind-box/xmas/dancey.png', '/assets/blind-box/xmas/dancey-blank.png'),
+  ('xmas', 'secret', 8, 1, 'Secret', '/assets/blind-box/xmas/secret.png', '/assets/blind-box/xmas/secret-blank.png');
 
 -- valentines: same weights as xmas
 INSERT INTO blind_box_plushies (series, key, sort_order, weight, name, image, empty_image) VALUES
-  ('valentines', 'choccy',  1, 3, 'Choccy',  '/blind-box/valentines/choccy.png',  '/blind-box/valentines/choccy-blank.png'),
-  ('valentines', 'cupie',   2, 3, 'Cupie',   '/blind-box/valentines/cupie.png',   '/blind-box/valentines/cupie-blank.png'),
-  ('valentines', 'bachie',  3, 3, 'Bachie',  '/blind-box/valentines/bachie.png',  '/blind-box/valentines/bachie-blank.png'),
-  ('valentines', 'drinky',  4, 3, 'Drinky',  '/blind-box/valentines/drinky.png',  '/blind-box/valentines/drinky-blank.png'),
-  ('valentines', 'sherbie', 5, 3, 'Sherbie', '/blind-box/valentines/sherbie.png', '/blind-box/valentines/sherbie-blank.png'),
-  ('valentines', 'lovey',   6, 3, 'Lovey',   '/blind-box/valentines/lovey.png',   '/blind-box/valentines/lovey-blank.png'),
-  ('valentines', 'bunchie', 7, 3, 'Bunchie', '/blind-box/valentines/bunchie.png', '/blind-box/valentines/bunchie-blank.png'),
-  ('valentines', 'secret',  8, 1, 'Secret',  '/blind-box/valentines/secret.png',  '/blind-box/valentines/secret-blank.png');
+  ('valentines', 'choccy',  1, 3, 'Choccy',  '/assets/blind-box/valentines/choccy.png',  '/assets/blind-box/valentines/choccy-blank.png'),
+  ('valentines', 'cupie',   2, 3, 'Cupie',   '/assets/blind-box/valentines/cupie.png',   '/assets/blind-box/valentines/cupie-blank.png'),
+  ('valentines', 'bachie',  3, 3, 'Bachie',  '/assets/blind-box/valentines/bachie.png',  '/assets/blind-box/valentines/bachie-blank.png'),
+  ('valentines', 'drinky',  4, 3, 'Drinky',  '/assets/blind-box/valentines/drinky.png',  '/assets/blind-box/valentines/drinky-blank.png'),
+  ('valentines', 'sherbie', 5, 3, 'Sherbie', '/assets/blind-box/valentines/sherbie.png', '/assets/blind-box/valentines/sherbie-blank.png'),
+  ('valentines', 'lovey',   6, 3, 'Lovey',   '/assets/blind-box/valentines/lovey.png',   '/assets/blind-box/valentines/lovey-blank.png'),
+  ('valentines', 'bunchie', 7, 3, 'Bunchie', '/assets/blind-box/valentines/bunchie.png', '/assets/blind-box/valentines/bunchie-blank.png'),
+  ('valentines', 'secret',  8, 1, 'Secret',  '/assets/blind-box/valentines/secret.png',  '/assets/blind-box/valentines/secret-blank.png');
 
 -- easter: rewards 1-7 weight 5, secret weight 1
 INSERT INTO blind_box_plushies (series, key, sort_order, weight, name, image, empty_image) VALUES
-  ('easter', 'bunny',  1, 5, 'Bunny',  '/blind-box/easter/bunny.png',  '/blind-box/easter/bunny-blank.png'),
-  ('easter', 'chikky', 2, 5, 'Chikky', '/blind-box/easter/chikky.png', '/blind-box/easter/chikky-blank.png'),
-  ('easter', 'nesty',  3, 5, 'Nesty',  '/blind-box/easter/nesty.png',  '/blind-box/easter/nesty-blank.png'),
-  ('easter', 'lamby',  4, 5, 'Lamby',  '/blind-box/easter/lamby.png',  '/blind-box/easter/lamby-blank.png'),
-  ('easter', 'choccy', 5, 5, 'Choccy', '/blind-box/easter/choccy.png', '/blind-box/easter/choccy-blank.png'),
-  ('easter', 'eggy',   6, 5, 'Eggy',   '/blind-box/easter/eggy.png',   '/blind-box/easter/eggy-blank.png'),
-  ('easter', 'flowey', 7, 5, 'Flowey', '/blind-box/easter/flowey.png', '/blind-box/easter/flowey-blank.png'),
-  ('easter', 'secret', 8, 1, 'Secret', '/blind-box/easter/secret.png', '/blind-box/easter/secret-blank.png');
+  ('easter', 'bunny',  1, 5, 'Bunny',  '/assets/blind-box/easter/bunny.png',  '/assets/blind-box/easter/bunny-blank.png'),
+  ('easter', 'chikky', 2, 5, 'Chikky', '/assets/blind-box/easter/chikky.png', '/assets/blind-box/easter/chikky-blank.png'),
+  ('easter', 'nesty',  3, 5, 'Nesty',  '/assets/blind-box/easter/nesty.png',  '/assets/blind-box/easter/nesty-blank.png'),
+  ('easter', 'lamby',  4, 5, 'Lamby',  '/assets/blind-box/easter/lamby.png',  '/assets/blind-box/easter/lamby-blank.png'),
+  ('easter', 'choccy', 5, 5, 'Choccy', '/assets/blind-box/easter/choccy.png', '/assets/blind-box/easter/choccy-blank.png'),
+  ('easter', 'eggy',   6, 5, 'Eggy',   '/assets/blind-box/easter/eggy.png',   '/assets/blind-box/easter/eggy-blank.png'),
+  ('easter', 'flowey', 7, 5, 'Flowey', '/assets/blind-box/easter/flowey.png', '/assets/blind-box/easter/flowey-blank.png'),
+  ('easter', 'secret', 8, 1, 'Secret', '/assets/blind-box/easter/secret.png', '/assets/blind-box/easter/secret-blank.png');
 
 -- Stat definitions (replaces hardcoded columns and statList in redemptions.go)
 -- short_name is used for overlay/leaderboard labels (abbreviated)
