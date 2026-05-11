@@ -21,6 +21,12 @@ const (
 	statsSubCommandSet      = "set"
 	statsSubCommandRm       = "rm"
 	blindBoxCommandMinParts = 2
+
+	msgFailedToUpdateStats = "Failed to update stats"
+	fragmentTypeMention    = "mention"
+	badgeBroadcaster       = "broadcaster"
+	badgeModerator         = "moderator"
+	badgeLeadModerator     = "lead_moderator"
 )
 
 type Command struct {
@@ -71,7 +77,7 @@ func Commands(seriesConfigs []blindbox.SeriesConfig) map[string]Command {
 				); err != nil {
 					b.logger.Error("failed to ensure stats", "err", err, "user", mentionedUser.UserLogin)
 					b.SendMessage(SendMessageParams{
-						Message:              "Failed to update stats",
+						Message:              msgFailedToUpdateStats,
 						ReplyParentMessageID: event.MessageId,
 					})
 					return
@@ -80,7 +86,7 @@ func Commands(seriesConfigs []blindbox.SeriesConfig) map[string]Command {
 				if err = b.statsService.ModifyStatValue(ctx, mentionedUser.UserID, "penis", -1003); err != nil {
 					b.logger.Error("failed to modify stat", "err", err, "user", mentionedUser.UserLogin)
 					b.SendMessage(SendMessageParams{
-						Message:              "Failed to update stats",
+						Message:              msgFailedToUpdateStats,
 						ReplyParentMessageID: event.MessageId,
 					})
 					return
@@ -332,7 +338,7 @@ func redeemBlindBox(ctx context.Context, b *Bot, userID, username string, cfg bl
 		"user", username,
 		"series", cfg.Series,
 		"plushie", plushie.Key,
-		"isNew", result.IsNew,
+		"is_new", result.IsNew,
 	)
 }
 
@@ -340,7 +346,7 @@ func extractMentionedUserFromFragments(
 	fragments []twitch.ChatMessageFragment,
 ) (*twitch.ChatMessageFragmentMention, error) {
 	for _, fragment := range fragments {
-		if fragment.Type == "mention" && fragment.Mention != nil {
+		if fragment.Type == fragmentTypeMention && fragment.Mention != nil {
 			return fragment.Mention, nil
 		}
 	}
@@ -352,7 +358,7 @@ func extractMentionedUserFromFragments(
 func IsModerator(event twitch.EventChannelChatMessage) bool {
 	for _, badge := range event.Badges {
 		switch badge.SetId {
-		case "broadcaster", "moderator", "lead_moderator":
+		case badgeBroadcaster, badgeModerator, badgeLeadModerator:
 			return true
 		}
 	}
