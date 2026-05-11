@@ -61,7 +61,18 @@ func (s *Server) Start() error {
 	if err != nil {
 		return fmt.Errorf("create web sub-filesystem: %w", err)
 	}
-	mux.Handle("GET /", http.FileServerFS(webContent))
+	fileServer := http.FileServerFS(webContent)
+	mux.Handle("GET /", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Serve real files directly; fall back to index.html for SPA routes.
+		path := strings.TrimPrefix(r.URL.Path, "/")
+		if path != "" {
+			if _, err := fs.Stat(webContent, path); err != nil {
+				r = r.Clone(r.Context())
+				r.URL.Path = "/"
+			}
+		}
+		fileServer.ServeHTTP(w, r)
+	}))
 
 	s.server = &http.Server{
 		Addr:         fmt.Sprintf(":%d", s.cfg.Port),
