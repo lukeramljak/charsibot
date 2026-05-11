@@ -195,7 +195,7 @@ func Commands(seriesConfigs []blindbox.SeriesConfig) map[string]Command {
 				); err != nil {
 					b.logger.Error("failed to ensure stats", "err", err, "user", mentionedUser.UserLogin)
 					b.SendMessage(SendMessageParams{
-						Message:              "Failed to update stats",
+						Message:              msgFailedToUpdateStats,
 						ReplyParentMessageID: event.MessageId,
 					})
 					return
@@ -205,7 +205,7 @@ func Commands(seriesConfigs []blindbox.SeriesConfig) map[string]Command {
 					if err = b.statsService.SetStatValue(ctx, mentionedUser.UserID, statColumn, amount); err != nil {
 						b.logger.Error("failed to set stat", "err", err, "user", mentionedUser.UserLogin)
 						b.SendMessage(SendMessageParams{
-							Message:              "Failed to update stats",
+							Message:              msgFailedToUpdateStats,
 							ReplyParentMessageID: event.MessageId,
 						})
 						return
@@ -219,7 +219,7 @@ func Commands(seriesConfigs []blindbox.SeriesConfig) map[string]Command {
 					); err != nil {
 						b.logger.Error("failed to modify stat", "err", err, "user", mentionedUser.UserLogin)
 						b.SendMessage(SendMessageParams{
-							Message:              "Failed to update stats",
+							Message:              msgFailedToUpdateStats,
 							ReplyParentMessageID: event.MessageId,
 						})
 						return

@@ -15,8 +15,10 @@ type RedemptionFunc func(ctx context.Context, b *Bot, event twitch.EventChannelC
 
 // Redemptions returns the full map of channel point redemptions keyed by reward title.
 func Redemptions(seriesConfigs []blindbox.SeriesConfig) map[string]RedemptionFunc {
+	const rewardDrinkAPotion = "Drink a Potion"
+
 	redemptions := map[string]RedemptionFunc{
-		"Drink a Potion": func(ctx context.Context, b *Bot, event twitch.EventChannelChannelPointsCustomRewardRedemptionAdd) {
+		rewardDrinkAPotion: func(ctx context.Context, b *Bot, event twitch.EventChannelChannelPointsCustomRewardRedemptionAdd) {
 			const (
 				negativePercent = 5
 				percentMax      = 100
