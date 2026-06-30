@@ -5,16 +5,21 @@ services:
     container_name: charsibot
     restart: unless-stopped
     ports:
-      - "8081:8081"
+      - "${SERVER_PORT:-8081}:8081"
     volumes:
       - twitch-data:/data
     environment:
-      - SERVER_PORT=8081
-      - DB_PATH=/data/charsibot.db
+      - SERVER_PORT=${SERVER_PORT:-8081}
+      - DB_PATH=${DB_PATH:-/data/charsibot.db}
+      - TWITCH_CLIENT_ID=${TWITCH_CLIENT_ID}
+      - TWITCH_CLIENT_SECRET=${TWITCH_CLIENT_SECRET}
+      - TWITCH_BOT_USER_ID=${TWITCH_BOT_USER_ID}
+      - TWITCH_CHANNEL_USER_ID=${TWITCH_CHANNEL_USER_ID}
+      - TWITCH_OAUTH_REDIRECT_URI=${TWITCH_OAUTH_REDIRECT_URI}
     labels:
       - docker-volume-backup.stop-during-backup=true
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8081/health"]
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:$${SERVER_PORT}/health"]
       interval: 15s
       timeout: 5s
       retries: 3

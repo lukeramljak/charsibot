@@ -16,7 +16,8 @@ COPY . .
 COPY --from=web-build /app/web/build ./server/web
 RUN CGO_ENABLED=0 GOOS=linux go build -o /charsibot ./cmd/charsibot
 
-FROM gcr.io/distroless/static-debian12
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends wget && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=build /charsibot /charsibot
 EXPOSE 8081
