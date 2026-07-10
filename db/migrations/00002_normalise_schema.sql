@@ -43,28 +43,28 @@ INSERT INTO blind_box_series (series, redemption_title, name, reveal_sound, box_
   ('valentines', 'Valentine''s Series Blind Box', 'Valentines',  '/assets/blind-box/valentines/reveal.mp3',  '/assets/blind-box/valentines/box-front.png', '/assets/blind-box/valentines/box-side.png', '#ffa7c3', '#ffffff'),
   ('easter',     'Easter Series Blind Box',       'Chocopups',   '/assets/blind-box/easter/reveal.mp3',      '/assets/blind-box/easter/box-front.png',     '/assets/blind-box/easter/box-side.png',     '#ff81a9', '#ffffff');
 
--- Seed blind_box_plushies from hardcoded config.go weights and configs.ts display data
--- coobubu: rewards 1-7 weight 12, secret weight 1
+-- Seed blind_box_plushies
+-- coobubu: rewards 1-7 weight 23, secret weight 7 (secret is a 1 in 24 chance)
 INSERT INTO blind_box_plushies (series, key, sort_order, weight, name, image, empty_image) VALUES
-  ('coobubu', 'cutey',     1, 12, 'Cutey',     '/assets/blind-box/coobubu/cutey.png',     '/assets/blind-box/coobubu/empty-slot.png'),
-  ('coobubu', 'blueberry', 2, 12, 'Blueberry', '/assets/blind-box/coobubu/blueberry.png', '/assets/blind-box/coobubu/empty-slot.png'),
-  ('coobubu', 'lemony',    3, 12, 'Lemony',    '/assets/blind-box/coobubu/lemony.png',    '/assets/blind-box/coobubu/empty-slot.png'),
-  ('coobubu', 'bibi',      4, 12, 'Bibi',      '/assets/blind-box/coobubu/bibi.png',      '/assets/blind-box/coobubu/empty-slot.png'),
-  ('coobubu', 'pinky',     5, 12, 'Pinky',     '/assets/blind-box/coobubu/pinky.png',     '/assets/blind-box/coobubu/empty-slot.png'),
-  ('coobubu', 'minty',     6, 12, 'Minty',     '/assets/blind-box/coobubu/minty.png',     '/assets/blind-box/coobubu/empty-slot.png'),
-  ('coobubu', 'cherry',    7, 12, 'Cherry',    '/assets/blind-box/coobubu/cherry.png',    '/assets/blind-box/coobubu/empty-slot.png'),
-  ('coobubu', 'secret',    8,  1, 'Secret',    '/assets/blind-box/coobubu/secret.png',    '/assets/blind-box/coobubu/empty-slot.png');
+  ('coobubu', 'cutey',     1, 23, 'Cutey',     '/assets/blind-box/coobubu/cutey.png',     '/assets/blind-box/coobubu/empty-slot.png'),
+  ('coobubu', 'blueberry', 2, 23, 'Blueberry', '/assets/blind-box/coobubu/blueberry.png', '/assets/blind-box/coobubu/empty-slot.png'),
+  ('coobubu', 'lemony',    3, 23, 'Lemony',    '/assets/blind-box/coobubu/lemony.png',    '/assets/blind-box/coobubu/empty-slot.png'),
+  ('coobubu', 'bibi',      4, 23, 'Bibi',      '/assets/blind-box/coobubu/bibi.png',      '/assets/blind-box/coobubu/empty-slot.png'),
+  ('coobubu', 'pinky',     5, 23, 'Pinky',     '/assets/blind-box/coobubu/pinky.png',     '/assets/blind-box/coobubu/empty-slot.png'),
+  ('coobubu', 'minty',     6, 23, 'Minty',     '/assets/blind-box/coobubu/minty.png',     '/assets/blind-box/coobubu/empty-slot.png'),
+  ('coobubu', 'cherry',    7, 23, 'Cherry',    '/assets/blind-box/coobubu/cherry.png',    '/assets/blind-box/coobubu/empty-slot.png'),
+  ('coobubu', 'secret',    8,  7, 'Secret',    '/assets/blind-box/coobubu/secret.png',    '/assets/blind-box/coobubu/empty-slot.png');
 
--- olliepop: same weights as coobubu
+-- olliepop: same weights as coobubu (secret is a 1 in 24 chance)
 INSERT INTO blind_box_plushies (series, key, sort_order, weight, name, image, empty_image) VALUES
-  ('olliepop', 'berry',     1, 12, 'Berry',     '/assets/blind-box/olliepops/berry.png',     '/assets/blind-box/olliepops/empty-slot.png'),
-  ('olliepop', 'tangerine', 2, 12, 'Tangerine', '/assets/blind-box/olliepops/tangerine.png', '/assets/blind-box/olliepops/empty-slot.png'),
-  ('olliepop', 'bibble',    3, 12, 'Bibble',    '/assets/blind-box/olliepops/bibble.png',    '/assets/blind-box/olliepops/empty-slot.png'),
-  ('olliepop', 'kiwi',      4, 12, 'Kiwi',      '/assets/blind-box/olliepops/kiwi.png',      '/assets/blind-box/olliepops/empty-slot.png'),
-  ('olliepop', 'crunchy',   5, 12, 'Crunchy',   '/assets/blind-box/olliepops/crunchy.png',   '/assets/blind-box/olliepops/empty-slot.png'),
-  ('olliepop', 'caramel',   6, 12, 'Caramel',   '/assets/blind-box/olliepops/caramel.png',   '/assets/blind-box/olliepops/empty-slot.png'),
-  ('olliepop', 'grape',     7, 12, 'Grape',     '/assets/blind-box/olliepops/grape.png',     '/assets/blind-box/olliepops/empty-slot.png'),
-  ('olliepop', 'secret',    8,  1, 'Secret',    '/assets/blind-box/olliepops/secret.png',    '/assets/blind-box/olliepops/empty-slot.png');
+  ('olliepop', 'berry',     1, 23, 'Berry',     '/assets/blind-box/olliepops/berry.png',     '/assets/blind-box/olliepops/empty-slot.png'),
+  ('olliepop', 'tangerine', 2, 23, 'Tangerine', '/assets/blind-box/olliepops/tangerine.png', '/assets/blind-box/olliepops/empty-slot.png'),
+  ('olliepop', 'bibble',    3, 23, 'Bibble',    '/assets/blind-box/olliepops/bibble.png',    '/assets/blind-box/olliepops/empty-slot.png'),
+  ('olliepop', 'kiwi',      4, 23, 'Kiwi',      '/assets/blind-box/olliepops/kiwi.png',      '/assets/blind-box/olliepops/empty-slot.png'),
+  ('olliepop', 'crunchy',   5, 23, 'Crunchy',   '/assets/blind-box/olliepops/crunchy.png',   '/assets/blind-box/olliepops/empty-slot.png'),
+  ('olliepop', 'caramel',   6, 23, 'Caramel',   '/assets/blind-box/olliepops/caramel.png',   '/assets/blind-box/olliepops/empty-slot.png'),
+  ('olliepop', 'grape',     7, 23, 'Grape',     '/assets/blind-box/olliepops/grape.png',     '/assets/blind-box/olliepops/empty-slot.png'),
+  ('olliepop', 'secret',    8,  7, 'Secret',    '/assets/blind-box/olliepops/secret.png',    '/assets/blind-box/olliepops/empty-slot.png');
 
 -- xmas: rewards 1-7 weight 3, secret weight 1
 INSERT INTO blind_box_plushies (series, key, sort_order, weight, name, image, empty_image) VALUES
