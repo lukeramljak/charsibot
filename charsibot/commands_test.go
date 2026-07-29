@@ -2,6 +2,7 @@ package charsibot
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"testing"
 
@@ -250,6 +251,31 @@ func TestProcessCommand_Nil(t *testing.T) {
 		Message: twitch.ChatMessage{Text: "!test"},
 	}
 	b.processCommand(event)
+}
+
+func TestResolveConnectResult(t *testing.T) {
+	t.Run("returns connect error when no reconnect requested", func(t *testing.T) {
+		b := createTestBot(t)
+		reconnectCh := make(chan error, 1)
+		connectErr := errors.New("connect failed")
+
+		got := b.resolveConnectResult(connectErr, reconnectCh)
+		if !errors.Is(got, connectErr) {
+			t.Fatalf("resolveConnectResult() = %v, want %v", got, connectErr)
+		}
+	})
+
+	t.Run("prefers reconnect request over connect result", func(t *testing.T) {
+		b := createTestBot(t)
+		reconnectCh := make(chan error, 1)
+		reconnectErr := errors.New("reconnect")
+		reconnectCh <- reconnectErr
+
+		got := b.resolveConnectResult(errors.New("connection closed"), reconnectCh)
+		if !errors.Is(got, reconnectErr) {
+			t.Fatalf("resolveConnectResult() = %v, want %v", got, reconnectErr)
+		}
+	})
 }
 
 // Helper function to create a test bot.

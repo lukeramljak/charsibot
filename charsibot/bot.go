@@ -2,6 +2,7 @@ package charsibot
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"math/rand/v2"
@@ -44,6 +45,8 @@ const (
 	reconnectDelay = 10 * time.Second
 	handlerTimeout = 10 * time.Second
 )
+
+var errReconnectRequested = errors.New("reconnect requested")
 
 type SendMessageParams struct {
 	Message              string
@@ -117,6 +120,7 @@ func (b *Bot) Start() error {
 func (b *Bot) connectOnce(url string) error {
 	client := twitch.NewClientWithUrl(url)
 	b.twitchClient = client
+	reconnectCh := make(chan error, 1)
 
 	client.OnError(func(err error) {
 		b.logger.Error("twitch client error", "err", err)
@@ -126,7 +130,13 @@ func (b *Bot) connectOnce(url string) error {
 		b.logger.Info("connected to twitch eventsub", "session_id", message.Payload.Session.ID)
 		if err := b.subscribeEvents(message.Payload.Session.ID); err != nil {
 			b.logger.Error("failed to subscribe to events", "err", err)
-			b.Shutdown()
+			select {
+			case reconnectCh <- fmt.Errorf("subscribe events: %w", err):
+			default:
+			}
+			if err := client.Close(); err != nil {
+				b.logger.Error("error closing client after subscribe failure", "err", err)
+			}
 		}
 	})
 
@@ -148,6 +158,10 @@ func (b *Bot) connectOnce(url string) error {
 			"shard_id", event.ShardId,
 			"status", event.Status,
 		)
+		select {
+		case reconnectCh <- fmt.Errorf("%w: conduit shard disabled (%s)", errReconnectRequested, event.Status):
+		default:
+		}
 		if err := client.Close(); err != nil {
 			b.logger.Error("error closing client after shard disabled", "err", err)
 		}
@@ -171,7 +185,23 @@ func (b *Bot) connectOnce(url string) error {
 		b.onChannelRaid(event)
 	})
 
-	return client.Connect()
+	return b.resolveConnectResult(client.Connect(), reconnectCh)
+}
+
+func (b *Bot) resolveConnectResult(connectErr error, reconnectCh <-chan error) error {
+	select {
+	case reconnectErr := <-reconnectCh:
+		if connectErr == nil {
+			return reconnectErr
+		}
+		b.logger.Warn("preferring reconnect request over connect result",
+			"reconnect_err", reconnectErr,
+			"connect_err", connectErr,
+		)
+		return reconnectErr
+	default:
+		return connectErr
+	}
 }
 
 func (b *Bot) Shutdown() {
