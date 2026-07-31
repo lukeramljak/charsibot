@@ -48,6 +48,8 @@
   let randomPlushieDialog = $state<HTMLDialogElement | undefined>(undefined);
   let pendingPlushie = $state.raw<PendingPlushie | null>(null);
   let plushieDialog = $state<HTMLDialogElement | undefined>(undefined);
+  let pendingResetCollection = $state.raw<Collection | null>(null);
+  let resetDialog = $state<HTMLDialogElement | undefined>(undefined);
   let randomStatDialog = $state<HTMLDialogElement | undefined>(undefined);
   let error = $state('');
   let statusMessage = $state('');
@@ -232,10 +234,23 @@
     );
   }
 
-  async function resetSeries(series: string) {
-    if (!selected || !confirm(`Reset ${selected.user.username}'s ${series} collection?`)) return;
+  function openResetDialog(collection: Collection) {
+    pendingResetCollection = collection;
+    resetDialog?.showModal();
+  }
+
+  function closeResetDialog() {
+    resetDialog?.close();
+    pendingResetCollection = null;
+  }
+
+  async function resetSeries() {
+    if (!selected) return;
+    const collection = pendingResetCollection;
+    closeResetDialog();
+    if (!collection) return;
     await mutate(
-      `/api/admin/users/${encodeURIComponent(selected.user.id)}/collections/${encodeURIComponent(series)}`,
+      `/api/admin/users/${encodeURIComponent(selected.user.id)}/collections/${encodeURIComponent(collection.config.series)}`,
       {
         method: 'DELETE',
       },
@@ -414,7 +429,7 @@
                         </button>
                         <button
                           class="button button-danger"
-                          onclick={() => resetSeries(collection.config.series)}
+                          onclick={() => openResetDialog(collection)}
                           disabled={loading || collection.collected.length === 0}
                           aria-label={`Reset ${collection.config.name} collection`}>Reset</button
                         >
@@ -483,6 +498,27 @@
     <button class="button button-primary" onclick={() => grantRandomPlushie(true)}>
       Grant &amp; show overlay
     </button>
+  </div>
+</dialog>
+
+<dialog
+  class="admin-dialog p-6"
+  bind:this={resetDialog}
+  aria-labelledby="reset-dialog-title"
+  oncancel={() => {
+    pendingResetCollection = null;
+  }}
+>
+  <p class="eyebrow">Blind-box collection</p>
+  <h2 class="section-title mt-2 text-2xl" id="reset-dialog-title">
+    Reset {pendingResetCollection?.config.name ?? 'this collection'}?
+  </h2>
+  <p class="admin-muted mt-2">
+    This permanently removes all {pendingResetCollection?.collected.length ?? 0} collected plushies.
+  </p>
+  <div class="dialog-actions mt-6">
+    <button class="button button-secondary" onclick={closeResetDialog}>Cancel</button>
+    <button class="button button-danger" onclick={resetSeries}>Reset collection</button>
   </div>
 </dialog>
 
