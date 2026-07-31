@@ -132,6 +132,13 @@
     );
   }
 
+  async function grantRandomStat() {
+    if (!selected) return;
+    await mutate(`/api/admin/users/${encodeURIComponent(selected.user.id)}/stats/random`, {
+      method: 'POST',
+    });
+  }
+
   async function setPlushie(series: string, key: string, owned: boolean) {
     if (!selected || mutatingPlushie) return;
     const plushieID = `${series}:${key}`;
@@ -247,86 +254,108 @@
 
         {#if selected}
           <section class="user-detail">
-            <div class="user-detail-header mb-4 flex items-baseline justify-between">
+            <div
+              class="user-detail-header mb-4 flex flex-wrap items-baseline justify-between gap-3"
+            >
               <h2 class="section-title text-2xl" bind:this={selectedUserHeading} tabindex="-1">
                 {selected.user.username}
               </h2>
-              <span class="admin-muted font-mono text-xs">{selected.user.id}</span>
+              <div class="flex items-center gap-3">
+                <button
+                  class="button button-secondary"
+                  onclick={grantRandomStat}
+                  disabled={loading}
+                >
+                  Grant random stat
+                </button>
+                <span class="admin-muted font-mono text-xs">{selected.user.id}</span>
+              </div>
             </div>
 
-            <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {#each selected.stats as stat (stat.name)}
-                <div class="stat-card p-4 text-center">
-                  <p class="font-semibold">
-                    {stat.longName} <span class="admin-muted">({stat.shortName})</span>
-                  </p>
-                  <div class="mt-3 flex items-center justify-center gap-2">
-                    <button
-                      class="stat-stepper"
-                      onclick={() => updateStat(stat, -1, 'adjust')}
-                      disabled={loading}
-                      aria-label={`Decrease ${stat.longName} by 1`}>−</button
-                    >
-                    <input
-                      class="stat-input w-20 appearance-none px-3 py-2 text-center tabular-nums [-moz-appearance:textfield] [&::-webkit-inner-spin-button]:m-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:m-0 [&::-webkit-outer-spin-button]:appearance-none"
-                      type="number"
-                      value={stat.value}
-                      aria-label={`Set ${stat.longName}`}
-                      onchange={async (event) => {
-                        const input = event.currentTarget;
-                        const saved = await updateStat(stat, Number(input.value), 'set');
-                        if (!saved) input.value = String(stat.value);
-                      }}
-                      disabled={loading}
-                    />
-                    <button
-                      class="stat-stepper"
-                      onclick={() => updateStat(stat, 1, 'adjust')}
-                      disabled={loading}
-                      aria-label={`Increase ${stat.longName} by 1`}>+</button
-                    >
-                  </div>
-                </div>
-              {/each}
-            </div>
-
-            <div class="mt-8 grid gap-6 lg:grid-cols-2">
-              {#each selected.collections as collection (collection.config.series)}
-                <section class="collection-card p-5">
-                  <div class="mb-4 flex items-center justify-between gap-4">
-                    <div>
-                      <h3 class="font-bold">{collection.config.name}</h3>
-                      <p class="admin-muted text-sm">
-                        {collection.collected.length}/{collection.config.plushies.length} collected
-                      </p>
-                    </div>
-                    <button
-                      class="button button-danger"
-                      onclick={() => resetSeries(collection.config.series)}
-                      disabled={loading || collection.collected.length === 0}
-                      aria-label={`Reset ${collection.config.name} collection`}>Reset</button
-                    >
-                  </div>
-                  <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    {#each collection.config.plushies as plushie (plushie.key)}
-                      {@const owned = collection.collected.includes(plushie.key)}
-                      {@const plushieID = `${collection.config.series}:${plushie.key}`}
+            <section aria-labelledby="stats-heading">
+              <h3 class="detail-section-title" id="stats-heading">Stats</h3>
+              <div class="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {#each selected.stats as stat (stat.name)}
+                  <div class="stat-card p-4 text-center">
+                    <p class="font-semibold">
+                      {stat.longName} <span class="admin-muted">({stat.shortName})</span>
+                    </p>
+                    <div class="mt-3 flex items-center justify-center gap-2">
                       <button
-                        class={['plushie-button p-2 text-left', !owned && 'is-unowned']}
-                        onclick={() => setPlushie(collection.config.series, plushie.key, owned)}
-                        disabled={mutatingPlushie === plushieID}
-                        title={owned ? `Remove ${plushie.name}` : `Grant ${plushie.name}`}
-                        aria-label={owned ? `Remove ${plushie.name}` : `Grant ${plushie.name}`}
-                        aria-pressed={owned}
+                        class="stat-stepper"
+                        onclick={() => updateStat(stat, -1, 'adjust')}
+                        disabled={loading}
+                        aria-label={`Decrease ${stat.longName} by 1`}>−</button
                       >
-                        <img class="mx-auto h-16 w-16 object-contain" src={plushie.image} alt="" />
-                        <span class="mt-1 block truncate text-center text-xs">{plushie.name}</span>
-                      </button>
-                    {/each}
+                      <input
+                        class="stat-input w-20 appearance-none px-3 py-2 text-center tabular-nums [-moz-appearance:textfield] [&::-webkit-inner-spin-button]:m-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:m-0 [&::-webkit-outer-spin-button]:appearance-none"
+                        type="number"
+                        value={stat.value}
+                        aria-label={`Set ${stat.longName}`}
+                        onchange={async (event) => {
+                          const input = event.currentTarget;
+                          const saved = await updateStat(stat, Number(input.value), 'set');
+                          if (!saved) input.value = String(stat.value);
+                        }}
+                        disabled={loading}
+                      />
+                      <button
+                        class="stat-stepper"
+                        onclick={() => updateStat(stat, 1, 'adjust')}
+                        disabled={loading}
+                        aria-label={`Increase ${stat.longName} by 1`}>+</button
+                      >
+                    </div>
                   </div>
-                </section>
-              {/each}
-            </div>
+                {/each}
+              </div>
+            </section>
+
+            <section class="mt-8" aria-labelledby="blind-boxes-heading">
+              <h3 class="detail-section-title" id="blind-boxes-heading">Blind boxes</h3>
+              <div class="mt-4 grid gap-6 lg:grid-cols-2">
+                {#each selected.collections as collection (collection.config.series)}
+                  <section class="collection-card p-5">
+                    <div class="mb-4 flex items-center justify-between gap-4">
+                      <div>
+                        <h3 class="font-bold">{collection.config.name}</h3>
+                        <p class="admin-muted text-sm">
+                          {collection.collected.length}/{collection.config.plushies.length} collected
+                        </p>
+                      </div>
+                      <button
+                        class="button button-danger"
+                        onclick={() => resetSeries(collection.config.series)}
+                        disabled={loading || collection.collected.length === 0}
+                        aria-label={`Reset ${collection.config.name} collection`}>Reset</button
+                      >
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                      {#each collection.config.plushies as plushie (plushie.key)}
+                        {@const owned = collection.collected.includes(plushie.key)}
+                        {@const plushieID = `${collection.config.series}:${plushie.key}`}
+                        <button
+                          class={['plushie-button p-2 text-left', !owned && 'is-unowned']}
+                          onclick={() => setPlushie(collection.config.series, plushie.key, owned)}
+                          disabled={mutatingPlushie === plushieID}
+                          title={owned ? `Remove ${plushie.name}` : `Grant ${plushie.name}`}
+                          aria-label={owned ? `Remove ${plushie.name}` : `Grant ${plushie.name}`}
+                          aria-pressed={owned}
+                        >
+                          <img
+                            class="mx-auto h-16 w-16 object-contain"
+                            src={plushie.image}
+                            alt=""
+                          />
+                          <span class="mt-1 block truncate text-center text-xs">{plushie.name}</span
+                          >
+                        </button>
+                      {/each}
+                    </div>
+                  </section>
+                {/each}
+              </div>
+            </section>
           </section>
         {:else if !loading}
           <section class="empty-workspace">
@@ -407,6 +436,14 @@
 
   .section-title {
     line-height: 1.05;
+  }
+
+  .detail-section-title {
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
   }
 
   .admin-subtitle,

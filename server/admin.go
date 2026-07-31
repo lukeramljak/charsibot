@@ -92,6 +92,30 @@ func (s *Server) handleAdminStat(w http.ResponseWriter, r *http.Request) {
 	s.writeAdminUser(w, r, user.ID)
 }
 
+func (s *Server) handleAdminRandomStat(w http.ResponseWriter, r *http.Request) {
+	if !s.requireLocalAdmin(w, r) {
+		return
+	}
+	user, ok := s.adminUser(w, r)
+	if !ok {
+		return
+	}
+	if _, err := s.stats.GetOrCreateStats(r.Context(), user.ID, user.Username); err != nil {
+		s.adminError(w, "initialize stats", err)
+		return
+	}
+	definition, err := s.stats.GetRandomStatDefinition(r.Context())
+	if err != nil {
+		s.adminError(w, "choose random stat", err)
+		return
+	}
+	if err := s.stats.ModifyStatValue(r.Context(), user.ID, definition.Name, 1); err != nil {
+		s.adminError(w, "grant random stat", err)
+		return
+	}
+	s.writeAdminUser(w, r, user.ID)
+}
+
 func (s *Server) handleAdminGrantPlushie(w http.ResponseWriter, r *http.Request) {
 	if !s.requireLocalAdmin(w, r) {
 		return
