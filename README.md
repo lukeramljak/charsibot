@@ -50,3 +50,12 @@ Twitch bot and overlay for [Charsibel](https://twitch.tv/charsibel)
 ## Database
 
 The Twitch bot uses a SQLite database (`charsibot.db`) which will be created automatically in the project root.
+
+## Catalog config
+
+Stat definitions and blind-box series are versioned JSON files under `catalog/config`.
+SQLite stores only viewer state (stat values and collected plushies).
+Catalog JSON is the runtime source of truth.
+
+Blind-box images and sounds live under `web/static/assets/blind-box/<series>/`.
+JSON files use filenames such as `cutey.png` and the app expands them to public paths like `/assets/blind-box/coobubu/cutey.png`.

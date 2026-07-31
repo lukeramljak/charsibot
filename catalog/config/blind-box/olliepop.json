@@ -1,0 +1,77 @@
+{
+  "series": "olliepop",
+  "assetDir": "olliepops",
+  "redemptionTitle": "Ollie Series Blind Box",
+  "name": "Olliepops",
+  "revealSound": "reveal.mp3",
+  "boxFrontFace": "box-front.png",
+  "boxSideFace": "box-side.png",
+  "displayColor": "#ff8c82",
+  "textColor": "#ffffff",
+  "plushies": [
+    {
+      "key": "berry",
+      "sortOrder": 1,
+      "weight": 23,
+      "name": "Berry",
+      "image": "berry.png",
+      "emptyImage": "empty-slot.png"
+    },
+    {
+      "key": "tangerine",
+      "sortOrder": 2,
+      "weight": 23,
+      "name": "Tangerine",
+      "image": "tangerine.png",
+      "emptyImage": "empty-slot.png"
+    },
+    {
+      "key": "bibble",
+      "sortOrder": 3,
+      "weight": 23,
+      "name": "Bibble",
+      "image": "bibble.png",
+      "emptyImage": "empty-slot.png"
+    },
+    {
+      "key": "kiwi",
+      "sortOrder": 4,
+      "weight": 23,
+      "name": "Kiwi",
+      "image": "kiwi.png",
+      "emptyImage": "empty-slot.png"
+    },
+    {
+      "key": "crunchy",
+      "sortOrder": 5,
+      "weight": 23,
+      "name": "Crunchy",
+      "image": "crunchy.png",
+      "emptyImage": "empty-slot.png"
+    },
+    {
+      "key": "caramel",
+      "sortOrder": 6,
+      "weight": 23,
+      "name": "Caramel",
+      "image": "caramel.png",
+      "emptyImage": "empty-slot.png"
+    },
+    {
+      "key": "grape",
+      "sortOrder": 7,
+      "weight": 23,
+      "name": "Grape",
+      "image": "grape.png",
+      "emptyImage": "empty-slot.png"
+    },
+    {
+      "key": "secret",
+      "sortOrder": 8,
+      "weight": 7,
+      "name": "Secret",
+      "image": "secret.png",
+      "emptyImage": "empty-slot.png"
+    }
+  ]
+}

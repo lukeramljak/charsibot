@@ -1,0 +1,50 @@
+[
+  {
+    "name": "strength",
+    "shortName": "STR",
+    "longName": "Strength",
+    "defaultValue": 3,
+    "sortOrder": 1,
+    "emoji": "💪"
+  },
+  {
+    "name": "intelligence",
+    "shortName": "INT",
+    "longName": "Intelligence",
+    "defaultValue": 3,
+    "sortOrder": 2,
+    "emoji": "🧠"
+  },
+  {
+    "name": "charisma",
+    "shortName": "CHA",
+    "longName": "Charisma",
+    "defaultValue": 3,
+    "sortOrder": 3,
+    "emoji": "✨"
+  },
+  {
+    "name": "luck",
+    "shortName": "LUCK",
+    "longName": "Luck",
+    "defaultValue": 3,
+    "sortOrder": 4,
+    "emoji": "🍀"
+  },
+  {
+    "name": "dexterity",
+    "shortName": "DEX",
+    "longName": "Dexterity",
+    "defaultValue": 3,
+    "sortOrder": 5,
+    "emoji": "🎯"
+  },
+  {
+    "name": "penis",
+    "shortName": "PENIS",
+    "longName": "Penis",
+    "defaultValue": 3,
+    "sortOrder": 6,
+    "emoji": "🍆"
+  }
+]

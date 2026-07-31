@@ -141,7 +141,7 @@ SELECT id, username, 'penis',        penis        FROM stats;
 -- `key` matches blind_box_plushies.key for the given series.
 -- key is not foreign-keyed because blind_box_plushies has a composite unique
 -- constraint on (series, key), not key alone. Valid keys are enforced by
--- the application (loaded from DB at startup via GetPlushiesForSeries).
+-- application catalog loading.
 CREATE TABLE user_plushies (
   user_id  TEXT NOT NULL,
   username TEXT NOT NULL,

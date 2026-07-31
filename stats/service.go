@@ -4,31 +4,64 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/rand/v2"
+	"sort"
 
 	"github.com/lukeramljak/charsibot/db"
 )
 
-type Service struct {
-	queries *db.Queries
+type UserStat struct {
+	Name      string
+	ShortName string
+	LongName  string
+	Value     int64
 }
 
-// NewService creates a new stats Service backed by the given queries.
-func NewService(queries *db.Queries) (*Service, error) {
+// Definition describes a stat sourced from the runtime catalog.
+type Definition struct {
+	Name         string
+	ShortName    string
+	LongName     string
+	DefaultValue int64
+	SortOrder    int64
+	Emoji        string
+}
+
+type LeaderboardRow struct {
+	Emoji    string
+	Username string
+	Value    int64
+}
+
+type Service struct {
+	queries     *db.Queries
+	definitions []Definition
+}
+
+// NewService creates a new stats Service backed by the given queries and JSON catalog definitions.
+func NewService(queries *db.Queries, definitions []Definition) (*Service, error) {
 	if queries == nil {
 		return nil, errors.New("queries must not be nil")
 	}
-
-	return &Service{queries}, nil
+	if len(definitions) == 0 {
+		return nil, errors.New("stat definitions must not be empty")
+	}
+	defs := append([]Definition(nil), definitions...)
+	sort.Slice(defs, func(i, j int) bool { return defs[i].SortOrder < defs[j].SortOrder })
+	return &Service{queries: queries, definitions: defs}, nil
 }
 
 // GetOrCreateStats ensures stat rows exist for a user then returns their stats.
-func (s *Service) GetOrCreateStats(ctx context.Context, userID, username string) ([]db.GetUserStatsRow, error) {
-	if err := s.queries.EnsureUserStats(ctx, db.EnsureUserStatsParams{
-		UserID:   userID,
-		Username: username,
-		UserID_2: userID,
-	}); err != nil {
-		return nil, fmt.Errorf("ensure stats: %w", err)
+func (s *Service) GetOrCreateStats(ctx context.Context, userID, username string) ([]UserStat, error) {
+	for _, definition := range s.definitions {
+		if err := s.queries.EnsureUserStat(ctx, db.EnsureUserStatParams{
+			UserID:   userID,
+			Username: username,
+			StatName: definition.Name,
+			Value:    definition.DefaultValue,
+		}); err != nil {
+			return nil, fmt.Errorf("ensure stat %s: %w", definition.Name, err)
+		}
 	}
 	if err := s.queries.UpdateUsername(ctx, db.UpdateUsernameParams{
 		Username: username,
@@ -36,19 +69,71 @@ func (s *Service) GetOrCreateStats(ctx context.Context, userID, username string)
 	}); err != nil {
 		return nil, fmt.Errorf("update username: %w", err)
 	}
-	return s.queries.GetUserStats(ctx, userID)
+	return s.GetUserStats(ctx, userID)
 }
 
-func (s *Service) GetUserStats(ctx context.Context, userID string) ([]db.GetUserStatsRow, error) {
-	return s.queries.GetUserStats(ctx, userID)
+func (s *Service) GetUserStats(ctx context.Context, userID string) ([]UserStat, error) {
+	values, err := s.queries.GetUserStatValues(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	if len(values) == 0 {
+		return nil, nil
+	}
+	byName := make(map[string]int64, len(values))
+	for _, value := range values {
+		byName[value.StatName] = value.Value
+	}
+	stats := make([]UserStat, 0, len(s.definitions))
+	for _, definition := range s.definitions {
+		value, ok := byName[definition.Name]
+		if !ok {
+			continue
+		}
+		stats = append(stats, UserStat{
+			Name:      definition.Name,
+			ShortName: definition.ShortName,
+			LongName:  definition.LongName,
+			Value:     value,
+		})
+	}
+	return stats, nil
 }
 
-func (s *Service) GetStatLeaderboard(ctx context.Context) ([]db.GetStatLeaderboardRow, error) {
-	return s.queries.GetStatLeaderboard(ctx)
+func (s *Service) GetStatLeaderboard(ctx context.Context) ([]LeaderboardRow, error) {
+	values, err := s.queries.GetAllUserStatValues(ctx)
+	if err != nil {
+		return nil, err
+	}
+	type bestStat struct {
+		username string
+		value    int64
+		seen     bool
+	}
+	bestByName := make(map[string]bestStat, len(s.definitions))
+	for _, value := range values {
+		best := bestByName[value.StatName]
+		if !best.seen || value.Value > best.value {
+			bestByName[value.StatName] = bestStat{username: value.Username, value: value.Value, seen: true}
+		}
+	}
+	rows := make([]LeaderboardRow, 0, len(s.definitions))
+	for _, definition := range s.definitions {
+		best := bestByName[definition.Name]
+		if !best.seen {
+			continue
+		}
+		rows = append(rows, LeaderboardRow{
+			Emoji:    definition.Emoji,
+			Username: best.username,
+			Value:    best.value,
+		})
+	}
+	return rows, nil
 }
 
-func (s *Service) GetRandomStatDefinition(ctx context.Context) (db.StatDefinition, error) {
-	return s.queries.GetRandomStatDefinition(ctx)
+func (s *Service) GetRandomStatDefinition(context.Context) (Definition, error) {
+	return s.definitions[rand.IntN(len(s.definitions))], nil
 }
 
 func (s *Service) ModifyStatValue(ctx context.Context, userID, statName string, value int64) error {

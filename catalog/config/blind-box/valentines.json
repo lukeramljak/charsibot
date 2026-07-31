@@ -1,0 +1,77 @@
+{
+  "series": "valentines",
+  "assetDir": "valentines",
+  "redemptionTitle": "Valentine's Series Blind Box",
+  "name": "Valentines",
+  "revealSound": "reveal.mp3",
+  "boxFrontFace": "box-front.png",
+  "boxSideFace": "box-side.png",
+  "displayColor": "#ffa7c3",
+  "textColor": "#ffffff",
+  "plushies": [
+    {
+      "key": "choccy",
+      "sortOrder": 1,
+      "weight": 3,
+      "name": "Choccy",
+      "image": "choccy.png",
+      "emptyImage": "choccy-blank.png"
+    },
+    {
+      "key": "cupie",
+      "sortOrder": 2,
+      "weight": 3,
+      "name": "Cupie",
+      "image": "cupie.png",
+      "emptyImage": "cupie-blank.png"
+    },
+    {
+      "key": "bachie",
+      "sortOrder": 3,
+      "weight": 3,
+      "name": "Bachie",
+      "image": "bachie.png",
+      "emptyImage": "bachie-blank.png"
+    },
+    {
+      "key": "drinky",
+      "sortOrder": 4,
+      "weight": 3,
+      "name": "Drinky",
+      "image": "drinky.png",
+      "emptyImage": "drinky-blank.png"
+    },
+    {
+      "key": "sherbie",
+      "sortOrder": 5,
+      "weight": 3,
+      "name": "Sherbie",
+      "image": "sherbie.png",
+      "emptyImage": "sherbie-blank.png"
+    },
+    {
+      "key": "lovey",
+      "sortOrder": 6,
+      "weight": 3,
+      "name": "Lovey",
+      "image": "lovey.png",
+      "emptyImage": "lovey-blank.png"
+    },
+    {
+      "key": "bunchie",
+      "sortOrder": 7,
+      "weight": 3,
+      "name": "Bunchie",
+      "image": "bunchie.png",
+      "emptyImage": "bunchie-blank.png"
+    },
+    {
+      "key": "secret",
+      "sortOrder": 8,
+      "weight": 1,
+      "name": "Secret",
+      "image": "secret.png",
+      "emptyImage": "secret-blank.png"
+    }
+  ]
+}
