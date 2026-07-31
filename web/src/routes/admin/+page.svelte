@@ -322,18 +322,18 @@
 
 <main class="admin-shell p-6 sm:p-10" aria-busy={loading}>
   <div class="admin-frame mx-auto max-w-[96rem]">
-    <header class="admin-header mb-8">
-      <a class="back-link" href={resolve('/')}>← Overlay</a>
-      <p class="eyebrow mt-6">Control room</p>
-      <h1 class="admin-title mt-2">Charsibot Admin</h1>
-      <p class="admin-subtitle mt-2">
-        Local-only controls for viewer stats and blind-box collections.
-      </p>
-    </header>
-
     <p class="sr-only" role="status">{statusMessage}</p>
 
     <div class="admin-layout">
+      <header class="admin-header">
+        <a class="back-link" href={resolve('/')}>← Overlay</a>
+        <p class="eyebrow mt-6">Control room</p>
+        <h1 class="admin-title mt-2">Charsibot Admin</h1>
+        <p class="admin-subtitle mt-2">
+          Local-only controls for viewer stats and blind-box collections.
+        </p>
+      </header>
+
       <aside class="viewer-directory">
         <section class="admin-surface p-5">
           <div class="flex items-center justify-between gap-4">
@@ -391,13 +391,14 @@
 
         {#if selected}
           <section class="user-detail">
-            <div
-              class="user-detail-header mb-4 flex flex-wrap items-baseline justify-between gap-3"
-            >
-              <h2 class="section-title text-2xl" bind:this={selectedUserHeading} tabindex="-1">
-                {selected.user.username}
-              </h2>
-              <div class="flex items-center gap-3">
+            <div class="user-detail-header mb-4">
+              <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
+                <h2 class="section-title text-2xl" bind:this={selectedUserHeading} tabindex="-1">
+                  {selected.user.username}
+                </h2>
+                <span class="admin-muted font-mono text-xs">{selected.user.id}</span>
+              </div>
+              <div class="user-actions mt-3 flex flex-wrap items-center gap-2">
                 <button
                   class="button button-secondary"
                   onclick={openRandomStatDialog}
@@ -414,7 +415,6 @@
                 <button class="button button-danger" onclick={() => resetStatsDialog?.showModal()} disabled={loading}>
                   Reset stats
                 </button>
-                <span class="admin-muted font-mono text-xs">{selected.user.id}</span>
               </div>
             </div>
 
@@ -691,6 +691,10 @@
     display: grid;
     gap: 1.5rem;
     align-items: start;
+    grid-template-areas:
+      'header'
+      'sidebar'
+      'workspace';
   }
 
   .viewer-directory,
@@ -698,9 +702,18 @@
     min-width: 0;
   }
 
+  .admin-header {
+    grid-area: header;
+  }
+
+  .viewer-directory {
+    grid-area: sidebar;
+  }
+
   .admin-workspace {
     display: grid;
     gap: 1.25rem;
+    grid-area: workspace;
   }
 
   .admin-header {
@@ -817,13 +830,20 @@
     font-weight: 800;
   }
 
-  .button-secondary {
+.button-secondary {
     border-radius: 999px;
     padding: 0.5rem 1rem;
     font-size: 0.75rem;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-  }
+}
+
+.button-secondary,
+.button-primary,
+.button-danger {
+  flex: none;
+  white-space: nowrap;
+}
 
   .button-secondary:hover:not(:disabled),
   .stat-stepper:hover:not(:disabled) {
@@ -998,18 +1018,20 @@
 
   @media (min-width: 900px) {
     .admin-layout {
+      grid-template-areas:
+        'sidebar header'
+        'sidebar workspace';
       grid-template-columns: minmax(17rem, 21rem) minmax(0, 1fr);
       gap: 2rem;
     }
 
     .viewer-directory {
       position: sticky;
-      top: 1.25rem;
+      top: 2.5rem;
     }
 
     .viewer-list {
-      max-height: calc(100vh - 19rem);
-      min-height: 16rem;
+      max-height: calc(100vh - 15rem);
     }
   }
 </style>
