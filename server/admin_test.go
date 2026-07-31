@@ -185,6 +185,56 @@ func TestAdminRandomPlushieGrantsFromSeries(t *testing.T) {
 	t.Errorf("granted plushie %q is not in series %q", key, series.Series)
 }
 
+func TestAdminGrantPlushieTriggersRedemptionEvent(t *testing.T) {
+	queries, sqlDB := db.NewTestDB(t)
+	defer sqlDB.Close()
+	appCatalog, err := catalog.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	statsService, err := stats.NewService(queries, appCatalog.Stats)
+	if err != nil {
+		t.Fatal(err)
+	}
+	blindboxService, err := blindbox.NewService(queries, appCatalog.Series)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := statsService.GetOrCreateStats(t.Context(), "viewer-1", "viewer"); err != nil {
+		t.Fatal(err)
+	}
+
+	series, plushie := appCatalog.Series[0], appCatalog.Series[0].Plushies[0]
+	srv := NewServer(ServerConfig{
+		StatsService:    statsService,
+		BlindBoxService: blindboxService,
+		Series:          appCatalog.Series,
+	}, slog.New(slog.NewTextHandler(testWriter{t}, nil)))
+	request := httptest.NewRequest(http.MethodPut, "/api/admin/users/viewer-1/collections/"+series.Series+"/"+plushie.Key, strings.NewReader(`{"triggerOverlay":true}`))
+	request.RemoteAddr = "127.0.0.1:12345"
+	request.SetPathValue("userID", "viewer-1")
+	request.SetPathValue("series", series.Series)
+	request.SetPathValue("key", plushie.Key)
+	response := httptest.NewRecorder()
+	events := make(chan OverlayEvent, 1)
+	srv.clients[events] = struct{}{}
+
+	srv.handleAdminGrantPlushie(response, request)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", response.Code, response.Body.String())
+	}
+	select {
+	case event := <-events:
+		data, ok := event.Data.(blindbox.BlindBoxRedemptionData)
+		if !ok || event.Type != EventTypeBlindBoxRedemption || data.Plushie.Key != plushie.Key {
+			t.Errorf("event = %#v, want redemption for %q", event, plushie.Key)
+		}
+	default:
+		t.Error("expected redemption event")
+	}
+}
+
 type testWriter struct{ t *testing.T }
 
 func (w testWriter) Write(p []byte) (int, error) {

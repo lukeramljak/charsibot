@@ -35,7 +35,7 @@ type updateStatRequest struct {
 	Value int64  `json:"value"`
 }
 
-type randomPlushieRequest struct {
+type plushieGrantRequest struct {
 	TriggerOverlay bool `json:"triggerOverlay"`
 }
 
@@ -148,7 +148,7 @@ func (s *Server) handleAdminRandomPlushie(w http.ResponseWriter, r *http.Request
 	if !ok {
 		return
 	}
-	var input randomPlushieRequest
+	var input plushieGrantRequest
 	if !decodeJSON(w, r, &input) {
 		return
 	}
@@ -193,14 +193,32 @@ func (s *Server) handleAdminGrantPlushie(w http.ResponseWriter, r *http.Request)
 	if !ok {
 		return
 	}
+	var input plushieGrantRequest
+	if !decodeJSON(w, r, &input) {
+		return
+	}
 	series, key := r.PathValue("series"), r.PathValue("key")
-	if !s.hasPlushie(series, key) {
+	cfg, plushie, found := s.plushieInSeries(series, key)
+	if !found {
 		http.Error(w, "unknown series or plushie", http.StatusBadRequest)
 		return
 	}
-	if _, _, err := s.blindbox.AddPlushieToCollection(r.Context(), user.ID, user.Username, series, key); err != nil {
+	isNew, collection, err := s.blindbox.AddPlushieToCollection(r.Context(), user.ID, user.Username, series, key)
+	if err != nil {
 		s.adminError(w, "grant plushie", err)
 		return
+	}
+	if input.TriggerOverlay {
+		s.Broadcast(OverlayEvent{
+			Type: EventTypeBlindBoxRedemption,
+			Data: blindbox.BlindBoxRedemptionData{
+				Username:   user.Username,
+				Plushie:    plushie,
+				IsNew:      isNew,
+				Collection: collection,
+				Config:     cfg,
+			},
+		})
 	}
 	s.writeAdminUser(w, r, user.ID)
 }
@@ -344,17 +362,22 @@ func (s *Server) hasSeries(series string) bool {
 }
 
 func (s *Server) hasPlushie(series, key string) bool {
+	_, _, found := s.plushieInSeries(series, key)
+	return found
+}
+
+func (s *Server) plushieInSeries(series, key string) (blindbox.SeriesConfig, blindbox.Plushie, bool) {
 	for _, cfg := range s.series {
 		if cfg.Series != series {
 			continue
 		}
 		for _, plushie := range cfg.Plushies {
 			if plushie.Key == key {
-				return true
+				return cfg, plushie, true
 			}
 		}
 	}
-	return false
+	return blindbox.SeriesConfig{}, blindbox.Plushie{}, false
 }
 
 func (s *Server) adminError(w http.ResponseWriter, action string, err error) {

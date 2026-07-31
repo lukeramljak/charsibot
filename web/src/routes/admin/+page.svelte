@@ -22,6 +22,12 @@
     collected: string[];
   }
 
+  interface PendingPlushie {
+    series: string;
+    key: string;
+    name: string;
+  }
+
   interface UserDetail {
     user: User;
     stats: UserStat[];
@@ -40,6 +46,8 @@
   let mutatingPlushie = $state<string | null>(null);
   let pendingRandomCollection = $state.raw<Collection | null>(null);
   let randomPlushieDialog = $state<HTMLDialogElement | undefined>(undefined);
+  let pendingPlushie = $state.raw<PendingPlushie | null>(null);
+  let plushieDialog = $state<HTMLDialogElement | undefined>(undefined);
   let randomStatDialog = $state<HTMLDialogElement | undefined>(undefined);
   let error = $state('');
   let statusMessage = $state('');
@@ -156,13 +164,44 @@
     );
   }
 
-  async function setPlushie(series: string, key: string, owned: boolean) {
+  async function setPlushie(series: string, key: string, name: string, owned: boolean) {
     if (!selected || mutatingPlushie) return;
+    if (!owned) {
+      pendingPlushie = { series, key, name };
+      plushieDialog?.showModal();
+      return;
+    }
     const plushieID = `${series}:${key}`;
     mutatingPlushie = plushieID;
     const base = `/api/admin/users/${encodeURIComponent(selected.user.id)}/collections/${encodeURIComponent(series)}/${encodeURIComponent(key)}`;
     try {
       await mutate(base, { method: owned ? 'DELETE' : 'PUT' });
+    } finally {
+      mutatingPlushie = null;
+    }
+  }
+
+  function closePlushieDialog() {
+    plushieDialog?.close();
+    pendingPlushie = null;
+  }
+
+  async function grantPlushie(triggerOverlay: boolean) {
+    if (!selected) return;
+    const plushie = pendingPlushie;
+    closePlushieDialog();
+    if (!plushie) return;
+    const plushieID = `${plushie.series}:${plushie.key}`;
+    mutatingPlushie = plushieID;
+    try {
+      await mutate(
+        `/api/admin/users/${encodeURIComponent(selected.user.id)}/collections/${encodeURIComponent(plushie.series)}/${encodeURIComponent(plushie.key)}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ triggerOverlay }),
+        },
+      );
     } finally {
       mutatingPlushie = null;
     }
@@ -387,7 +426,7 @@
                         {@const plushieID = `${collection.config.series}:${plushie.key}`}
                         <button
                           class={['plushie-button p-2 text-left', !owned && 'is-unowned']}
-                          onclick={() => setPlushie(collection.config.series, plushie.key, owned)}
+                          onclick={() => setPlushie(collection.config.series, plushie.key, plushie.name, owned)}
                           disabled={mutatingPlushie === plushieID}
                           title={owned ? `Remove ${plushie.name}` : `Grant ${plushie.name}`}
                           aria-label={owned ? `Remove ${plushie.name}` : `Grant ${plushie.name}`}
@@ -442,6 +481,28 @@
       Grant silently
     </button>
     <button class="button button-primary" onclick={() => grantRandomPlushie(true)}>
+      Grant &amp; show overlay
+    </button>
+  </div>
+</dialog>
+
+<dialog
+  class="admin-dialog p-6"
+  bind:this={plushieDialog}
+  aria-labelledby="plushie-dialog-title"
+  oncancel={() => {
+    pendingPlushie = null;
+  }}
+>
+  <p class="eyebrow">Blind-box redemption</p>
+  <h2 class="section-title mt-2 text-2xl" id="plushie-dialog-title">
+    Grant {pendingPlushie?.name ?? 'this plushie'}?
+  </h2>
+  <p class="admin-muted mt-2">Choose whether to announce this redemption on the overlay.</p>
+  <div class="dialog-actions mt-6">
+    <button class="button button-secondary" onclick={closePlushieDialog}>Cancel</button>
+    <button class="button button-secondary" onclick={() => grantPlushie(false)}>Grant silently</button>
+    <button class="button button-primary" onclick={() => grantPlushie(true)}>
       Grant &amp; show overlay
     </button>
   </div>
