@@ -81,12 +81,14 @@ func TestAdminRandomStatIncrementsOneStat(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	var chatMessage string
 	srv := NewServer(ServerConfig{
 		StatsService:    statsService,
 		BlindBoxService: blindboxService,
 		Series:          appCatalog.Series,
 	}, slog.New(slog.NewTextHandler(testWriter{t}, nil)))
-	request := httptest.NewRequest(http.MethodPost, "/api/admin/users/viewer-1/stats/random", nil)
+	srv.SetAdminChatMessage(func(message string) { chatMessage = message })
+	request := httptest.NewRequest(http.MethodPost, "/api/admin/users/viewer-1/stats/random", strings.NewReader(`{"displayInChat":true}`))
 	request.RemoteAddr = "127.0.0.1:12345"
 	request.SetPathValue("userID", "viewer-1")
 	response := httptest.NewRecorder()
@@ -110,6 +112,13 @@ func TestAdminRandomStatIncrementsOneStat(t *testing.T) {
 	}
 	if total != defaults+1 {
 		t.Errorf("total stat value = %d, want %d", total, defaults+1)
+	}
+	userStats, err := statsService.GetUserStats(t.Context(), "viewer-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := stats.FormatStats("viewer", userStats); chatMessage != want {
+		t.Errorf("chat message = %q, want %q", chatMessage, want)
 	}
 }
 

@@ -72,6 +72,9 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("create bot: %w", err)
 	}
+	srv.SetAdminChatMessage(func(message string) {
+		bot.SendMessage(charsibot.SendMessageParams{Message: message})
+	})
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)

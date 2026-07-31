@@ -40,6 +40,7 @@
   let mutatingPlushie = $state<string | null>(null);
   let pendingRandomCollection = $state.raw<Collection | null>(null);
   let randomPlushieDialog = $state<HTMLDialogElement | undefined>(undefined);
+  let randomStatDialog = $state<HTMLDialogElement | undefined>(undefined);
   let error = $state('');
   let statusMessage = $state('');
   let selectedUserHeading = $state<HTMLHeadingElement | undefined>(undefined);
@@ -134,11 +135,25 @@
     );
   }
 
-  async function grantRandomStat() {
+  function openRandomStatDialog() {
+    randomStatDialog?.showModal();
+  }
+
+  function closeRandomStatDialog() {
+    randomStatDialog?.close();
+  }
+
+  async function grantRandomStat(displayInChat: boolean) {
     if (!selected) return;
-    await mutate(`/api/admin/users/${encodeURIComponent(selected.user.id)}/stats/random`, {
-      method: 'POST',
-    });
+    closeRandomStatDialog();
+    await mutate(
+      `/api/admin/users/${encodeURIComponent(selected.user.id)}/stats/random`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ displayInChat }),
+      },
+    );
   }
 
   async function setPlushie(series: string, key: string, owned: boolean) {
@@ -290,7 +305,7 @@
               <div class="flex items-center gap-3">
                 <button
                   class="button button-secondary"
-                  onclick={grantRandomStat}
+                  onclick={openRandomStatDialog}
                   disabled={loading}
                 >
                   Grant random stat
@@ -428,6 +443,25 @@
     </button>
     <button class="button button-primary" onclick={() => grantRandomPlushie(true)}>
       Grant &amp; show overlay
+    </button>
+  </div>
+</dialog>
+
+<dialog
+  class="admin-dialog p-6"
+  bind:this={randomStatDialog}
+  aria-labelledby="random-stat-dialog-title"
+>
+  <p class="eyebrow">Random stat</p>
+  <h2 class="section-title mt-2 text-2xl" id="random-stat-dialog-title">Grant a random stat?</h2>
+  <p class="admin-muted mt-2">Choose whether to display the viewer's updated stats in chat.</p>
+  <div class="dialog-actions mt-6">
+    <button class="button button-secondary" onclick={closeRandomStatDialog}>Cancel</button>
+    <button class="button button-secondary" onclick={() => grantRandomStat(false)}>
+      Grant silently
+    </button>
+    <button class="button button-primary" onclick={() => grantRandomStat(true)}>
+      Grant &amp; display stats
     </button>
   </div>
 </dialog>

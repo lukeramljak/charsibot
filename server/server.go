@@ -41,14 +41,33 @@ type ServerConfig struct {
 
 // Server handles SSE streaming and OAuth.
 type Server struct {
-	cfg      ServerConfig
-	logger   *slog.Logger
-	server   *http.Server
-	clients  map[chan OverlayEvent]struct{}
-	mu       sync.RWMutex
-	stats    *stats.Service
-	blindbox *blindbox.Service
-	series   []blindbox.SeriesConfig
+	cfg              ServerConfig
+	logger           *slog.Logger
+	server           *http.Server
+	clients          map[chan OverlayEvent]struct{}
+	mu               sync.RWMutex
+	stats            *stats.Service
+	blindbox         *blindbox.Service
+	series           []blindbox.SeriesConfig
+	adminChatMessage func(string)
+}
+
+// SetAdminChatMessage configures how the local admin API posts a message to chat.
+func (s *Server) SetAdminChatMessage(send func(string)) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.adminChatMessage = send
+}
+
+func (s *Server) sendAdminChatMessage(message string) bool {
+	s.mu.RLock()
+	send := s.adminChatMessage
+	s.mu.RUnlock()
+	if send == nil {
+		return false
+	}
+	send(message)
+	return true
 }
 
 func NewServer(cfg ServerConfig, logger *slog.Logger) *Server {

@@ -39,6 +39,10 @@ type randomPlushieRequest struct {
 	TriggerOverlay bool `json:"triggerOverlay"`
 }
 
+type randomStatRequest struct {
+	DisplayInChat bool `json:"displayInChat"`
+}
+
 func (s *Server) handleAdminUsers(w http.ResponseWriter, r *http.Request) {
 	if !s.requireLocalAdmin(w, r) {
 		return
@@ -104,6 +108,14 @@ func (s *Server) handleAdminRandomStat(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	var input randomStatRequest
+	if !decodeJSON(w, r, &input) {
+		return
+	}
+	if input.DisplayInChat && !s.hasAdminChatMessage() {
+		http.Error(w, "chat is unavailable", http.StatusServiceUnavailable)
+		return
+	}
 	if _, err := s.stats.GetOrCreateStats(r.Context(), user.ID, user.Username); err != nil {
 		s.adminError(w, "initialize stats", err)
 		return
@@ -116,6 +128,14 @@ func (s *Server) handleAdminRandomStat(w http.ResponseWriter, r *http.Request) {
 	if err := s.stats.ModifyStatValue(r.Context(), user.ID, definition.Name, 1); err != nil {
 		s.adminError(w, "grant random stat", err)
 		return
+	}
+	if input.DisplayInChat {
+		userStats, err := s.stats.GetUserStats(r.Context(), user.ID)
+		if err != nil {
+			s.adminError(w, "get updated stats", err)
+			return
+		}
+		s.sendAdminChatMessage(stats.FormatStats(user.Username, userStats))
 	}
 	s.writeAdminUser(w, r, user.ID)
 }
@@ -297,6 +317,12 @@ func (s *Server) requireLocalAdmin(w http.ResponseWriter, r *http.Request) bool 
 		return false
 	}
 	return true
+}
+
+func (s *Server) hasAdminChatMessage() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.adminChatMessage != nil
 }
 
 func (s *Server) hasStat(name string) bool {
