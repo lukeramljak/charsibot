@@ -11,6 +11,12 @@
       >
         Blind Box
       </a>
+      <a
+        href={resolve('/admin')}
+        class="rounded-lg bg-slate-700 px-8 py-4 font-semibold text-white transition-colors duration-200 hover:bg-slate-600"
+      >
+        Admin
+      </a>
     </div>
   </div>
 </div>

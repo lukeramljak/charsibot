@@ -179,6 +179,15 @@ func (s *Service) ResetCollection(ctx context.Context, userID, series string) er
 	})
 }
 
+// RemovePlushieFromCollection removes a single plushie from a user's collection.
+func (s *Service) RemovePlushieFromCollection(ctx context.Context, userID, series, key string) error {
+	return s.queries.DeleteUserPlushie(ctx, db.DeleteUserPlushieParams{
+		UserID: userID,
+		Series: series,
+		Key:    key,
+	})
+}
+
 // PickPlushie selects a random plushie using weighted random selection.
 // Returns an error if no plushies have a positive weight.
 func PickPlushie(plushies []Plushie) (Plushie, error) {

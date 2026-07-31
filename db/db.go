@@ -24,6 +24,9 @@ func New(db DBTX) *Queries {
 func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	q := Queries{db: db}
 	var err error
+	if q.deleteUserPlushieStmt, err = db.PrepareContext(ctx, deleteUserPlushie); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteUserPlushie: %w", err)
+	}
 	if q.ensureUserStatStmt, err = db.PrepareContext(ctx, ensureUserStat); err != nil {
 		return nil, fmt.Errorf("error preparing query EnsureUserStat: %w", err)
 	}
@@ -32,6 +35,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.getCollectedPlushiesStmt, err = db.PrepareContext(ctx, getCollectedPlushies); err != nil {
 		return nil, fmt.Errorf("error preparing query GetCollectedPlushies: %w", err)
+	}
+	if q.getUserByIDStmt, err = db.PrepareContext(ctx, getUserByID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetUserByID: %w", err)
 	}
 	if q.getUserPlushieCountsStmt, err = db.PrepareContext(ctx, getUserPlushieCounts); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUserPlushieCounts: %w", err)
@@ -47,6 +53,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.lastChangeCountStmt, err = db.PrepareContext(ctx, lastChangeCount); err != nil {
 		return nil, fmt.Errorf("error preparing query LastChangeCount: %w", err)
+	}
+	if q.listUsersStmt, err = db.PrepareContext(ctx, listUsers); err != nil {
+		return nil, fmt.Errorf("error preparing query ListUsers: %w", err)
 	}
 	if q.modifyStatValueStmt, err = db.PrepareContext(ctx, modifyStatValue); err != nil {
 		return nil, fmt.Errorf("error preparing query ModifyStatValue: %w", err)
@@ -68,6 +77,11 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 
 func (q *Queries) Close() error {
 	var err error
+	if q.deleteUserPlushieStmt != nil {
+		if cerr := q.deleteUserPlushieStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteUserPlushieStmt: %w", cerr)
+		}
+	}
 	if q.ensureUserStatStmt != nil {
 		if cerr := q.ensureUserStatStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing ensureUserStatStmt: %w", cerr)
@@ -81,6 +95,11 @@ func (q *Queries) Close() error {
 	if q.getCollectedPlushiesStmt != nil {
 		if cerr := q.getCollectedPlushiesStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getCollectedPlushiesStmt: %w", cerr)
+		}
+	}
+	if q.getUserByIDStmt != nil {
+		if cerr := q.getUserByIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getUserByIDStmt: %w", cerr)
 		}
 	}
 	if q.getUserPlushieCountsStmt != nil {
@@ -106,6 +125,11 @@ func (q *Queries) Close() error {
 	if q.lastChangeCountStmt != nil {
 		if cerr := q.lastChangeCountStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing lastChangeCountStmt: %w", cerr)
+		}
+	}
+	if q.listUsersStmt != nil {
+		if cerr := q.listUsersStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing listUsersStmt: %w", cerr)
 		}
 	}
 	if q.modifyStatValueStmt != nil {
@@ -172,14 +196,17 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 type Queries struct {
 	db                         DBTX
 	tx                         *sql.Tx
+	deleteUserPlushieStmt      *sql.Stmt
 	ensureUserStatStmt         *sql.Stmt
 	getAllUserStatValuesStmt   *sql.Stmt
 	getCollectedPlushiesStmt   *sql.Stmt
+	getUserByIDStmt            *sql.Stmt
 	getUserPlushieCountsStmt   *sql.Stmt
 	getUserStatValuesStmt      *sql.Stmt
 	hasUserPlushieStmt         *sql.Stmt
 	insertUserPlushieIfNewStmt *sql.Stmt
 	lastChangeCountStmt        *sql.Stmt
+	listUsersStmt              *sql.Stmt
 	modifyStatValueStmt        *sql.Stmt
 	resetUserPlushiesStmt      *sql.Stmt
 	setStatValueStmt           *sql.Stmt
@@ -191,14 +218,17 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
 		db:                         tx,
 		tx:                         tx,
+		deleteUserPlushieStmt:      q.deleteUserPlushieStmt,
 		ensureUserStatStmt:         q.ensureUserStatStmt,
 		getAllUserStatValuesStmt:   q.getAllUserStatValuesStmt,
 		getCollectedPlushiesStmt:   q.getCollectedPlushiesStmt,
+		getUserByIDStmt:            q.getUserByIDStmt,
 		getUserPlushieCountsStmt:   q.getUserPlushieCountsStmt,
 		getUserStatValuesStmt:      q.getUserStatValuesStmt,
 		hasUserPlushieStmt:         q.hasUserPlushieStmt,
 		insertUserPlushieIfNewStmt: q.insertUserPlushieIfNewStmt,
 		lastChangeCountStmt:        q.lastChangeCountStmt,
+		listUsersStmt:              q.listUsersStmt,
 		modifyStatValueStmt:        q.modifyStatValueStmt,
 		resetUserPlushiesStmt:      q.resetUserPlushiesStmt,
 		setStatValueStmt:           q.setStatValueStmt,

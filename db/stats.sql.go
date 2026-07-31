@@ -65,6 +65,27 @@ func (q *Queries) GetAllUserStatValues(ctx context.Context) ([]GetAllUserStatVal
 	return items, nil
 }
 
+const getUserByID = `-- name: GetUserByID :one
+;
+
+SELECT user_stats.user_id, user_stats.username FROM user_stats WHERE user_stats.user_id = ?1
+UNION
+SELECT user_plushies.user_id, user_plushies.username FROM user_plushies WHERE user_plushies.user_id = ?1
+LIMIT 1
+`
+
+type GetUserByIDRow struct {
+	UserID   string `json:"userId"`
+	Username string `json:"username"`
+}
+
+func (q *Queries) GetUserByID(ctx context.Context, userID string) (GetUserByIDRow, error) {
+	row := q.queryRow(ctx, q.getUserByIDStmt, getUserByID, userID)
+	var i GetUserByIDRow
+	err := row.Scan(&i.UserID, &i.Username)
+	return i, err
+}
+
 const getUserStatValues = `-- name: GetUserStatValues :many
 SELECT stat_name, value
 FROM user_stats
@@ -86,6 +107,43 @@ func (q *Queries) GetUserStatValues(ctx context.Context, userID string) ([]GetUs
 	for rows.Next() {
 		var i GetUserStatValuesRow
 		if err := rows.Scan(&i.StatName, &i.Value); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listUsers = `-- name: ListUsers :many
+SELECT user_stats.user_id, CAST(MAX(user_stats.username) AS TEXT) AS username FROM user_stats
+GROUP BY user_id
+UNION
+SELECT user_plushies.user_id, CAST(MAX(user_plushies.username) AS TEXT) AS username FROM user_plushies
+GROUP BY user_id
+ORDER BY username COLLATE NOCASE
+`
+
+type ListUsersRow struct {
+	UserID   string `json:"userId"`
+	Username string `json:"username"`
+}
+
+func (q *Queries) ListUsers(ctx context.Context) ([]ListUsersRow, error) {
+	rows, err := q.query(ctx, q.listUsersStmt, listUsers)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListUsersRow{}
+	for rows.Next() {
+		var i ListUsersRow
+		if err := rows.Scan(&i.UserID, &i.Username); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

@@ -33,6 +33,12 @@ type LeaderboardRow struct {
 	Value    int64
 }
 
+// User is a viewer known to the bot through stats or blind-box collection data.
+type User struct {
+	ID       string `json:"id"`
+	Username string `json:"username"`
+}
+
 type Service struct {
 	queries     *db.Queries
 	definitions []Definition
@@ -130,6 +136,33 @@ func (s *Service) GetStatLeaderboard(ctx context.Context) ([]LeaderboardRow, err
 		})
 	}
 	return rows, nil
+}
+
+// ListUsers returns all viewers known through stats or blind-box collection data.
+func (s *Service) ListUsers(ctx context.Context) ([]User, error) {
+	rows, err := s.queries.ListUsers(ctx)
+	if err != nil {
+		return nil, err
+	}
+	users := make([]User, len(rows))
+	for i, row := range rows {
+		users[i] = User{ID: row.UserID, Username: row.Username}
+	}
+	return users, nil
+}
+
+// GetUser returns a known viewer by Twitch user ID.
+func (s *Service) GetUser(ctx context.Context, userID string) (User, error) {
+	row, err := s.queries.GetUserByID(ctx, userID)
+	if err != nil {
+		return User{}, err
+	}
+	return User{ID: row.UserID, Username: row.Username}, nil
+}
+
+// Definitions returns the configured stat definitions in display order.
+func (s *Service) Definitions() []Definition {
+	return append([]Definition(nil), s.definitions...)
 }
 
 func (s *Service) GetRandomStatDefinition(context.Context) (Definition, error) {

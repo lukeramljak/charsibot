@@ -70,3 +70,39 @@ func TestGetOrCreateStats(t *testing.T) {
 		_ = stats
 	})
 }
+
+func TestListUsersIncludesStatsAndCollectionUsersInCaseInsensitiveOrder(t *testing.T) {
+	queries, sqlDB := db.NewTestDB(t)
+	defer sqlDB.Close()
+	appCatalog, err := catalog.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	svc, err := stats.NewService(queries, appCatalog.Stats)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	if _, err := svc.GetOrCreateStats(ctx, "stats-user", "Zulu"); err != nil {
+		t.Fatal(err)
+	}
+	if err := queries.UpsertUserPlushie(ctx, db.UpsertUserPlushieParams{
+		UserID:   "collection-user",
+		Username: "alpha",
+		Series:   "coobubu",
+		Key:      "cutey",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	users, err := svc.ListUsers(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(users) != 2 {
+		t.Fatalf("users = %d, want 2", len(users))
+	}
+	if users[0].Username != "alpha" || users[1].Username != "Zulu" {
+		t.Errorf("user order = %#v, want alpha then Zulu", users)
+	}
+}

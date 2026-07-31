@@ -14,6 +14,9 @@ import (
 	"time"
 
 	helix "github.com/nicklaw5/helix/v2"
+
+	"github.com/lukeramljak/charsibot/blindbox"
+	"github.com/lukeramljak/charsibot/stats"
 )
 
 //go:embed all:web
@@ -31,22 +34,31 @@ type ServerConfig struct {
 	ClientID         string
 	ClientSecret     string
 	OAuthRedirectURI string
+	StatsService     *stats.Service
+	BlindBoxService  *blindbox.Service
+	Series           []blindbox.SeriesConfig
 }
 
 // Server handles SSE streaming and OAuth.
 type Server struct {
-	cfg     ServerConfig
-	logger  *slog.Logger
-	server  *http.Server
-	clients map[chan OverlayEvent]struct{}
-	mu      sync.RWMutex
+	cfg      ServerConfig
+	logger   *slog.Logger
+	server   *http.Server
+	clients  map[chan OverlayEvent]struct{}
+	mu       sync.RWMutex
+	stats    *stats.Service
+	blindbox *blindbox.Service
+	series   []blindbox.SeriesConfig
 }
 
 func NewServer(cfg ServerConfig, logger *slog.Logger) *Server {
 	return &Server{
-		cfg:     cfg,
-		logger:  logger,
-		clients: make(map[chan OverlayEvent]struct{}),
+		cfg:      cfg,
+		logger:   logger,
+		clients:  make(map[chan OverlayEvent]struct{}),
+		stats:    cfg.StatsService,
+		blindbox: cfg.BlindBoxService,
+		series:   append([]blindbox.SeriesConfig(nil), cfg.Series...),
 	}
 }
 
@@ -56,6 +68,12 @@ func (s *Server) Start() error {
 	mux.HandleFunc("GET /health", s.handleHealth)
 	mux.HandleFunc("GET /oauth/start", s.handleOAuthStart)
 	mux.HandleFunc("GET /oauth/callback", s.handleOAuthCallback)
+	mux.HandleFunc("GET /api/admin/users", s.handleAdminUsers)
+	mux.HandleFunc("GET /api/admin/users/{userID}", s.handleAdminUser)
+	mux.HandleFunc("PATCH /api/admin/users/{userID}/stats/{statName}", s.handleAdminStat)
+	mux.HandleFunc("PUT /api/admin/users/{userID}/collections/{series}/{key}", s.handleAdminGrantPlushie)
+	mux.HandleFunc("DELETE /api/admin/users/{userID}/collections/{series}/{key}", s.handleAdminDeletePlushie)
+	mux.HandleFunc("DELETE /api/admin/users/{userID}/collections/{series}", s.handleAdminResetCollection)
 
 	webContent, err := fs.Sub(webFS, "web")
 	if err != nil {

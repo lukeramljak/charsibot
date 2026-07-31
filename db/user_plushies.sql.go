@@ -9,6 +9,22 @@ import (
 	"context"
 )
 
+const deleteUserPlushie = `-- name: DeleteUserPlushie :exec
+DELETE FROM user_plushies
+WHERE user_id = ? AND series = ? AND key = ?
+`
+
+type DeleteUserPlushieParams struct {
+	UserID string `json:"userId"`
+	Series string `json:"series"`
+	Key    string `json:"key"`
+}
+
+func (q *Queries) DeleteUserPlushie(ctx context.Context, arg DeleteUserPlushieParams) error {
+	_, err := q.exec(ctx, q.deleteUserPlushieStmt, deleteUserPlushie, arg.UserID, arg.Series, arg.Key)
+	return err
+}
+
 const getCollectedPlushies = `-- name: GetCollectedPlushies :many
 SELECT key FROM user_plushies
 WHERE user_id = ? AND series = ?
