@@ -88,13 +88,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("GET /health", s.handleHealth)
 	mux.HandleFunc("GET /oauth/start", s.handleOAuthStart)
 	mux.HandleFunc("GET /oauth/callback", s.handleOAuthCallback)
-	config := huma.DefaultConfig("Charsibot local admin API", "1.0.0")
-	config.DocsPath = "/api/admin/docs"
-	config.OpenAPIPath = "/api/admin/openapi"
-	config.DocsRenderer = huma.DocsRendererScalar
-	api := humago.New(mux, config)
-	s.registerOverlayEvents(api)
-	s.registerAdminRoutes(api)
+	s.NewAPI(mux)
 
 	webContent, err := fs.Sub(webFS, "web")
 	if err != nil {
@@ -128,6 +122,18 @@ func (s *Server) Start() error {
 	}()
 
 	return nil
+}
+
+// NewAPI registers the overlay and local admin API contracts on mux.
+func (s *Server) NewAPI(mux *http.ServeMux) huma.API {
+	config := huma.DefaultConfig("Charsibot local admin API", "1.0.0")
+	config.DocsPath = "/api/admin/docs"
+	config.OpenAPIPath = "/api/admin/openapi"
+	config.DocsRenderer = huma.DocsRendererScalar
+	api := humago.New(mux, config)
+	s.registerOverlayEvents(api)
+	s.registerAdminRoutes(api)
+	return api
 }
 
 func (s *Server) Stop() {
@@ -170,6 +176,10 @@ func (s *Server) registerOverlayEvents(api huma.API) {
 		}()
 
 		s.logger.Info("SSE client connected")
+		if err := send.Comment("ping"); err != nil {
+			s.logger.Debug("SSE initial heartbeat failed", "err", err)
+			return
+		}
 
 		ping := time.NewTicker(pingInterval)
 		defer ping.Stop()

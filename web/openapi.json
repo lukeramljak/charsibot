@@ -1,0 +1,677 @@
+{
+  "components": {
+    "schemas": {
+      "AdminChatInputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": ["https://example.com/schemas/AdminChatInputBody.json"],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "displayInChat": { "type": "boolean" }
+        },
+        "required": ["displayInChat"],
+        "type": "object"
+      },
+      "AdminCollection": {
+        "additionalProperties": false,
+        "properties": {
+          "collected": { "items": { "type": "string" }, "type": "array" },
+          "config": { "$ref": "#/components/schemas/SeriesConfig" }
+        },
+        "required": ["config", "collected"],
+        "type": "object"
+      },
+      "AdminPlushieInputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": ["https://example.com/schemas/AdminPlushieInputBody.json"],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "triggerOverlay": { "type": "boolean" }
+        },
+        "required": ["triggerOverlay"],
+        "type": "object"
+      },
+      "AdminRandomPlushieInputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": ["https://example.com/schemas/AdminRandomPlushieInputBody.json"],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "triggerOverlay": { "type": "boolean" }
+        },
+        "required": ["triggerOverlay"],
+        "type": "object"
+      },
+      "AdminStat": {
+        "additionalProperties": false,
+        "properties": {
+          "longName": { "type": "string" },
+          "name": { "description": "Stable stat identifier", "type": "string" },
+          "shortName": { "type": "string" },
+          "value": { "format": "int64", "type": "integer" }
+        },
+        "required": ["name", "shortName", "longName", "value"],
+        "type": "object"
+      },
+      "AdminStatInputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": ["https://example.com/schemas/AdminStatInputBody.json"],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "mode": { "enum": ["set", "adjust"], "type": "string" },
+          "value": { "format": "int64", "type": "integer" }
+        },
+        "required": ["mode", "value"],
+        "type": "object"
+      },
+      "AdminUserResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": ["https://example.com/schemas/AdminUserResponse.json"],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "collections": {
+            "items": { "$ref": "#/components/schemas/AdminCollection" },
+            "type": "array"
+          },
+          "stats": { "items": { "$ref": "#/components/schemas/AdminStat" }, "type": "array" },
+          "user": { "$ref": "#/components/schemas/User" }
+        },
+        "required": ["user", "stats", "collections"],
+        "type": "object"
+      },
+      "AdminUsersResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": ["https://example.com/schemas/AdminUsersResponse.json"],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "users": { "items": { "$ref": "#/components/schemas/User" }, "type": "array" }
+        },
+        "required": ["users"],
+        "type": "object"
+      },
+      "BlindBoxDisplayData": {
+        "additionalProperties": false,
+        "properties": {
+          "collection": { "items": { "type": "string" }, "type": "array" },
+          "config": { "$ref": "#/components/schemas/SeriesConfig" },
+          "username": { "type": "string" }
+        },
+        "required": ["username", "collection", "config"],
+        "type": "object"
+      },
+      "BlindBoxRedemptionData": {
+        "additionalProperties": false,
+        "properties": {
+          "collection": { "items": { "type": "string" }, "type": "array" },
+          "config": { "$ref": "#/components/schemas/SeriesConfig" },
+          "isNew": { "type": "boolean" },
+          "plushie": { "$ref": "#/components/schemas/Plushie" },
+          "username": { "type": "string" }
+        },
+        "required": ["username", "plushie", "isNew", "collection", "config"],
+        "type": "object"
+      },
+      "ChatCommandData": {
+        "additionalProperties": false,
+        "properties": { "message": { "type": "string" } },
+        "required": ["message"],
+        "type": "object"
+      },
+      "ErrorDetail": {
+        "additionalProperties": false,
+        "properties": {
+          "location": {
+            "description": "Where the error occurred, e.g. 'body.items[3].tags' or 'path.thing-id'",
+            "type": "string"
+          },
+          "message": { "description": "Error message text", "type": "string" },
+          "value": { "description": "The value at the given location" }
+        },
+        "type": "object"
+      },
+      "ErrorModel": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": ["https://example.com/schemas/ErrorModel.json"],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "detail": {
+            "description": "A human-readable explanation specific to this occurrence of the problem.",
+            "examples": ["Property foo is required but is missing."],
+            "type": "string"
+          },
+          "errors": {
+            "description": "Optional list of individual error details",
+            "items": { "$ref": "#/components/schemas/ErrorDetail" },
+            "type": ["array", "null"]
+          },
+          "instance": {
+            "description": "A URI reference that identifies the specific occurrence of the problem.",
+            "examples": ["https://example.com/error-log/abc123"],
+            "format": "uri",
+            "type": "string"
+          },
+          "status": {
+            "description": "HTTP status code",
+            "examples": [400],
+            "format": "int64",
+            "type": "integer"
+          },
+          "title": {
+            "description": "A short, human-readable summary of the problem type. This value should not change between occurrences of the error.",
+            "examples": ["Bad Request"],
+            "type": "string"
+          },
+          "type": {
+            "default": "about:blank",
+            "description": "A URI reference to human-readable documentation for the error.",
+            "examples": ["https://example.com/errors/example"],
+            "format": "uri",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "Plushie": {
+        "additionalProperties": false,
+        "properties": {
+          "emptyImage": { "type": "string" },
+          "image": { "type": "string" },
+          "key": { "type": "string" },
+          "name": { "type": "string" },
+          "series": { "type": "string" },
+          "sortOrder": { "format": "int64", "type": "integer" },
+          "weight": { "format": "int64", "type": "integer" }
+        },
+        "required": ["series", "key", "sortOrder", "weight", "name", "image", "emptyImage"],
+        "type": "object"
+      },
+      "SeriesConfig": {
+        "additionalProperties": false,
+        "properties": {
+          "boxFrontFace": { "type": "string" },
+          "boxSideFace": { "type": "string" },
+          "displayColor": { "type": "string" },
+          "name": { "type": "string" },
+          "plushies": { "items": { "$ref": "#/components/schemas/Plushie" }, "type": "array" },
+          "redemptionTitle": { "type": "string" },
+          "revealSound": { "type": "string" },
+          "series": { "type": "string" },
+          "textColor": { "type": "string" }
+        },
+        "required": [
+          "series",
+          "redemptionTitle",
+          "name",
+          "revealSound",
+          "boxFrontFace",
+          "boxSideFace",
+          "displayColor",
+          "textColor",
+          "plushies"
+        ],
+        "type": "object"
+      },
+      "User": {
+        "additionalProperties": false,
+        "properties": { "id": { "type": "string" }, "username": { "type": "string" } },
+        "required": ["id", "username"],
+        "type": "object"
+      }
+    }
+  },
+  "info": { "title": "Charsibot local admin API", "version": "1.0.0" },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/admin/users": {
+      "get": {
+        "operationId": "list-admin-users",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AdminUsersResponse" }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ErrorModel" }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "tags": ["Admin"]
+      }
+    },
+    "/api/admin/users/{userID}": {
+      "get": {
+        "operationId": "get-admin-user",
+        "parameters": [
+          {
+            "description": "Twitch user ID",
+            "in": "path",
+            "name": "userID",
+            "required": true,
+            "schema": { "description": "Twitch user ID", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/AdminUserResponse" } }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ErrorModel" }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "tags": ["Admin"]
+      }
+    },
+    "/api/admin/users/{userID}/collections/{series}": {
+      "delete": {
+        "operationId": "reset-admin-collection",
+        "parameters": [
+          { "in": "path", "name": "userID", "required": true, "schema": { "type": "string" } },
+          { "in": "path", "name": "series", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/AdminUserResponse" } }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ErrorModel" }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "tags": ["Admin"]
+      }
+    },
+    "/api/admin/users/{userID}/collections/{series}/random": {
+      "post": {
+        "operationId": "grant-admin-random-plushie",
+        "parameters": [
+          { "in": "path", "name": "userID", "required": true, "schema": { "type": "string" } },
+          { "in": "path", "name": "series", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AdminRandomPlushieInputBody" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/AdminUserResponse" } }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ErrorModel" }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "tags": ["Admin"]
+      }
+    },
+    "/api/admin/users/{userID}/collections/{series}/{key}": {
+      "delete": {
+        "operationId": "remove-admin-plushie",
+        "parameters": [
+          { "in": "path", "name": "userID", "required": true, "schema": { "type": "string" } },
+          { "in": "path", "name": "series", "required": true, "schema": { "type": "string" } },
+          { "in": "path", "name": "key", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/AdminUserResponse" } }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ErrorModel" }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "tags": ["Admin"]
+      },
+      "put": {
+        "operationId": "grant-admin-plushie",
+        "parameters": [
+          { "in": "path", "name": "userID", "required": true, "schema": { "type": "string" } },
+          { "in": "path", "name": "series", "required": true, "schema": { "type": "string" } },
+          { "in": "path", "name": "key", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AdminPlushieInputBody" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/AdminUserResponse" } }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ErrorModel" }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "tags": ["Admin"]
+      }
+    },
+    "/api/admin/users/{userID}/stats/explode": {
+      "post": {
+        "operationId": "explode-admin-user",
+        "parameters": [
+          {
+            "description": "Twitch user ID",
+            "in": "path",
+            "name": "userID",
+            "required": true,
+            "schema": { "description": "Twitch user ID", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/AdminUserResponse" } }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ErrorModel" }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "tags": ["Admin"]
+      }
+    },
+    "/api/admin/users/{userID}/stats/explode/undo": {
+      "post": {
+        "operationId": "undo-admin-explode",
+        "parameters": [
+          {
+            "description": "Twitch user ID",
+            "in": "path",
+            "name": "userID",
+            "required": true,
+            "schema": { "description": "Twitch user ID", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/AdminUserResponse" } }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ErrorModel" }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "tags": ["Admin"]
+      }
+    },
+    "/api/admin/users/{userID}/stats/random": {
+      "post": {
+        "operationId": "grant-admin-random-stat",
+        "parameters": [
+          { "in": "path", "name": "userID", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/AdminChatInputBody" } }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/AdminUserResponse" } }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ErrorModel" }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "tags": ["Admin"]
+      }
+    },
+    "/api/admin/users/{userID}/stats/reset": {
+      "post": {
+        "operationId": "reset-admin-stats",
+        "parameters": [
+          { "in": "path", "name": "userID", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/AdminChatInputBody" } }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/AdminUserResponse" } }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ErrorModel" }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "tags": ["Admin"]
+      }
+    },
+    "/api/admin/users/{userID}/stats/{statName}": {
+      "patch": {
+        "operationId": "update-admin-stat",
+        "parameters": [
+          { "in": "path", "name": "userID", "required": true, "schema": { "type": "string" } },
+          { "in": "path", "name": "statName", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/AdminStatInputBody" } }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/AdminUserResponse" } }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ErrorModel" }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "tags": ["Admin"]
+      }
+    },
+    "/events": {
+      "get": {
+        "operationId": "overlay-events",
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "description": "Each oneOf object in the array represents one possible Server Sent Events (SSE) message, serialized as UTF-8 text according to the SSE specification.",
+                  "items": {
+                    "oneOf": [
+                      {
+                        "properties": {
+                          "data": { "$ref": "#/components/schemas/BlindBoxDisplayData" },
+                          "event": {
+                            "const": "blindbox_display",
+                            "description": "The event name.",
+                            "type": "string"
+                          },
+                          "id": { "description": "The event ID.", "type": "integer" },
+                          "retry": {
+                            "description": "The retry time in milliseconds.",
+                            "type": "integer"
+                          }
+                        },
+                        "required": ["data", "event"],
+                        "title": "Event blindbox_display",
+                        "type": "object"
+                      },
+                      {
+                        "properties": {
+                          "data": { "$ref": "#/components/schemas/BlindBoxRedemptionData" },
+                          "event": {
+                            "const": "blindbox_redemption",
+                            "description": "The event name.",
+                            "type": "string"
+                          },
+                          "id": { "description": "The event ID.", "type": "integer" },
+                          "retry": {
+                            "description": "The retry time in milliseconds.",
+                            "type": "integer"
+                          }
+                        },
+                        "required": ["data", "event"],
+                        "title": "Event blindbox_redemption",
+                        "type": "object"
+                      },
+                      {
+                        "properties": {
+                          "data": { "$ref": "#/components/schemas/ChatCommandData" },
+                          "event": {
+                            "const": "chat_command",
+                            "description": "The event name.",
+                            "type": "string"
+                          },
+                          "id": { "description": "The event ID.", "type": "integer" },
+                          "retry": {
+                            "description": "The retry time in milliseconds.",
+                            "type": "integer"
+                          }
+                        },
+                        "required": ["data", "event"],
+                        "title": "Event chat_command",
+                        "type": "object"
+                      }
+                    ]
+                  },
+                  "title": "Server Sent Events",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ErrorModel" }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Stream overlay events",
+        "tags": ["Overlay"]
+      }
+    }
+  }
+}

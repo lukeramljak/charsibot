@@ -1,12 +1,14 @@
 package server
 
 import (
+	"bufio"
 	"encoding/json"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humago"
@@ -35,6 +37,31 @@ func TestAdminRoutesExposeOpenAPI(t *testing.T) {
 	}
 	if !strings.Contains(response.Body.String(), "blindbox_redemption") {
 		t.Fatal("OpenAPI schema does not document the blindbox redemption event")
+	}
+}
+
+func TestOverlayEventsSendsInitialHeartbeat(t *testing.T) {
+	srv := NewServer(ServerConfig{}, slog.New(slog.NewTextHandler(testWriter{t}, nil)))
+	mux := http.NewServeMux()
+	srv.NewAPI(mux)
+	httpServer := httptest.NewServer(mux)
+	defer httpServer.Close()
+
+	client := &http.Client{Timeout: time.Second}
+	response, err := client.Get(httpServer.URL + "/events")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer response.Body.Close()
+	if response.Header.Get("Content-Type") != "text/event-stream" {
+		t.Fatalf("Content-Type = %q", response.Header.Get("Content-Type"))
+	}
+	line, err := bufio.NewReader(response.Body).ReadString('\n')
+	if err != nil {
+		t.Fatal(err)
+	}
+	if line != ": ping\n" {
+		t.Fatalf("first SSE line = %q, want initial heartbeat", line)
 	}
 }
 
@@ -385,6 +412,46 @@ func TestAdminGrantPlushieTriggersRedemptionEvent(t *testing.T) {
 		}
 	default:
 		t.Error("expected redemption event")
+	}
+}
+
+func TestAdminRemovePlushieDoesNotRequireBody(t *testing.T) {
+	queries, sqlDB := db.NewTestDB(t)
+	defer sqlDB.Close()
+	appCatalog, err := catalog.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	statsService, err := stats.NewService(queries, appCatalog.Stats)
+	if err != nil {
+		t.Fatal(err)
+	}
+	blindboxService, err := blindbox.NewService(queries, appCatalog.Series)
+	if err != nil {
+		t.Fatal(err)
+	}
+	series, plushie := appCatalog.Series[0], appCatalog.Series[0].Plushies[0]
+	if _, err := statsService.GetOrCreateStats(t.Context(), "viewer-1", "viewer"); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := blindboxService.AddPlushieToCollection(t.Context(), "viewer-1", "viewer", series.Series, plushie.Key); err != nil {
+		t.Fatal(err)
+	}
+
+	srv := NewServer(ServerConfig{
+		StatsService:    statsService,
+		BlindBoxService: blindboxService,
+		Series:          appCatalog.Series,
+	}, slog.New(slog.NewTextHandler(testWriter{t}, nil)))
+	mux := http.NewServeMux()
+	srv.NewAPI(mux)
+	request := httptest.NewRequest(http.MethodDelete, "/api/admin/users/viewer-1/collections/"+series.Series+"/"+plushie.Key, nil)
+	request.RemoteAddr = "127.0.0.1:12345"
+	response := httptest.NewRecorder()
+	mux.ServeHTTP(response, request)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", response.Code, response.Body.String())
 	}
 }
 

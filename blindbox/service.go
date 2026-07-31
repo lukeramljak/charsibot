@@ -21,7 +21,7 @@ type SeriesConfig struct {
 	BoxSideFace     string    `json:"boxSideFace"`
 	DisplayColor    string    `json:"displayColor"`
 	TextColor       string    `json:"textColor"`
-	Plushies        []Plushie `json:"plushies"`
+	Plushies        []Plushie `json:"plushies" nullable:"false"`
 }
 
 // Plushie is a catalog entry that can be awarded by a blind box.

@@ -3,35 +3,18 @@
   import { afterNavigate, goto } from '$app/navigation';
   import { resolve } from '$app/paths';
   import { page } from '$app/state';
-  import type { BlindBoxOverlayConfig } from '$lib/types';
+  import type { components } from '$lib/api.generated';
 
-  interface User {
-    id: string;
-    username: string;
-  }
-
-  interface UserStat {
-    name: string;
-    shortName: string;
-    longName: string;
-    value: number;
-  }
-
-  interface Collection {
-    config: BlindBoxOverlayConfig;
-    collected: string[];
-  }
+  type User = components['schemas']['User'];
+  type UserStat = components['schemas']['AdminStat'];
+  type Collection = components['schemas']['AdminCollection'];
+  type UserDetail = components['schemas']['AdminUserResponse'];
+  type UsersResponse = components['schemas']['AdminUsersResponse'];
 
   interface PendingPlushie {
     series: string;
     key: string;
     name: string;
-  }
-
-  interface UserDetail {
-    user: User;
-    stats: UserStat[];
-    collections: Collection[];
   }
 
   let users = $state.raw<User[]>([]);
@@ -71,7 +54,7 @@
     error = '';
     statusMessage = 'Loading viewers…';
     try {
-      const response = await request<{ users: User[] }>('/api/admin/users');
+      const response = await request<UsersResponse>('/api/admin/users');
       users = response.users;
       statusMessage = `Loaded ${users.length} viewers.`;
     } catch (err) {
@@ -159,14 +142,11 @@
   async function grantRandomStat(displayInChat: boolean) {
     if (!selected) return;
     closeRandomStatDialog();
-    await mutate(
-      `/api/admin/users/${encodeURIComponent(selected.user.id)}/stats/random`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ displayInChat }),
-      },
-    );
+    await mutate(`/api/admin/users/${encodeURIComponent(selected.user.id)}/stats/random`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ displayInChat }),
+    });
   }
 
   function closeExplodeDialog() {
@@ -406,13 +386,25 @@
                 >
                   Grant random stat
                 </button>
-                <button class="button button-danger" onclick={() => explodeDialog?.showModal()} disabled={loading}>
+                <button
+                  class="button button-danger"
+                  onclick={() => explodeDialog?.showModal()}
+                  disabled={loading}
+                >
                   Explode
                 </button>
-                <button class="button button-secondary" onclick={() => undoExplodeDialog?.showModal()} disabled={loading}>
+                <button
+                  class="button button-secondary"
+                  onclick={() => undoExplodeDialog?.showModal()}
+                  disabled={loading}
+                >
                   Undo explode
                 </button>
-                <button class="button button-danger" onclick={() => resetStatsDialog?.showModal()} disabled={loading}>
+                <button
+                  class="button button-danger"
+                  onclick={() => resetStatsDialog?.showModal()}
+                  disabled={loading}
+                >
                   Reset stats
                 </button>
               </div>
@@ -491,7 +483,8 @@
                         {@const plushieID = `${collection.config.series}:${plushie.key}`}
                         <button
                           class={['plushie-button p-2 text-left', !owned && 'is-unowned']}
-                          onclick={() => setPlushie(collection.config.series, plushie.key, plushie.name, owned)}
+                          onclick={() =>
+                            setPlushie(collection.config.series, plushie.key, plushie.name, owned)}
                           disabled={mutatingPlushie === plushieID}
                           title={owned ? `Remove ${plushie.name}` : `Grant ${plushie.name}`}
                           aria-label={owned ? `Remove ${plushie.name}` : `Grant ${plushie.name}`}
@@ -525,144 +518,147 @@
     </div>
   </div>
 
-<dialog
-  class="admin-dialog p-6"
-  bind:this={randomPlushieDialog}
-  aria-labelledby="random-plushie-dialog-title"
-  oncancel={() => {
-    pendingRandomCollection = null;
-  }}
->
-  <p class="eyebrow">Blind-box redemption</p>
-  <h2 class="section-title mt-2 text-2xl" id="random-plushie-dialog-title">
-    Grant a random plushie?
-  </h2>
-  <p class="admin-muted mt-2">
-    {pendingRandomCollection?.config.name ?? 'This series'} uses its normal weighted drop chances.
-  </p>
-  <div class="dialog-actions mt-6">
-    <button class="button button-secondary" onclick={closeRandomPlushieDialog}>Cancel</button>
-    <button class="button button-secondary" onclick={() => grantRandomPlushie(false)}>
-      Grant silently
-    </button>
-    <button class="button button-primary" onclick={() => grantRandomPlushie(true)}>
-      Grant &amp; show overlay
-    </button>
-  </div>
-</dialog>
+  <dialog
+    class="admin-dialog p-6"
+    bind:this={randomPlushieDialog}
+    aria-labelledby="random-plushie-dialog-title"
+    oncancel={() => {
+      pendingRandomCollection = null;
+    }}
+  >
+    <p class="eyebrow">Blind-box redemption</p>
+    <h2 class="section-title mt-2 text-2xl" id="random-plushie-dialog-title">
+      Grant a random plushie?
+    </h2>
+    <p class="admin-muted mt-2">
+      {pendingRandomCollection?.config.name ?? 'This series'} uses its normal weighted drop chances.
+    </p>
+    <div class="dialog-actions mt-6">
+      <button class="button button-secondary" onclick={closeRandomPlushieDialog}>Cancel</button>
+      <button class="button button-secondary" onclick={() => grantRandomPlushie(false)}>
+        Grant silently
+      </button>
+      <button class="button button-primary" onclick={() => grantRandomPlushie(true)}>
+        Grant &amp; show overlay
+      </button>
+    </div>
+  </dialog>
 
-<dialog
-  class="admin-dialog p-6"
-  bind:this={resetStatsDialog}
-  aria-labelledby="reset-stats-dialog-title"
->
-  <p class="eyebrow">Viewer stats</p>
-  <h2 class="section-title mt-2 text-2xl" id="reset-stats-dialog-title">
-    Reset {selected?.user.username ?? 'this viewer'}'s stats?
-  </h2>
-  <p class="admin-muted mt-2">This restores every stat to its configured default.</p>
-  <div class="dialog-actions mt-6">
-    <button class="button button-secondary" onclick={closeResetStatsDialog}>Cancel</button>
-    <button class="button button-danger" onclick={() => resetStats(false)}>Reset silently</button>
-    <button class="button button-primary" onclick={() => resetStats(true)}>
-      Reset &amp; display stats
-    </button>
-  </div>
-</dialog>
+  <dialog
+    class="admin-dialog p-6"
+    bind:this={resetStatsDialog}
+    aria-labelledby="reset-stats-dialog-title"
+  >
+    <p class="eyebrow">Viewer stats</p>
+    <h2 class="section-title mt-2 text-2xl" id="reset-stats-dialog-title">
+      Reset {selected?.user.username ?? 'this viewer'}'s stats?
+    </h2>
+    <p class="admin-muted mt-2">This restores every stat to its configured default.</p>
+    <div class="dialog-actions mt-6">
+      <button class="button button-secondary" onclick={closeResetStatsDialog}>Cancel</button>
+      <button class="button button-danger" onclick={() => resetStats(false)}>Reset silently</button>
+      <button class="button button-primary" onclick={() => resetStats(true)}>
+        Reset &amp; display stats
+      </button>
+    </div>
+  </dialog>
 
-<dialog
-  class="admin-dialog p-6"
-  bind:this={resetDialog}
-  aria-labelledby="reset-dialog-title"
-  oncancel={() => {
-    pendingResetCollection = null;
-  }}
->
-  <p class="eyebrow">Blind-box collection</p>
-  <h2 class="section-title mt-2 text-2xl" id="reset-dialog-title">
-    Reset {pendingResetCollection?.config.name ?? 'this collection'}?
-  </h2>
-  <p class="admin-muted mt-2">
-    This permanently removes all {pendingResetCollection?.collected.length ?? 0} collected plushies.
-  </p>
-  <div class="dialog-actions mt-6">
-    <button class="button button-secondary" onclick={closeResetDialog}>Cancel</button>
-    <button class="button button-danger" onclick={resetSeries}>Reset collection</button>
-  </div>
-</dialog>
+  <dialog
+    class="admin-dialog p-6"
+    bind:this={resetDialog}
+    aria-labelledby="reset-dialog-title"
+    oncancel={() => {
+      pendingResetCollection = null;
+    }}
+  >
+    <p class="eyebrow">Blind-box collection</p>
+    <h2 class="section-title mt-2 text-2xl" id="reset-dialog-title">
+      Reset {pendingResetCollection?.config.name ?? 'this collection'}?
+    </h2>
+    <p class="admin-muted mt-2">
+      This permanently removes all {pendingResetCollection?.collected.length ?? 0} collected plushies.
+    </p>
+    <div class="dialog-actions mt-6">
+      <button class="button button-secondary" onclick={closeResetDialog}>Cancel</button>
+      <button class="button button-danger" onclick={resetSeries}>Reset collection</button>
+    </div>
+  </dialog>
 
-<dialog
-  class="admin-dialog p-6"
-  bind:this={plushieDialog}
-  aria-labelledby="plushie-dialog-title"
-  oncancel={() => {
-    pendingPlushie = null;
-  }}
->
-  <p class="eyebrow">Blind-box redemption</p>
-  <h2 class="section-title mt-2 text-2xl" id="plushie-dialog-title">
-    Grant {pendingPlushie?.name ?? 'this plushie'}?
-  </h2>
-  <p class="admin-muted mt-2">Choose whether to announce this redemption on the overlay.</p>
-  <div class="dialog-actions mt-6">
-    <button class="button button-secondary" onclick={closePlushieDialog}>Cancel</button>
-    <button class="button button-secondary" onclick={() => grantPlushie(false)}>Grant silently</button>
-    <button class="button button-primary" onclick={() => grantPlushie(true)}>
-      Grant &amp; show overlay
-    </button>
-  </div>
-</dialog>
+  <dialog
+    class="admin-dialog p-6"
+    bind:this={plushieDialog}
+    aria-labelledby="plushie-dialog-title"
+    oncancel={() => {
+      pendingPlushie = null;
+    }}
+  >
+    <p class="eyebrow">Blind-box redemption</p>
+    <h2 class="section-title mt-2 text-2xl" id="plushie-dialog-title">
+      Grant {pendingPlushie?.name ?? 'this plushie'}?
+    </h2>
+    <p class="admin-muted mt-2">Choose whether to announce this redemption on the overlay.</p>
+    <div class="dialog-actions mt-6">
+      <button class="button button-secondary" onclick={closePlushieDialog}>Cancel</button>
+      <button class="button button-secondary" onclick={() => grantPlushie(false)}
+        >Grant silently</button
+      >
+      <button class="button button-primary" onclick={() => grantPlushie(true)}>
+        Grant &amp; show overlay
+      </button>
+    </div>
+  </dialog>
 
-<dialog
-  class="admin-dialog p-6"
-  bind:this={explodeDialog}
-  aria-labelledby="explode-dialog-title"
->
-  <p class="eyebrow">Viewer stat</p>
-  <h2 class="section-title mt-2 text-2xl" id="explode-dialog-title">
-    Explode {selected?.user.username ?? 'this viewer'}?
-  </h2>
-  <p class="admin-muted mt-2">This sets their PENIS stat to -1000 and displays their updated stats in chat.</p>
-  <div class="dialog-actions mt-6">
-    <button class="button button-secondary" onclick={closeExplodeDialog}>Cancel</button>
-    <button class="button button-danger" onclick={explode}>Explode</button>
-  </div>
-</dialog>
+  <dialog class="admin-dialog p-6" bind:this={explodeDialog} aria-labelledby="explode-dialog-title">
+    <p class="eyebrow">Viewer stat</p>
+    <h2 class="section-title mt-2 text-2xl" id="explode-dialog-title">
+      Explode {selected?.user.username ?? 'this viewer'}?
+    </h2>
+    <p class="admin-muted mt-2">
+      This sets their PENIS stat to -1000 and displays their updated stats in chat.
+    </p>
+    <div class="dialog-actions mt-6">
+      <button class="button button-secondary" onclick={closeExplodeDialog}>Cancel</button>
+      <button class="button button-danger" onclick={explode}>Explode</button>
+    </div>
+  </dialog>
 
-<dialog
-  class="admin-dialog p-6"
-  bind:this={undoExplodeDialog}
-  aria-labelledby="undo-explode-dialog-title"
->
-  <p class="eyebrow">Viewer stat</p>
-  <h2 class="section-title mt-2 text-2xl" id="undo-explode-dialog-title">
-    Undo {selected?.user.username ?? 'this viewer'}'s explosion?
-  </h2>
-  <p class="admin-muted mt-2">This restores their PENIS stat to its configured default and displays their updated stats in chat.</p>
-  <div class="dialog-actions mt-6">
-    <button class="button button-secondary" onclick={closeUndoExplodeDialog}>Cancel</button>
-    <button class="button button-primary" onclick={undoExplode}>Undo explode</button>
-  </div>
-</dialog>
+  <dialog
+    class="admin-dialog p-6"
+    bind:this={undoExplodeDialog}
+    aria-labelledby="undo-explode-dialog-title"
+  >
+    <p class="eyebrow">Viewer stat</p>
+    <h2 class="section-title mt-2 text-2xl" id="undo-explode-dialog-title">
+      Undo {selected?.user.username ?? 'this viewer'}'s explosion?
+    </h2>
+    <p class="admin-muted mt-2">
+      This restores their PENIS stat to its configured default and displays their updated stats in
+      chat.
+    </p>
+    <div class="dialog-actions mt-6">
+      <button class="button button-secondary" onclick={closeUndoExplodeDialog}>Cancel</button>
+      <button class="button button-primary" onclick={undoExplode}>Undo explode</button>
+    </div>
+  </dialog>
 
-<dialog
-  class="admin-dialog p-6"
-  bind:this={randomStatDialog}
-  aria-labelledby="random-stat-dialog-title"
->
-  <p class="eyebrow">Random stat</p>
-  <h2 class="section-title mt-2 text-2xl" id="random-stat-dialog-title">Grant a random stat?</h2>
-  <p class="admin-muted mt-2">Choose whether to display the viewer's updated stats in chat.</p>
-  <div class="dialog-actions mt-6">
-    <button class="button button-secondary" onclick={closeRandomStatDialog}>Cancel</button>
-    <button class="button button-secondary" onclick={() => grantRandomStat(false)}>
-      Grant silently
-    </button>
-    <button class="button button-primary" onclick={() => grantRandomStat(true)}>
-      Grant &amp; display stats
-    </button>
-  </div>
-</dialog>
+  <dialog
+    class="admin-dialog p-6"
+    bind:this={randomStatDialog}
+    aria-labelledby="random-stat-dialog-title"
+  >
+    <p class="eyebrow">Random stat</p>
+    <h2 class="section-title mt-2 text-2xl" id="random-stat-dialog-title">Grant a random stat?</h2>
+    <p class="admin-muted mt-2">Choose whether to display the viewer's updated stats in chat.</p>
+    <div class="dialog-actions mt-6">
+      <button class="button button-secondary" onclick={closeRandomStatDialog}>Cancel</button>
+      <button class="button button-secondary" onclick={() => grantRandomStat(false)}>
+        Grant silently
+      </button>
+      <button class="button button-primary" onclick={() => grantRandomStat(true)}>
+        Grant &amp; display stats
+      </button>
+    </div>
+  </dialog>
 </main>
 
 <style>
@@ -830,20 +826,20 @@
     font-weight: 800;
   }
 
-.button-secondary {
+  .button-secondary {
     border-radius: 999px;
     padding: 0.5rem 1rem;
     font-size: 0.75rem;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-}
+  }
 
-.button-secondary,
-.button-primary,
-.button-danger {
-  flex: none;
-  white-space: nowrap;
-}
+  .button-secondary,
+  .button-primary,
+  .button-danger {
+    flex: none;
+    white-space: nowrap;
+  }
 
   .button-secondary:hover:not(:disabled),
   .stat-stepper:hover:not(:disabled) {

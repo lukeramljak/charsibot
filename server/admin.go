@@ -27,17 +27,17 @@ type AdminStat struct {
 
 type AdminCollection struct {
 	Config    blindbox.SeriesConfig `json:"config"`
-	Collected []string              `json:"collected"`
+	Collected []string              `json:"collected" nullable:"false"`
 }
 
 type AdminUserResponse struct {
 	User        stats.User        `json:"user"`
-	Stats       []AdminStat       `json:"stats"`
-	Collections []AdminCollection `json:"collections"`
+	Stats       []AdminStat       `json:"stats" nullable:"false"`
+	Collections []AdminCollection `json:"collections" nullable:"false"`
 }
 
 type adminUsersResponse struct {
-	Users []stats.User `json:"users"`
+	Users []stats.User `json:"users" nullable:"false"`
 }
 type adminUserOutput struct{ Body AdminUserResponse }
 type adminUsersOutput struct{ Body adminUsersResponse }
@@ -65,6 +65,11 @@ type adminPlushieInput struct {
 	Body   struct {
 		TriggerOverlay bool `json:"triggerOverlay"`
 	}
+}
+type adminPlushiePathInput struct {
+	UserID string `path:"userID"`
+	Series string `path:"series"`
+	Key    string `path:"key"`
 }
 type adminRandomPlushieInput struct {
 	UserID string `path:"userID"`
@@ -273,7 +278,7 @@ func (s *Server) grantAdminPlushie(ctx context.Context, input *adminPlushieInput
 	return s.adminOutput(ctx, user.ID)
 }
 
-func (s *Server) removeAdminPlushie(ctx context.Context, input *adminPlushieInput) (*adminUserOutput, error) {
+func (s *Server) removeAdminPlushie(ctx context.Context, input *adminPlushiePathInput) (*adminUserOutput, error) {
 	user, err := s.adminUser(ctx, input.UserID)
 	if err != nil {
 		return nil, err
