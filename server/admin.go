@@ -1,12 +1,16 @@
 package server
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net"
 	"net/http"
 	"strings"
+
+	"github.com/danielgtaylor/huma/v2"
 
 	"github.com/lukeramljak/charsibot/blindbox"
 	"github.com/lukeramljak/charsibot/stats"
@@ -14,449 +18,369 @@ import (
 
 const explodedPenisValue int64 = -1000
 
-type adminStat struct {
-	Name      string `json:"name"`
+type AdminStat struct {
+	Name      string `json:"name" doc:"Stable stat identifier"`
 	ShortName string `json:"shortName"`
 	LongName  string `json:"longName"`
 	Value     int64  `json:"value"`
 }
 
-type adminCollection struct {
+type AdminCollection struct {
 	Config    blindbox.SeriesConfig `json:"config"`
 	Collected []string              `json:"collected"`
 }
 
-type adminUserResponse struct {
+type AdminUserResponse struct {
 	User        stats.User        `json:"user"`
-	Stats       []adminStat       `json:"stats"`
-	Collections []adminCollection `json:"collections"`
+	Stats       []AdminStat       `json:"stats"`
+	Collections []AdminCollection `json:"collections"`
 }
 
-type updateStatRequest struct {
-	Mode  string `json:"mode"`
-	Value int64  `json:"value"`
+type adminUsersResponse struct {
+	Users []stats.User `json:"users"`
+}
+type adminUserOutput struct{ Body AdminUserResponse }
+type adminUsersOutput struct{ Body adminUsersResponse }
+type adminUserInput struct {
+	UserID string `path:"userID" doc:"Twitch user ID"`
+}
+type adminStatInput struct {
+	UserID   string `path:"userID"`
+	StatName string `path:"statName"`
+	Body     struct {
+		Mode  string `json:"mode" enum:"set,adjust"`
+		Value int64  `json:"value"`
+	}
+}
+type adminChatInput struct {
+	UserID string `path:"userID"`
+	Body   struct {
+		DisplayInChat bool `json:"displayInChat"`
+	}
+}
+type adminPlushieInput struct {
+	UserID string `path:"userID"`
+	Series string `path:"series"`
+	Key    string `path:"key"`
+	Body   struct {
+		TriggerOverlay bool `json:"triggerOverlay"`
+	}
+}
+type adminRandomPlushieInput struct {
+	UserID string `path:"userID"`
+	Series string `path:"series"`
+	Body   struct {
+		TriggerOverlay bool `json:"triggerOverlay"`
+	}
+}
+type adminCollectionInput struct {
+	UserID string `path:"userID"`
+	Series string `path:"series"`
 }
 
-type plushieGrantRequest struct {
-	TriggerOverlay bool `json:"triggerOverlay"`
-}
-
-type randomStatRequest struct {
-	DisplayInChat bool `json:"displayInChat"`
-}
-
-type resetStatsRequest struct {
-	DisplayInChat bool `json:"displayInChat"`
-}
-
-func (s *Server) handleAdminUsers(w http.ResponseWriter, r *http.Request) {
-	if !s.requireLocalAdmin(w, r) {
-		return
-	}
-	users, err := s.stats.ListUsers(r.Context())
-	if err != nil {
-		s.adminError(w, "list users", err)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]any{"users": users})
-}
-
-func (s *Server) handleAdminUser(w http.ResponseWriter, r *http.Request) {
-	if !s.requireLocalAdmin(w, r) {
-		return
-	}
-	s.writeAdminUser(w, r, r.PathValue("userID"))
-}
-
-func (s *Server) handleAdminStat(w http.ResponseWriter, r *http.Request) {
-	if !s.requireLocalAdmin(w, r) {
-		return
-	}
-	user, ok := s.adminUser(w, r)
-	if !ok {
-		return
-	}
-	statName := r.PathValue("statName")
-	if !s.hasStat(statName) {
-		http.Error(w, "unknown stat", http.StatusBadRequest)
-		return
-	}
-	var input updateStatRequest
-	if !decodeJSON(w, r, &input) {
-		return
-	}
-	if _, err := s.stats.GetOrCreateStats(r.Context(), user.ID, user.Username); err != nil {
-		s.adminError(w, "initialize stats", err)
-		return
-	}
-	var err error
-	switch input.Mode {
-	case "set":
-		err = s.stats.SetStatValue(r.Context(), user.ID, statName, input.Value)
-	case "adjust":
-		err = s.stats.ModifyStatValue(r.Context(), user.ID, statName, input.Value)
-	default:
-		http.Error(w, `mode must be "set" or "adjust"`, http.StatusBadRequest)
-		return
-	}
-	if err != nil {
-		s.adminError(w, "update stat", err)
-		return
-	}
-	s.writeAdminUser(w, r, user.ID)
-}
-
-func (s *Server) handleAdminRandomStat(w http.ResponseWriter, r *http.Request) {
-	if !s.requireLocalAdmin(w, r) {
-		return
-	}
-	user, ok := s.adminUser(w, r)
-	if !ok {
-		return
-	}
-	var input randomStatRequest
-	if !decodeJSON(w, r, &input) {
-		return
-	}
-	if input.DisplayInChat && !s.hasAdminChatMessage() {
-		http.Error(w, "chat is unavailable", http.StatusServiceUnavailable)
-		return
-	}
-	if _, err := s.stats.GetOrCreateStats(r.Context(), user.ID, user.Username); err != nil {
-		s.adminError(w, "initialize stats", err)
-		return
-	}
-	definition, err := s.stats.GetRandomStatDefinition(r.Context())
-	if err != nil {
-		s.adminError(w, "choose random stat", err)
-		return
-	}
-	if err := s.stats.ModifyStatValue(r.Context(), user.ID, definition.Name, 1); err != nil {
-		s.adminError(w, "grant random stat", err)
-		return
-	}
-	if input.DisplayInChat {
-		userStats, err := s.stats.GetUserStats(r.Context(), user.ID)
-		if err != nil {
-			s.adminError(w, "get updated stats", err)
+func (s *Server) registerAdminRoutes(api huma.API) {
+	admin := huma.NewGroup(api, "/api/admin")
+	admin.UseMiddleware(func(ctx huma.Context, next func(huma.Context)) {
+		if err := s.requireLocalAdmin(ctx.RemoteAddr()); err != nil {
+			status := http.StatusInternalServerError
+			if statusErr, ok := err.(huma.StatusError); ok {
+				status = statusErr.GetStatus()
+			}
+			_ = huma.WriteErr(api, ctx, status, "", err)
 			return
 		}
-		s.sendAdminChatMessage(stats.FormatStats(user.Username, userStats))
-	}
-	s.writeAdminUser(w, r, user.ID)
+		next(ctx)
+	})
+
+	huma.Register(admin, huma.Operation{OperationID: "list-admin-users", Method: http.MethodGet, Path: "/users", Tags: []string{"Admin"}}, s.listAdminUsers)
+	huma.Register(admin, huma.Operation{OperationID: "get-admin-user", Method: http.MethodGet, Path: "/users/{userID}", Tags: []string{"Admin"}}, s.getAdminUser)
+	huma.Register(admin, huma.Operation{OperationID: "update-admin-stat", Method: http.MethodPatch, Path: "/users/{userID}/stats/{statName}", Tags: []string{"Admin"}}, s.updateAdminStat)
+	huma.Register(admin, huma.Operation{OperationID: "grant-admin-random-stat", Method: http.MethodPost, Path: "/users/{userID}/stats/random", Tags: []string{"Admin"}}, s.grantAdminRandomStat)
+	huma.Register(admin, huma.Operation{OperationID: "reset-admin-stats", Method: http.MethodPost, Path: "/users/{userID}/stats/reset", Tags: []string{"Admin"}}, s.resetAdminStats)
+	huma.Register(admin, huma.Operation{OperationID: "explode-admin-user", Method: http.MethodPost, Path: "/users/{userID}/stats/explode", Tags: []string{"Admin"}}, s.explodeAdminUser)
+	huma.Register(admin, huma.Operation{OperationID: "undo-admin-explode", Method: http.MethodPost, Path: "/users/{userID}/stats/explode/undo", Tags: []string{"Admin"}}, s.undoAdminExplode)
+	huma.Register(admin, huma.Operation{OperationID: "grant-admin-random-plushie", Method: http.MethodPost, Path: "/users/{userID}/collections/{series}/random", Tags: []string{"Admin"}}, s.grantAdminRandomPlushie)
+	huma.Register(admin, huma.Operation{OperationID: "grant-admin-plushie", Method: http.MethodPut, Path: "/users/{userID}/collections/{series}/{key}", Tags: []string{"Admin"}}, s.grantAdminPlushie)
+	huma.Register(admin, huma.Operation{OperationID: "remove-admin-plushie", Method: http.MethodDelete, Path: "/users/{userID}/collections/{series}/{key}", Tags: []string{"Admin"}}, s.removeAdminPlushie)
+	huma.Register(admin, huma.Operation{OperationID: "reset-admin-collection", Method: http.MethodDelete, Path: "/users/{userID}/collections/{series}", Tags: []string{"Admin"}}, s.resetAdminCollection)
 }
 
-func (s *Server) handleAdminResetStats(w http.ResponseWriter, r *http.Request) {
-	if !s.requireLocalAdmin(w, r) {
-		return
-	}
-	user, ok := s.adminUser(w, r)
-	if !ok {
-		return
-	}
-	var input resetStatsRequest
-	if !decodeJSON(w, r, &input) {
-		return
-	}
-	if input.DisplayInChat && !s.hasAdminChatMessage() {
-		http.Error(w, "chat is unavailable", http.StatusServiceUnavailable)
-		return
-	}
-	if _, err := s.stats.GetOrCreateStats(r.Context(), user.ID, user.Username); err != nil {
-		s.adminError(w, "initialize stats", err)
-		return
-	}
-	if err := s.stats.ResetStats(r.Context(), user.ID); err != nil {
-		s.adminError(w, "reset stats", err)
-		return
-	}
-	if input.DisplayInChat {
-		userStats, err := s.stats.GetUserStats(r.Context(), user.ID)
-		if err != nil {
-			s.adminError(w, "get reset stats", err)
-			return
-		}
-		s.sendAdminChatMessage(stats.FormatStats(user.Username, userStats))
-	}
-	s.writeAdminUser(w, r, user.ID)
-}
-
-func (s *Server) handleAdminExplode(w http.ResponseWriter, r *http.Request) {
-	if !s.requireLocalAdmin(w, r) {
-		return
-	}
-	user, ok := s.adminUser(w, r)
-	if !ok {
-		return
-	}
-	_, found := s.statDefinition("penis")
-	if !found {
-		http.Error(w, "penis stat is unavailable", http.StatusServiceUnavailable)
-		return
-	}
-	if !s.hasAdminChatMessage() {
-		http.Error(w, "chat is unavailable", http.StatusServiceUnavailable)
-		return
-	}
-	if _, err := s.stats.GetOrCreateStats(r.Context(), user.ID, user.Username); err != nil {
-		s.adminError(w, "initialize stats", err)
-		return
-	}
-	if err := s.stats.SetStatValue(r.Context(), user.ID, "penis", explodedPenisValue); err != nil {
-		s.adminError(w, "explode stat", err)
-		return
-	}
-	userStats, err := s.stats.GetUserStats(r.Context(), user.ID)
+func (s *Server) listAdminUsers(ctx context.Context, _ *struct{}) (*adminUsersOutput, error) {
+	users, err := s.stats.ListUsers(ctx)
 	if err != nil {
-		s.adminError(w, "get updated stats", err)
-		return
+		return nil, s.adminError("list users", err)
 	}
-	s.sendAdminChatMessage(stats.FormatStats(user.Username, userStats))
-	s.writeAdminUser(w, r, user.ID)
+	return &adminUsersOutput{Body: adminUsersResponse{Users: users}}, nil
 }
 
-func (s *Server) handleAdminUndoExplode(w http.ResponseWriter, r *http.Request) {
-	if !s.requireLocalAdmin(w, r) {
-		return
+func (s *Server) getAdminUser(ctx context.Context, input *adminUserInput) (*adminUserOutput, error) {
+	return s.adminOutput(ctx, input.UserID)
+}
+
+func (s *Server) updateAdminStat(ctx context.Context, input *adminStatInput) (*adminUserOutput, error) {
+	user, err := s.adminUser(ctx, input.UserID)
+	if err != nil {
+		return nil, err
 	}
-	user, ok := s.adminUser(w, r)
-	if !ok {
-		return
+	if !s.hasStat(input.StatName) {
+		return nil, huma.Error400BadRequest("unknown stat")
+	}
+	if _, err := s.stats.GetOrCreateStats(ctx, user.ID, user.Username); err != nil {
+		return nil, s.adminError("initialize stats", err)
+	}
+	if input.Body.Mode == "set" {
+		err = s.stats.SetStatValue(ctx, user.ID, input.StatName, input.Body.Value)
+	} else {
+		err = s.stats.ModifyStatValue(ctx, user.ID, input.StatName, input.Body.Value)
+	}
+	if err != nil {
+		return nil, s.adminError("update stat", err)
+	}
+	return s.adminOutput(ctx, user.ID)
+}
+
+func (s *Server) grantAdminRandomStat(ctx context.Context, input *adminChatInput) (*adminUserOutput, error) {
+	user, err := s.adminUser(ctx, input.UserID)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.ensureChat(input.Body.DisplayInChat); err != nil {
+		return nil, err
+	}
+	if _, err := s.stats.GetOrCreateStats(ctx, user.ID, user.Username); err != nil {
+		return nil, s.adminError("initialize stats", err)
+	}
+	definition, err := s.stats.GetRandomStatDefinition(ctx)
+	if err != nil {
+		return nil, s.adminError("choose random stat", err)
+	}
+	if err := s.stats.ModifyStatValue(ctx, user.ID, definition.Name, 1); err != nil {
+		return nil, s.adminError("grant random stat", err)
+	}
+	if err := s.displayStats(ctx, user, input.Body.DisplayInChat); err != nil {
+		return nil, err
+	}
+	return s.adminOutput(ctx, user.ID)
+}
+
+func (s *Server) resetAdminStats(ctx context.Context, input *adminChatInput) (*adminUserOutput, error) {
+	user, err := s.adminUser(ctx, input.UserID)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.ensureChat(input.Body.DisplayInChat); err != nil {
+		return nil, err
+	}
+	if _, err := s.stats.GetOrCreateStats(ctx, user.ID, user.Username); err != nil {
+		return nil, s.adminError("initialize stats", err)
+	}
+	if err := s.stats.ResetStats(ctx, user.ID); err != nil {
+		return nil, s.adminError("reset stats", err)
+	}
+	if err := s.displayStats(ctx, user, input.Body.DisplayInChat); err != nil {
+		return nil, err
+	}
+	return s.adminOutput(ctx, user.ID)
+}
+
+func (s *Server) explodeAdminUser(ctx context.Context, input *adminUserInput) (*adminUserOutput, error) {
+	user, err := s.adminUser(ctx, input.UserID)
+	if err != nil {
+		return nil, err
+	}
+	if !s.hasStat("penis") {
+		return nil, huma.Error503ServiceUnavailable("penis stat is unavailable")
+	}
+	if err := s.ensureChat(true); err != nil {
+		return nil, err
+	}
+	if _, err := s.stats.GetOrCreateStats(ctx, user.ID, user.Username); err != nil {
+		return nil, s.adminError("initialize stats", err)
+	}
+	if err := s.stats.SetStatValue(ctx, user.ID, "penis", explodedPenisValue); err != nil {
+		return nil, s.adminError("explode stat", err)
+	}
+	if err := s.displayStats(ctx, user, true); err != nil {
+		return nil, err
+	}
+	return s.adminOutput(ctx, user.ID)
+}
+
+func (s *Server) undoAdminExplode(ctx context.Context, input *adminUserInput) (*adminUserOutput, error) {
+	user, err := s.adminUser(ctx, input.UserID)
+	if err != nil {
+		return nil, err
 	}
 	penis, found := s.statDefinition("penis")
 	if !found {
-		http.Error(w, "penis stat is unavailable", http.StatusServiceUnavailable)
-		return
+		return nil, huma.Error503ServiceUnavailable("penis stat is unavailable")
 	}
-	if !s.hasAdminChatMessage() {
-		http.Error(w, "chat is unavailable", http.StatusServiceUnavailable)
-		return
+	if err := s.ensureChat(true); err != nil {
+		return nil, err
 	}
-	if _, err := s.stats.GetOrCreateStats(r.Context(), user.ID, user.Username); err != nil {
-		s.adminError(w, "initialize stats", err)
-		return
+	if _, err := s.stats.GetOrCreateStats(ctx, user.ID, user.Username); err != nil {
+		return nil, s.adminError("initialize stats", err)
 	}
-	if err := s.stats.SetStatValue(r.Context(), user.ID, "penis", penis.DefaultValue); err != nil {
-		s.adminError(w, "undo explode stat", err)
-		return
+	if err := s.stats.SetStatValue(ctx, user.ID, "penis", penis.DefaultValue); err != nil {
+		return nil, s.adminError("undo explode stat", err)
 	}
-	userStats, err := s.stats.GetUserStats(r.Context(), user.ID)
-	if err != nil {
-		s.adminError(w, "get updated stats", err)
-		return
+	if err := s.displayStats(ctx, user, true); err != nil {
+		return nil, err
 	}
-	s.sendAdminChatMessage(stats.FormatStats(user.Username, userStats))
-	s.writeAdminUser(w, r, user.ID)
+	return s.adminOutput(ctx, user.ID)
 }
 
-func (s *Server) handleAdminRandomPlushie(w http.ResponseWriter, r *http.Request) {
-	if !s.requireLocalAdmin(w, r) {
-		return
+func (s *Server) grantAdminRandomPlushie(ctx context.Context, input *adminRandomPlushieInput) (*adminUserOutput, error) {
+	user, err := s.adminUser(ctx, input.UserID)
+	if err != nil {
+		return nil, err
 	}
-	user, ok := s.adminUser(w, r)
-	if !ok {
-		return
-	}
-	var input plushieGrantRequest
-	if !decodeJSON(w, r, &input) {
-		return
-	}
-	series := r.PathValue("series")
 	for _, cfg := range s.series {
-		if cfg.Series != series {
-			continue
+		if cfg.Series == input.Series {
+			plushie, err := blindbox.PickPlushie(cfg.Plushies)
+			if err != nil {
+				return nil, s.adminError("choose random plushie", err)
+			}
+			result, err := s.blindbox.Redeem(ctx, user.ID, user.Username, input.Series, plushie.Key)
+			if err != nil {
+				return nil, s.adminError("grant random plushie", err)
+			}
+			if input.Body.TriggerOverlay {
+				s.Broadcast(OverlayEvent{Type: EventTypeBlindBoxRedemption, Data: blindbox.BlindBoxRedemptionData{Username: result.Username, Plushie: plushie, IsNew: result.IsNew, Collection: result.Collection, Config: cfg}})
+			}
+			return s.adminOutput(ctx, user.ID)
 		}
-		plushie, err := blindbox.PickPlushie(cfg.Plushies)
-		if err != nil {
-			s.adminError(w, "choose random plushie", err)
-			return
-		}
-		result, err := s.blindbox.Redeem(r.Context(), user.ID, user.Username, series, plushie.Key)
-		if err != nil {
-			s.adminError(w, "grant random plushie", err)
-			return
-		}
-		if input.TriggerOverlay {
-			s.Broadcast(OverlayEvent{
-				Type: EventTypeBlindBoxRedemption,
-				Data: blindbox.BlindBoxRedemptionData{
-					Username:   result.Username,
-					Plushie:    plushie,
-					IsNew:      result.IsNew,
-					Collection: result.Collection,
-					Config:     cfg,
-				},
-			})
-		}
-		s.writeAdminUser(w, r, user.ID)
-		return
 	}
-	http.Error(w, "unknown series", http.StatusBadRequest)
+	return nil, huma.Error400BadRequest("unknown series")
 }
 
-func (s *Server) handleAdminGrantPlushie(w http.ResponseWriter, r *http.Request) {
-	if !s.requireLocalAdmin(w, r) {
-		return
+func (s *Server) grantAdminPlushie(ctx context.Context, input *adminPlushieInput) (*adminUserOutput, error) {
+	user, err := s.adminUser(ctx, input.UserID)
+	if err != nil {
+		return nil, err
 	}
-	user, ok := s.adminUser(w, r)
-	if !ok {
-		return
-	}
-	var input plushieGrantRequest
-	if !decodeJSON(w, r, &input) {
-		return
-	}
-	series, key := r.PathValue("series"), r.PathValue("key")
-	cfg, plushie, found := s.plushieInSeries(series, key)
+	cfg, plushie, found := s.plushieInSeries(input.Series, input.Key)
 	if !found {
-		http.Error(w, "unknown series or plushie", http.StatusBadRequest)
-		return
+		return nil, huma.Error400BadRequest("unknown series or plushie")
 	}
-	isNew, collection, err := s.blindbox.AddPlushieToCollection(r.Context(), user.ID, user.Username, series, key)
+	isNew, collection, err := s.blindbox.AddPlushieToCollection(ctx, user.ID, user.Username, input.Series, input.Key)
 	if err != nil {
-		s.adminError(w, "grant plushie", err)
-		return
+		return nil, s.adminError("grant plushie", err)
 	}
-	if input.TriggerOverlay {
-		s.Broadcast(OverlayEvent{
-			Type: EventTypeBlindBoxRedemption,
-			Data: blindbox.BlindBoxRedemptionData{
-				Username:   user.Username,
-				Plushie:    plushie,
-				IsNew:      isNew,
-				Collection: collection,
-				Config:     cfg,
-			},
-		})
+	if input.Body.TriggerOverlay {
+		s.Broadcast(OverlayEvent{Type: EventTypeBlindBoxRedemption, Data: blindbox.BlindBoxRedemptionData{Username: user.Username, Plushie: plushie, IsNew: isNew, Collection: collection, Config: cfg}})
 	}
-	s.writeAdminUser(w, r, user.ID)
+	return s.adminOutput(ctx, user.ID)
 }
 
-func (s *Server) handleAdminDeletePlushie(w http.ResponseWriter, r *http.Request) {
-	if !s.requireLocalAdmin(w, r) {
-		return
-	}
-	user, ok := s.adminUser(w, r)
-	if !ok {
-		return
-	}
-	series, key := r.PathValue("series"), r.PathValue("key")
-	if !s.hasPlushie(series, key) {
-		http.Error(w, "unknown series or plushie", http.StatusBadRequest)
-		return
-	}
-	if err := s.blindbox.RemovePlushieFromCollection(r.Context(), user.ID, series, key); err != nil {
-		s.adminError(w, "remove plushie", err)
-		return
-	}
-	s.writeAdminUser(w, r, user.ID)
-}
-
-func (s *Server) handleAdminResetCollection(w http.ResponseWriter, r *http.Request) {
-	if !s.requireLocalAdmin(w, r) {
-		return
-	}
-	user, ok := s.adminUser(w, r)
-	if !ok {
-		return
-	}
-	series := r.PathValue("series")
-	if !s.hasSeries(series) {
-		http.Error(w, "unknown series", http.StatusBadRequest)
-		return
-	}
-	if err := s.blindbox.ResetCollection(r.Context(), user.ID, series); err != nil {
-		s.adminError(w, "reset collection", err)
-		return
-	}
-	s.writeAdminUser(w, r, user.ID)
-}
-
-func (s *Server) writeAdminUser(w http.ResponseWriter, r *http.Request, userID string) {
-	user, ok := s.adminUserByID(w, r, userID)
-	if !ok {
-		return
-	}
-	userStats, err := s.stats.GetUserStats(r.Context(), user.ID)
+func (s *Server) removeAdminPlushie(ctx context.Context, input *adminPlushieInput) (*adminUserOutput, error) {
+	user, err := s.adminUser(ctx, input.UserID)
 	if err != nil {
-		s.adminError(w, "get stats", err)
-		return
+		return nil, err
 	}
-	valuesByName := make(map[string]int64, len(userStats))
+	if !s.hasPlushie(input.Series, input.Key) {
+		return nil, huma.Error400BadRequest("unknown series or plushie")
+	}
+	if err := s.blindbox.RemovePlushieFromCollection(ctx, user.ID, input.Series, input.Key); err != nil {
+		return nil, s.adminError("remove plushie", err)
+	}
+	return s.adminOutput(ctx, user.ID)
+}
+
+func (s *Server) resetAdminCollection(ctx context.Context, input *adminCollectionInput) (*adminUserOutput, error) {
+	user, err := s.adminUser(ctx, input.UserID)
+	if err != nil {
+		return nil, err
+	}
+	if !s.hasSeries(input.Series) {
+		return nil, huma.Error400BadRequest("unknown series")
+	}
+	if err := s.blindbox.ResetCollection(ctx, user.ID, input.Series); err != nil {
+		return nil, s.adminError("reset collection", err)
+	}
+	return s.adminOutput(ctx, user.ID)
+}
+
+func (s *Server) adminOutput(ctx context.Context, userID string) (*adminUserOutput, error) {
+	user, err := s.adminUser(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	userStats, err := s.stats.GetUserStats(ctx, user.ID)
+	if err != nil {
+		return nil, s.adminError("get stats", err)
+	}
+	values := make(map[string]int64, len(userStats))
 	for _, stat := range userStats {
-		valuesByName[stat.Name] = stat.Value
+		values[stat.Name] = stat.Value
 	}
 	definitions := s.stats.Definitions()
-	statValues := make([]adminStat, len(definitions))
+	statValues := make([]AdminStat, len(definitions))
 	for i, definition := range definitions {
-		value, exists := valuesByName[definition.Name]
-		if !exists {
+		value, ok := values[definition.Name]
+		if !ok {
 			value = definition.DefaultValue
 		}
-		statValues[i] = adminStat{
-			Name:      definition.Name,
-			ShortName: definition.ShortName,
-			LongName:  definition.LongName,
-			Value:     value,
-		}
+		statValues[i] = AdminStat{Name: definition.Name, ShortName: definition.ShortName, LongName: definition.LongName, Value: value}
 	}
-	collections := make([]adminCollection, 0, len(s.series))
+	collections := make([]AdminCollection, 0, len(s.series))
 	for _, cfg := range s.series {
-		collected, err := s.blindbox.GetCollection(r.Context(), user.ID, cfg.Series)
+		collected, err := s.blindbox.GetCollection(ctx, user.ID, cfg.Series)
 		if err != nil {
-			s.adminError(w, "get collection", err)
-			return
+			return nil, s.adminError("get collection", err)
 		}
-		collections = append(collections, adminCollection{Config: cfg, Collected: collected})
+		collections = append(collections, AdminCollection{Config: cfg, Collected: collected})
 	}
-	writeJSON(w, http.StatusOK, adminUserResponse{User: user, Stats: statValues, Collections: collections})
+	return &adminUserOutput{Body: AdminUserResponse{User: user, Stats: statValues, Collections: collections}}, nil
 }
 
-func (s *Server) adminUser(w http.ResponseWriter, r *http.Request) (stats.User, bool) {
-	return s.adminUserByID(w, r, r.PathValue("userID"))
-}
-
-func (s *Server) adminUserByID(w http.ResponseWriter, r *http.Request, userID string) (stats.User, bool) {
+func (s *Server) adminUser(ctx context.Context, userID string) (stats.User, error) {
 	if strings.TrimSpace(userID) == "" {
-		http.Error(w, "user ID is required", http.StatusBadRequest)
-		return stats.User{}, false
+		return stats.User{}, huma.Error400BadRequest("user ID is required")
 	}
-	user, err := s.stats.GetUser(r.Context(), userID)
+	user, err := s.stats.GetUser(ctx, userID)
 	if errors.Is(err, sql.ErrNoRows) {
-		http.Error(w, "user not found", http.StatusNotFound)
-		return stats.User{}, false
+		return stats.User{}, huma.Error404NotFound("user not found")
 	}
 	if err != nil {
-		s.adminError(w, "get user", err)
-		return stats.User{}, false
+		return stats.User{}, s.adminError("get user", err)
 	}
-	return user, true
+	return user, nil
 }
 
-func (s *Server) requireLocalAdmin(w http.ResponseWriter, r *http.Request) bool {
+func (s *Server) ensureChat(display bool) error {
+	if display && !s.hasAdminChatMessage() {
+		return huma.Error503ServiceUnavailable("chat is unavailable")
+	}
+	return nil
+}
+func (s *Server) displayStats(ctx context.Context, user stats.User, display bool) error {
+	if !display {
+		return nil
+	}
+	values, err := s.stats.GetUserStats(ctx, user.ID)
+	if err != nil {
+		return s.adminError("get updated stats", err)
+	}
+	s.sendAdminChatMessage(stats.FormatStats(user.Username, values))
+	return nil
+}
+func (s *Server) requireLocalAdmin(remoteAddr string) error {
 	if s.stats == nil || s.blindbox == nil {
-		http.Error(w, "admin is not configured", http.StatusServiceUnavailable)
-		return false
+		return huma.Error503ServiceUnavailable("admin is not configured")
 	}
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	host, _, err := net.SplitHostPort(remoteAddr)
 	if err != nil || !net.ParseIP(host).IsLoopback() {
-		http.Error(w, "admin is available only on localhost", http.StatusForbidden)
-		return false
+		return huma.Error403Forbidden("admin is available only on localhost")
 	}
-	return true
+	return nil
 }
-
 func (s *Server) hasAdminChatMessage() bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.adminChatMessage != nil
 }
-
-func (s *Server) hasStat(name string) bool {
-	_, found := s.statDefinition(name)
-	return found
-}
-
+func (s *Server) hasStat(name string) bool { _, found := s.statDefinition(name); return found }
 func (s *Server) statDefinition(name string) (stats.Definition, bool) {
 	for _, stat := range s.stats.Definitions() {
 		if stat.Name == name {
@@ -465,7 +389,6 @@ func (s *Server) statDefinition(name string) (stats.Definition, bool) {
 	}
 	return stats.Definition{}, false
 }
-
 func (s *Server) hasSeries(series string) bool {
 	for _, cfg := range s.series {
 		if cfg.Series == series {
@@ -474,45 +397,81 @@ func (s *Server) hasSeries(series string) bool {
 	}
 	return false
 }
-
 func (s *Server) hasPlushie(series, key string) bool {
 	_, _, found := s.plushieInSeries(series, key)
 	return found
 }
-
 func (s *Server) plushieInSeries(series, key string) (blindbox.SeriesConfig, blindbox.Plushie, bool) {
 	for _, cfg := range s.series {
-		if cfg.Series != series {
-			continue
-		}
-		for _, plushie := range cfg.Plushies {
-			if plushie.Key == key {
-				return cfg, plushie, true
+		if cfg.Series == series {
+			for _, plushie := range cfg.Plushies {
+				if plushie.Key == key {
+					return cfg, plushie, true
+				}
 			}
 		}
 	}
 	return blindbox.SeriesConfig{}, blindbox.Plushie{}, false
 }
-
-func (s *Server) adminError(w http.ResponseWriter, action string, err error) {
-	s.logger.Error("admin request failed", "action", action, "err", err)
-	http.Error(w, "admin request failed", http.StatusInternalServerError)
+func (s *Server) adminError(action string, err error) error {
+	s.logger.Error("admin request failed", slog.String("action", action), slog.Any("err", err))
+	return huma.Error500InternalServerError("admin request failed")
 }
 
-func decodeJSON(w http.ResponseWriter, r *http.Request, target any) bool {
-	decoder := json.NewDecoder(r.Body)
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(target); err != nil {
-		http.Error(w, "invalid JSON request body", http.StatusBadRequest)
-		return false
-	}
-	return true
-}
+// The following helpers preserve direct handler coverage while the public API is
+// registered through Huma. They are deliberately not registered as routes.
+type adminUserResponse = AdminUserResponse
 
-func writeJSON(w http.ResponseWriter, status int, value any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(value); err != nil {
+func (s *Server) writeLegacyAdmin(w http.ResponseWriter, r *http.Request, response *adminUserOutput, err error) {
+	if err != nil {
+		status := http.StatusInternalServerError
+		if statusErr, ok := err.(huma.StatusError); ok {
+			status = statusErr.GetStatus()
+		}
+		http.Error(w, err.Error(), status)
 		return
 	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(response.Body)
+}
+
+func (s *Server) handleAdminUser(w http.ResponseWriter, r *http.Request) {
+	if err := s.requireLocalAdmin(r.RemoteAddr); err != nil {
+		s.writeLegacyAdmin(w, r, nil, err)
+		return
+	}
+	out, err := s.getAdminUser(r.Context(), &adminUserInput{UserID: r.PathValue("userID")})
+	s.writeLegacyAdmin(w, r, out, err)
+}
+func (s *Server) handleAdminRandomStat(w http.ResponseWriter, r *http.Request) {
+	input := &adminChatInput{UserID: r.PathValue("userID")}
+	_ = json.NewDecoder(r.Body).Decode(&input.Body)
+	out, err := s.grantAdminRandomStat(r.Context(), input)
+	s.writeLegacyAdmin(w, r, out, err)
+}
+func (s *Server) handleAdminResetStats(w http.ResponseWriter, r *http.Request) {
+	input := &adminChatInput{UserID: r.PathValue("userID")}
+	_ = json.NewDecoder(r.Body).Decode(&input.Body)
+	out, err := s.resetAdminStats(r.Context(), input)
+	s.writeLegacyAdmin(w, r, out, err)
+}
+func (s *Server) handleAdminExplode(w http.ResponseWriter, r *http.Request) {
+	out, err := s.explodeAdminUser(r.Context(), &adminUserInput{UserID: r.PathValue("userID")})
+	s.writeLegacyAdmin(w, r, out, err)
+}
+func (s *Server) handleAdminUndoExplode(w http.ResponseWriter, r *http.Request) {
+	out, err := s.undoAdminExplode(r.Context(), &adminUserInput{UserID: r.PathValue("userID")})
+	s.writeLegacyAdmin(w, r, out, err)
+}
+func (s *Server) handleAdminRandomPlushie(w http.ResponseWriter, r *http.Request) {
+	input := &adminRandomPlushieInput{UserID: r.PathValue("userID"), Series: r.PathValue("series")}
+	_ = json.NewDecoder(r.Body).Decode(&input.Body)
+	out, err := s.grantAdminRandomPlushie(r.Context(), input)
+	s.writeLegacyAdmin(w, r, out, err)
+}
+func (s *Server) handleAdminGrantPlushie(w http.ResponseWriter, r *http.Request) {
+	input := &adminPlushieInput{UserID: r.PathValue("userID"), Series: r.PathValue("series"), Key: r.PathValue("key")}
+	_ = json.NewDecoder(r.Body).Decode(&input.Body)
+	out, err := s.grantAdminPlushie(r.Context(), input)
+	s.writeLegacyAdmin(w, r, out, err)
 }

@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/danielgtaylor/huma/v2"
+	"github.com/danielgtaylor/huma/v2/adapters/humago"
 	_ "modernc.org/sqlite"
 
 	"github.com/lukeramljak/charsibot/blindbox"
@@ -15,6 +17,26 @@ import (
 	"github.com/lukeramljak/charsibot/db"
 	"github.com/lukeramljak/charsibot/stats"
 )
+
+func TestAdminRoutesExposeOpenAPI(t *testing.T) {
+	mux := http.NewServeMux()
+	srv := NewServer(ServerConfig{}, slog.New(slog.NewTextHandler(testWriter{t}, nil)))
+	config := huma.DefaultConfig("Charsibot local admin API", "1.0.0")
+	config.DocsPath = "/api/admin/docs"
+	config.OpenAPIPath = "/api/admin/openapi"
+	api := humago.New(mux, config)
+	srv.registerOverlayEvents(api)
+	srv.registerAdminRoutes(api)
+
+	response := httptest.NewRecorder()
+	mux.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/api/admin/openapi.json", nil))
+	if response.Code != http.StatusOK {
+		t.Fatalf("OpenAPI status = %d, body = %s", response.Code, response.Body.String())
+	}
+	if !strings.Contains(response.Body.String(), "blindbox_redemption") {
+		t.Fatal("OpenAPI schema does not document the blindbox redemption event")
+	}
+}
 
 func TestAdminUserIncludesDefaultStatsForCollectionOnlyUser(t *testing.T) {
 	queries, sqlDB := db.NewTestDB(t)

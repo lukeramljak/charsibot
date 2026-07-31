@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"embed"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -13,6 +12,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/danielgtaylor/huma/v2"
+	"github.com/danielgtaylor/huma/v2/adapters/humago"
+	"github.com/danielgtaylor/huma/v2/sse"
 	helix "github.com/nicklaw5/helix/v2"
 
 	"github.com/lukeramljak/charsibot/blindbox"
@@ -83,21 +85,16 @@ func NewServer(cfg ServerConfig, logger *slog.Logger) *Server {
 
 func (s *Server) Start() error {
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /events", s.handleSSE)
 	mux.HandleFunc("GET /health", s.handleHealth)
 	mux.HandleFunc("GET /oauth/start", s.handleOAuthStart)
 	mux.HandleFunc("GET /oauth/callback", s.handleOAuthCallback)
-	mux.HandleFunc("GET /api/admin/users", s.handleAdminUsers)
-	mux.HandleFunc("GET /api/admin/users/{userID}", s.handleAdminUser)
-	mux.HandleFunc("POST /api/admin/users/{userID}/stats/reset", s.handleAdminResetStats)
-	mux.HandleFunc("POST /api/admin/users/{userID}/stats/explode", s.handleAdminExplode)
-	mux.HandleFunc("POST /api/admin/users/{userID}/stats/explode/undo", s.handleAdminUndoExplode)
-	mux.HandleFunc("POST /api/admin/users/{userID}/stats/random", s.handleAdminRandomStat)
-	mux.HandleFunc("PATCH /api/admin/users/{userID}/stats/{statName}", s.handleAdminStat)
-	mux.HandleFunc("POST /api/admin/users/{userID}/collections/{series}/random", s.handleAdminRandomPlushie)
-	mux.HandleFunc("PUT /api/admin/users/{userID}/collections/{series}/{key}", s.handleAdminGrantPlushie)
-	mux.HandleFunc("DELETE /api/admin/users/{userID}/collections/{series}/{key}", s.handleAdminDeletePlushie)
-	mux.HandleFunc("DELETE /api/admin/users/{userID}/collections/{series}", s.handleAdminResetCollection)
+	config := huma.DefaultConfig("Charsibot local admin API", "1.0.0")
+	config.DocsPath = "/api/admin/docs"
+	config.OpenAPIPath = "/api/admin/openapi"
+	config.DocsRenderer = huma.DocsRendererScalar
+	api := humago.New(mux, config)
+	s.registerOverlayEvents(api)
+	s.registerAdminRoutes(api)
 
 	webContent, err := fs.Sub(webFS, "web")
 	if err != nil {
@@ -143,57 +140,58 @@ func (s *Server) Stop() {
 	}
 }
 
-func (s *Server) handleSSE(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Connection", "keep-alive")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("X-Accel-Buffering", "no")
+// ChatCommandData is the payload of a chat_command overlay event.
+type ChatCommandData struct {
+	Message string `json:"message"`
+}
 
-	flusher, ok := w.(http.Flusher)
-	if !ok {
-		http.Error(w, "streaming unsupported", http.StatusInternalServerError)
-		return
-	}
-
-	ch := make(chan OverlayEvent, eventChannelBuffer)
-	s.mu.Lock()
-	s.clients[ch] = struct{}{}
-	s.mu.Unlock()
-
-	defer func() {
+func (s *Server) registerOverlayEvents(api huma.API) {
+	sse.Register(api, huma.Operation{
+		OperationID: "overlay-events",
+		Method:      http.MethodGet,
+		Path:        "/events",
+		Summary:     "Stream overlay events",
+		Tags:        []string{"Overlay"},
+	}, map[string]any{
+		string(EventTypeChatCommand):        ChatCommandData{},
+		string(EventTypeCollectionDisplay):  blindbox.BlindBoxDisplayData{},
+		string(EventTypeBlindBoxRedemption): blindbox.BlindBoxRedemptionData{},
+	}, func(ctx context.Context, _ *struct{}, send sse.Sender) {
+		ch := make(chan OverlayEvent, eventChannelBuffer)
 		s.mu.Lock()
-		delete(s.clients, ch)
-		close(ch)
+		s.clients[ch] = struct{}{}
 		s.mu.Unlock()
-	}()
 
-	s.logger.Info("SSE client connected", "remote_addr", r.RemoteAddr)
+		defer func() {
+			s.mu.Lock()
+			delete(s.clients, ch)
+			close(ch)
+			s.mu.Unlock()
+		}()
 
-	fmt.Fprintf(w, ": ping\n\n")
-	flusher.Flush()
+		s.logger.Info("SSE client connected")
 
-	ping := time.NewTicker(pingInterval)
-	defer ping.Stop()
+		ping := time.NewTicker(pingInterval)
+		defer ping.Stop()
 
-	for {
-		select {
-		case <-r.Context().Done():
-			s.logger.Debug("SSE client disconnected")
-			return
-		case <-ping.C:
-			fmt.Fprintf(w, ": ping\n\n")
-			flusher.Flush()
-		case event := <-ch:
-			data, err := json.Marshal(event.Data)
-			if err != nil {
-				s.logger.Error("failed to marshal event", "err", err)
-				continue
+		for {
+			select {
+			case <-ctx.Done():
+				s.logger.Debug("SSE client disconnected")
+				return
+			case <-ping.C:
+				if err := send.Comment("ping"); err != nil {
+					s.logger.Debug("SSE heartbeat failed", "err", err)
+					return
+				}
+			case event := <-ch:
+				if err := send.Data(event.Data); err != nil {
+					s.logger.Debug("SSE event send failed", "err", err, "type", event.Type)
+					return
+				}
 			}
-			fmt.Fprintf(w, "event: %s\ndata: %s\n\n", event.Type, data)
-			flusher.Flush()
 		}
-	}
+	})
 }
 
 func (s *Server) Broadcast(event OverlayEvent) {
