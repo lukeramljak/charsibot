@@ -4,6 +4,15 @@
   import { charsibot } from '$lib/charsibot.svelte';
 </script>
 
+<svelte:head>
+  <style>
+    html,
+    body {
+      background: transparent;
+    }
+  </style>
+</svelte:head>
+
 {#if !charsibot.isConnected}
   <DisconnectedBanner
     title="Blind Box Overlay is Sleeping"

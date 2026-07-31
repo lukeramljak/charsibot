@@ -255,18 +255,6 @@ func (b *Bot) processCommand(event twitch.EventChannelChatMessage) {
 		"message", event.Message.Text,
 	)
 
-	if command.ModeratorOnly && !IsModerator(event) {
-		b.logger.Warn("non-moderator attempted mod command",
-			"user", event.ChatterUserName,
-			"command", cmd,
-		)
-		b.SendMessage(SendMessageParams{
-			Message:              "You must be a moderator to use this command",
-			ReplyParentMessageID: event.MessageId,
-		})
-		return
-	}
-
 	b.logger.Info("executing command", "command", cmd, "user", event.ChatterUserName)
 	ctx, cancel := context.WithTimeout(context.Background(), handlerTimeout)
 	defer cancel()

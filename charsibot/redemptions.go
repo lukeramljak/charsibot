@@ -2,11 +2,13 @@ package charsibot
 
 import (
 	"context"
+	"fmt"
 	"math/rand/v2"
 
 	"github.com/joeyak/go-twitch-eventsub/v3"
 
 	"github.com/lukeramljak/charsibot/blindbox"
+	"github.com/lukeramljak/charsibot/server"
 	"github.com/lukeramljak/charsibot/stats"
 )
 
@@ -88,4 +90,33 @@ func Redemptions(seriesConfigs []blindbox.SeriesConfig) map[string]RedemptionFun
 	}
 
 	return redemptions
+}
+
+// redeemBlindBox picks a random plushie, records it, and broadcasts the SSE event.
+func redeemBlindBox(ctx context.Context, b *Bot, userID, username string, cfg blindbox.SeriesConfig) {
+	plushie, err := blindbox.PickPlushie(cfg.Plushies)
+	if err != nil {
+		b.logger.Error("failed to pick plushie", "err", err, "series", cfg.Series)
+		b.SendMessage(SendMessageParams{Message: fmt.Sprintf("@%s sorry, the redemption failed. Please ping @modservo.", username)})
+		return
+	}
+
+	result, err := b.blindboxService.Redeem(ctx, userID, username, cfg.Series, plushie.Key)
+	if err != nil {
+		b.logger.Error("failed to redeem blind box", "err", err, "user", username)
+		b.SendMessage(SendMessageParams{Message: fmt.Sprintf("@%s sorry, the redemption failed. Please ping @modservo.", username)})
+		return
+	}
+
+	b.broadcast(server.OverlayEvent{
+		Type: server.EventTypeBlindBoxRedemption,
+		Data: blindbox.BlindBoxRedemptionData{
+			Username:   result.Username,
+			Plushie:    plushie,
+			IsNew:      result.IsNew,
+			Collection: result.Collection,
+			Config:     cfg,
+		},
+	})
+	b.logger.Info("blind box redeemed", "user", username, "series", cfg.Series, "plushie", plushie.Key, "is_new", result.IsNew)
 }

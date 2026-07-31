@@ -122,6 +122,57 @@ func TestAdminRandomStatIncrementsOneStat(t *testing.T) {
 	}
 }
 
+func TestAdminExplodeReducesPenisAndDisplaysStats(t *testing.T) {
+	queries, sqlDB := db.NewTestDB(t)
+	defer sqlDB.Close()
+	appCatalog, err := catalog.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	statsService, err := stats.NewService(queries, appCatalog.Stats)
+	if err != nil {
+		t.Fatal(err)
+	}
+	blindboxService, err := blindbox.NewService(queries, appCatalog.Series)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := statsService.GetOrCreateStats(t.Context(), "viewer-1", "viewer"); err != nil {
+		t.Fatal(err)
+	}
+
+	var chatMessage string
+	srv := NewServer(ServerConfig{
+		StatsService:    statsService,
+		BlindBoxService: blindboxService,
+		Series:          appCatalog.Series,
+	}, slog.New(slog.NewTextHandler(testWriter{t}, nil)))
+	srv.SetAdminChatMessage(func(message string) { chatMessage = message })
+	request := httptest.NewRequest(http.MethodPost, "/api/admin/users/viewer-1/stats/explode", nil)
+	request.RemoteAddr = "127.0.0.1:12345"
+	request.SetPathValue("userID", "viewer-1")
+	response := httptest.NewRecorder()
+
+	srv.handleAdminExplode(response, request)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", response.Code, response.Body.String())
+	}
+	userStats, err := statsService.GetUserStats(t.Context(), "viewer-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, stat := range userStats {
+		if stat.Name == "penis" && stat.Value == -1000 {
+			if want := stats.FormatStats("viewer", userStats); chatMessage != want {
+				t.Errorf("chat message = %q, want %q", chatMessage, want)
+			}
+			return
+		}
+	}
+	t.Error("penis stat was not reduced by 1003")
+}
+
 func TestAdminRandomPlushieGrantsFromSeries(t *testing.T) {
 	queries, sqlDB := db.NewTestDB(t)
 	defer sqlDB.Close()

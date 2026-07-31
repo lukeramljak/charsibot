@@ -50,6 +50,7 @@
   let plushieDialog = $state<HTMLDialogElement | undefined>(undefined);
   let pendingResetCollection = $state.raw<Collection | null>(null);
   let resetDialog = $state<HTMLDialogElement | undefined>(undefined);
+  let explodeDialog = $state<HTMLDialogElement | undefined>(undefined);
   let randomStatDialog = $state<HTMLDialogElement | undefined>(undefined);
   let error = $state('');
   let statusMessage = $state('');
@@ -164,6 +165,18 @@
         body: JSON.stringify({ displayInChat }),
       },
     );
+  }
+
+  function closeExplodeDialog() {
+    explodeDialog?.close();
+  }
+
+  async function explode() {
+    if (!selected) return;
+    closeExplodeDialog();
+    await mutate(`/api/admin/users/${encodeURIComponent(selected.user.id)}/stats/explode`, {
+      method: 'POST',
+    });
   }
 
   async function setPlushie(series: string, key: string, name: string, owned: boolean) {
@@ -364,6 +377,9 @@
                 >
                   Grant random stat
                 </button>
+                <button class="button button-danger" onclick={() => explodeDialog?.showModal()} disabled={loading}>
+                  Explode
+                </button>
                 <span class="admin-muted font-mono text-xs">{selected.user.id}</span>
               </div>
             </div>
@@ -541,6 +557,22 @@
     <button class="button button-primary" onclick={() => grantPlushie(true)}>
       Grant &amp; show overlay
     </button>
+  </div>
+</dialog>
+
+<dialog
+  class="admin-dialog p-6"
+  bind:this={explodeDialog}
+  aria-labelledby="explode-dialog-title"
+>
+  <p class="eyebrow">Viewer stat</p>
+  <h2 class="section-title mt-2 text-2xl" id="explode-dialog-title">
+    Explode {selected?.user.username ?? 'this viewer'}?
+  </h2>
+  <p class="admin-muted mt-2">This reduces their PENIS stat by 1003 and displays their updated stats in chat.</p>
+  <div class="dialog-actions mt-6">
+    <button class="button button-secondary" onclick={closeExplodeDialog}>Cancel</button>
+    <button class="button button-danger" onclick={explode}>Explode</button>
   </div>
 </dialog>
 

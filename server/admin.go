@@ -140,6 +140,39 @@ func (s *Server) handleAdminRandomStat(w http.ResponseWriter, r *http.Request) {
 	s.writeAdminUser(w, r, user.ID)
 }
 
+func (s *Server) handleAdminExplode(w http.ResponseWriter, r *http.Request) {
+	if !s.requireLocalAdmin(w, r) {
+		return
+	}
+	user, ok := s.adminUser(w, r)
+	if !ok {
+		return
+	}
+	if !s.hasStat("penis") {
+		http.Error(w, "penis stat is unavailable", http.StatusServiceUnavailable)
+		return
+	}
+	if !s.hasAdminChatMessage() {
+		http.Error(w, "chat is unavailable", http.StatusServiceUnavailable)
+		return
+	}
+	if _, err := s.stats.GetOrCreateStats(r.Context(), user.ID, user.Username); err != nil {
+		s.adminError(w, "initialize stats", err)
+		return
+	}
+	if err := s.stats.ModifyStatValue(r.Context(), user.ID, "penis", -1003); err != nil {
+		s.adminError(w, "explode stat", err)
+		return
+	}
+	userStats, err := s.stats.GetUserStats(r.Context(), user.ID)
+	if err != nil {
+		s.adminError(w, "get updated stats", err)
+		return
+	}
+	s.sendAdminChatMessage(stats.FormatStats(user.Username, userStats))
+	s.writeAdminUser(w, r, user.ID)
+}
+
 func (s *Server) handleAdminRandomPlushie(w http.ResponseWriter, r *http.Request) {
 	if !s.requireLocalAdmin(w, r) {
 		return
