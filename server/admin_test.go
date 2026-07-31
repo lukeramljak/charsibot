@@ -122,6 +122,59 @@ func TestAdminRandomStatIncrementsOneStat(t *testing.T) {
 	}
 }
 
+func TestAdminResetStatsRestoresDefaults(t *testing.T) {
+	queries, sqlDB := db.NewTestDB(t)
+	defer sqlDB.Close()
+	appCatalog, err := catalog.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	statsService, err := stats.NewService(queries, appCatalog.Stats)
+	if err != nil {
+		t.Fatal(err)
+	}
+	blindboxService, err := blindbox.NewService(queries, appCatalog.Series)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := statsService.GetOrCreateStats(t.Context(), "viewer-1", "viewer"); err != nil {
+		t.Fatal(err)
+	}
+	if err := statsService.ModifyStatValue(t.Context(), "viewer-1", appCatalog.Stats[0].Name, 20); err != nil {
+		t.Fatal(err)
+	}
+
+	var chatMessage string
+	srv := NewServer(ServerConfig{
+		StatsService:    statsService,
+		BlindBoxService: blindboxService,
+		Series:          appCatalog.Series,
+	}, slog.New(slog.NewTextHandler(testWriter{t}, nil)))
+	srv.SetAdminChatMessage(func(message string) { chatMessage = message })
+	request := httptest.NewRequest(http.MethodPost, "/api/admin/users/viewer-1/stats/reset", strings.NewReader(`{"displayInChat":true}`))
+	request.RemoteAddr = "127.0.0.1:12345"
+	request.SetPathValue("userID", "viewer-1")
+	response := httptest.NewRecorder()
+
+	srv.handleAdminResetStats(response, request)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", response.Code, response.Body.String())
+	}
+	userStats, err := statsService.GetUserStats(t.Context(), "viewer-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, stat := range userStats {
+		if stat.Value != appCatalog.Stats[i].DefaultValue {
+			t.Errorf("%s = %d, want %d", stat.Name, stat.Value, appCatalog.Stats[i].DefaultValue)
+		}
+	}
+	if want := stats.FormatStats("viewer", userStats); chatMessage != want {
+		t.Errorf("chat message = %q, want %q", chatMessage, want)
+	}
+}
+
 func TestAdminExplodeReducesPenisAndDisplaysStats(t *testing.T) {
 	queries, sqlDB := db.NewTestDB(t)
 	defer sqlDB.Close()

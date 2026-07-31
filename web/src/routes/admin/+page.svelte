@@ -52,6 +52,7 @@
   let resetDialog = $state<HTMLDialogElement | undefined>(undefined);
   let explodeDialog = $state<HTMLDialogElement | undefined>(undefined);
   let undoExplodeDialog = $state<HTMLDialogElement | undefined>(undefined);
+  let resetStatsDialog = $state<HTMLDialogElement | undefined>(undefined);
   let randomStatDialog = $state<HTMLDialogElement | undefined>(undefined);
   let error = $state('');
   let statusMessage = $state('');
@@ -189,6 +190,20 @@
     closeUndoExplodeDialog();
     await mutate(`/api/admin/users/${encodeURIComponent(selected.user.id)}/stats/explode/undo`, {
       method: 'POST',
+    });
+  }
+
+  function closeResetStatsDialog() {
+    resetStatsDialog?.close();
+  }
+
+  async function resetStats(displayInChat: boolean) {
+    if (!selected) return;
+    closeResetStatsDialog();
+    await mutate(`/api/admin/users/${encodeURIComponent(selected.user.id)}/stats/reset`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ displayInChat }),
     });
   }
 
@@ -396,6 +411,9 @@
                 <button class="button button-secondary" onclick={() => undoExplodeDialog?.showModal()} disabled={loading}>
                   Undo explode
                 </button>
+                <button class="button button-danger" onclick={() => resetStatsDialog?.showModal()} disabled={loading}>
+                  Reset stats
+                </button>
                 <span class="admin-muted font-mono text-xs">{selected.user.id}</span>
               </div>
             </div>
@@ -529,6 +547,25 @@
     </button>
     <button class="button button-primary" onclick={() => grantRandomPlushie(true)}>
       Grant &amp; show overlay
+    </button>
+  </div>
+</dialog>
+
+<dialog
+  class="admin-dialog p-6"
+  bind:this={resetStatsDialog}
+  aria-labelledby="reset-stats-dialog-title"
+>
+  <p class="eyebrow">Viewer stats</p>
+  <h2 class="section-title mt-2 text-2xl" id="reset-stats-dialog-title">
+    Reset {selected?.user.username ?? 'this viewer'}'s stats?
+  </h2>
+  <p class="admin-muted mt-2">This restores every stat to its configured default.</p>
+  <div class="dialog-actions mt-6">
+    <button class="button button-secondary" onclick={closeResetStatsDialog}>Cancel</button>
+    <button class="button button-danger" onclick={() => resetStats(false)}>Reset silently</button>
+    <button class="button button-primary" onclick={() => resetStats(true)}>
+      Reset &amp; display stats
     </button>
   </div>
 </dialog>

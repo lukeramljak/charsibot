@@ -45,6 +45,10 @@ type randomStatRequest struct {
 	DisplayInChat bool `json:"displayInChat"`
 }
 
+type resetStatsRequest struct {
+	DisplayInChat bool `json:"displayInChat"`
+}
+
 func (s *Server) handleAdminUsers(w http.ResponseWriter, r *http.Request) {
 	if !s.requireLocalAdmin(w, r) {
 		return
@@ -135,6 +139,41 @@ func (s *Server) handleAdminRandomStat(w http.ResponseWriter, r *http.Request) {
 		userStats, err := s.stats.GetUserStats(r.Context(), user.ID)
 		if err != nil {
 			s.adminError(w, "get updated stats", err)
+			return
+		}
+		s.sendAdminChatMessage(stats.FormatStats(user.Username, userStats))
+	}
+	s.writeAdminUser(w, r, user.ID)
+}
+
+func (s *Server) handleAdminResetStats(w http.ResponseWriter, r *http.Request) {
+	if !s.requireLocalAdmin(w, r) {
+		return
+	}
+	user, ok := s.adminUser(w, r)
+	if !ok {
+		return
+	}
+	var input resetStatsRequest
+	if !decodeJSON(w, r, &input) {
+		return
+	}
+	if input.DisplayInChat && !s.hasAdminChatMessage() {
+		http.Error(w, "chat is unavailable", http.StatusServiceUnavailable)
+		return
+	}
+	if _, err := s.stats.GetOrCreateStats(r.Context(), user.ID, user.Username); err != nil {
+		s.adminError(w, "initialize stats", err)
+		return
+	}
+	if err := s.stats.ResetStats(r.Context(), user.ID); err != nil {
+		s.adminError(w, "reset stats", err)
+		return
+	}
+	if input.DisplayInChat {
+		userStats, err := s.stats.GetUserStats(r.Context(), user.ID)
+		if err != nil {
+			s.adminError(w, "get reset stats", err)
 			return
 		}
 		s.sendAdminChatMessage(stats.FormatStats(user.Username, userStats))

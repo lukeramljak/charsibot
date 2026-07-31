@@ -184,3 +184,13 @@ func (s *Service) SetStatValue(ctx context.Context, userID, statName string, val
 		Value:    value,
 	})
 }
+
+// ResetStats restores every configured stat for a user to its catalog default.
+func (s *Service) ResetStats(ctx context.Context, userID string) error {
+	for _, definition := range s.definitions {
+		if err := s.SetStatValue(ctx, userID, definition.Name, definition.DefaultValue); err != nil {
+			return fmt.Errorf("reset stat %s: %w", definition.Name, err)
+		}
+	}
+	return nil
+}
