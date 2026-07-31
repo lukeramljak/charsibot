@@ -21,6 +21,7 @@
   let users = $state.raw<User[]>([]);
   let usernameFilter = $state('');
   let activityFilter = $state<ActivityFilter>('all');
+  let selectedUserIDs = $state.raw<string[]>([]);
   let filteredUsers = $derived.by(() => {
     const query = usernameFilter.trim().toLowerCase();
     const now = Date.now();
@@ -48,6 +49,7 @@
   let undoExplodeDialog = $state<HTMLDialogElement | undefined>(undefined);
   let resetStatsDialog = $state<HTMLDialogElement | undefined>(undefined);
   let deleteUserDialog = $state<HTMLDialogElement | undefined>(undefined);
+  let bulkDeleteDialog = $state<HTMLDialogElement | undefined>(undefined);
   let randomStatDialog = $state<HTMLDialogElement | undefined>(undefined);
   let error = $state('');
   let statusMessage = $state('');
@@ -180,6 +182,62 @@
     } catch (err) {
       error = err instanceof Error ? err.message : 'Could not delete viewer';
       statusMessage = '';
+    } finally {
+      loading = false;
+    }
+  }
+
+  function toggleUserSelection(userID: string, checked: boolean) {
+    selectedUserIDs = checked
+      ? [...new Set([...selectedUserIDs, userID])]
+      : selectedUserIDs.filter((candidate) => candidate !== userID);
+  }
+
+  function selectFilteredUsers() {
+    selectedUserIDs = filteredUsers.map((user) => user.id);
+  }
+
+  function clearUserSelection() {
+    selectedUserIDs = [];
+  }
+
+  function closeBulkDeleteDialog() {
+    bulkDeleteDialog?.close();
+  }
+
+  async function deleteSelectedUsers() {
+    const userIDs = [...selectedUserIDs];
+    if (userIDs.length === 0) return;
+
+    closeBulkDeleteDialog();
+    loading = true;
+    error = '';
+    const deletedUserIDs: string[] = [];
+    try {
+      for (const userID of userIDs) {
+        const response = await fetch(`/api/admin/users/${encodeURIComponent(userID)}`, {
+          method: 'DELETE',
+        });
+        if (!response.ok) throw new Error((await response.text()) || 'Could not delete viewers');
+        deletedUserIDs.push(userID);
+      }
+
+      users = users.filter((user) => !deletedUserIDs.includes(user.id));
+      selectedUserIDs = [];
+      if (selected && deletedUserIDs.includes(selected.user.id)) {
+        selected = null;
+        await goto(resolve('/admin'), { keepFocus: true, noScroll: true });
+      }
+      statusMessage = `Deleted ${deletedUserIDs.length} viewers.`;
+    } catch (err) {
+      users = users.filter((user) => !deletedUserIDs.includes(user.id));
+      selectedUserIDs = selectedUserIDs.filter((userID) => !deletedUserIDs.includes(userID));
+      if (selected && deletedUserIDs.includes(selected.user.id)) {
+        selected = null;
+        await goto(resolve('/admin'), { keepFocus: true, noScroll: true });
+      }
+      error = err instanceof Error ? err.message : 'Could not delete viewers';
+      statusMessage = deletedUserIDs.length > 0 ? `Deleted ${deletedUserIDs.length} viewers before stopping.` : '';
     } finally {
       loading = false;
     }
@@ -406,11 +464,40 @@
               <option value="inactive90">Inactive for 90+ days</option>
               <option value="recent">Active in the last 30 days</option>
             </select>
+            <div class="viewer-bulk-actions mt-3">
+              <button
+                class="button button-secondary"
+                onclick={selectFilteredUsers}
+                disabled={loading || filteredUsers.length === 0}
+              >
+                Select filtered
+              </button>
+              {#if selectedUserIDs.length > 0}
+                <button class="button button-secondary" onclick={clearUserSelection} disabled={loading}>
+                  Clear selection
+                </button>
+                <button
+                  class="button button-danger"
+                  onclick={() => bulkDeleteDialog?.showModal()}
+                  disabled={loading}
+                >
+                  Prune {selectedUserIDs.length} selected
+                </button>
+              {/if}
+            </div>
             <ul class="viewer-list mt-4" aria-label="Viewers">
               {#each filteredUsers as user (user.id)}
-                <li>
+                <li class={['viewer-list-item', selected?.user.id === user.id && 'is-selected']}>
+                  <input
+                    class="viewer-selection"
+                    type="checkbox"
+                    checked={selectedUserIDs.includes(user.id)}
+                    onchange={(event) => toggleUserSelection(user.id, event.currentTarget.checked)}
+                    aria-label={`Select ${user.username} for pruning`}
+                    disabled={loading}
+                  />
                   <button
-                    class={['viewer-row', selected?.user.id === user.id && 'is-selected']}
+                    class="viewer-row"
                     onclick={() => selectUser(user)}
                     disabled={loading}
                     aria-current={selected?.user.id === user.id ? 'true' : undefined}
@@ -628,6 +715,26 @@
   <div class="dialog-actions mt-6">
     <button class="button button-secondary" onclick={closeDeleteUserDialog}>Cancel</button>
     <button class="button button-danger" onclick={deleteUser}>Delete viewer</button>
+  </div>
+</dialog>
+
+<dialog
+  class="admin-dialog p-6"
+  bind:this={bulkDeleteDialog}
+  aria-labelledby="bulk-delete-dialog-title"
+>
+  <p class="eyebrow">Prune viewers</p>
+  <h2 class="section-title mt-2 text-2xl" id="bulk-delete-dialog-title">
+    Delete {selectedUserIDs.length} selected viewers?
+  </h2>
+  <p class="admin-muted mt-2">
+    This permanently removes their activity, stats, and blind-box collections.
+  </p>
+  <div class="dialog-actions mt-6">
+    <button class="button button-secondary" onclick={closeBulkDeleteDialog}>Cancel</button>
+    <button class="button button-danger" onclick={deleteSelectedUsers}>
+      Delete {selectedUserIDs.length} viewers
+    </button>
   </div>
 </dialog>
 
@@ -1000,13 +1107,57 @@
     border-radius: 0.85rem;
   }
 
+  .viewer-bulk-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .viewer-bulk-actions .button {
+    text-align: center;
+  }
+
   .viewer-list li + li {
     border-top: 1px solid rgb(214 198 223 / 12%);
   }
 
+  .viewer-list-item {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    transition: background-color 150ms ease;
+  }
+
+  .viewer-list-item:has(.viewer-selection:not(:disabled)):hover {
+    background: rgb(242 161 186 / 16%);
+  }
+
+  .viewer-list-item.is-selected {
+    background: rgb(242 161 186 / 13%);
+    box-shadow: inset 3px 0 var(--accent);
+  }
+
+  .viewer-selection {
+    width: 1rem;
+    height: 1rem;
+    flex: none;
+    margin-left: 1rem;
+    accent-color: var(--accent);
+  }
+
+  .viewer-selection:focus-visible {
+    outline: 2px solid var(--accent-strong);
+    outline-offset: 3px;
+  }
+
+  .viewer-selection:hover:not(:disabled) {
+    cursor: pointer;
+    filter: brightness(1.2);
+  }
+
   .viewer-row {
     display: flex;
-    width: 100%;
+    flex: 1;
     min-width: 0;
     align-items: center;
     justify-content: space-between;
@@ -1014,15 +1165,6 @@
     padding: 0.85rem 1rem;
     color: var(--text);
     text-align: left;
-  }
-
-  .viewer-row:hover:not(:disabled) {
-    background: rgb(255 255 255 / 4%);
-  }
-
-  .viewer-row.is-selected {
-    background: rgb(242 161 186 / 13%);
-    box-shadow: inset 3px 0 var(--accent);
   }
 
   .viewer-row:focus-visible {
@@ -1141,6 +1283,15 @@
 
     .viewer-list {
       max-height: calc(100vh - 18rem);
+    }
+
+    .viewer-bulk-actions {
+      flex-direction: column;
+    }
+
+    .viewer-bulk-actions .button {
+      width: 100%;
+      text-align: center;
     }
   }
 </style>

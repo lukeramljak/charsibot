@@ -55,12 +55,11 @@ func (q *Queries) GetViewer(ctx context.Context, userID string) (Viewer, error) 
 	var viewer Viewer
 	var lastActive sql.NullString
 	err := q.db.QueryRowContext(ctx, `
-SELECT user_id, username, last_active_at FROM viewer_activity WHERE user_id = ?
-UNION
-SELECT user_id, username, NULL FROM user_stats WHERE user_id = ?
-UNION
-SELECT user_id, username, NULL FROM user_plushies WHERE user_id = ?
-LIMIT 1`, userID, userID, userID).Scan(&viewer.UserID, &viewer.Username, &lastActive)
+SELECT user_id, MAX(username), MAX(last_active_at) FROM (
+  SELECT user_id, username, last_active_at FROM viewer_activity WHERE user_id = ?
+  UNION ALL SELECT user_id, username, NULL FROM user_stats WHERE user_id = ?
+  UNION ALL SELECT user_id, username, NULL FROM user_plushies WHERE user_id = ?
+) GROUP BY user_id`, userID, userID, userID).Scan(&viewer.UserID, &viewer.Username, &lastActive)
 	if err != nil {
 		return Viewer{}, err
 	}
