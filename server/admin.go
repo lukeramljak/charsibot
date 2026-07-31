@@ -12,6 +12,8 @@ import (
 	"github.com/lukeramljak/charsibot/stats"
 )
 
+const explodedPenisValue int64 = -1000
+
 type adminStat struct {
 	Name      string `json:"name"`
 	ShortName string `json:"shortName"`
@@ -148,7 +150,8 @@ func (s *Server) handleAdminExplode(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	if !s.hasStat("penis") {
+	penis, found := s.statDefinition("penis")
+	if !found {
 		http.Error(w, "penis stat is unavailable", http.StatusServiceUnavailable)
 		return
 	}
@@ -160,7 +163,7 @@ func (s *Server) handleAdminExplode(w http.ResponseWriter, r *http.Request) {
 		s.adminError(w, "initialize stats", err)
 		return
 	}
-	if err := s.stats.ModifyStatValue(r.Context(), user.ID, "penis", -1003); err != nil {
+	if err := s.stats.ModifyStatValue(r.Context(), user.ID, "penis", explodedPenisValue-penis.DefaultValue); err != nil {
 		s.adminError(w, "explode stat", err)
 		return
 	}
@@ -377,12 +380,17 @@ func (s *Server) hasAdminChatMessage() bool {
 }
 
 func (s *Server) hasStat(name string) bool {
+	_, found := s.statDefinition(name)
+	return found
+}
+
+func (s *Server) statDefinition(name string) (stats.Definition, bool) {
 	for _, stat := range s.stats.Definitions() {
 		if stat.Name == name {
-			return true
+			return stat, true
 		}
 	}
-	return false
+	return stats.Definition{}, false
 }
 
 func (s *Server) hasSeries(series string) bool {

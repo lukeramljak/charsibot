@@ -129,6 +129,11 @@ func TestAdminExplodeReducesPenisAndDisplaysStats(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	for i := range appCatalog.Stats {
+		if appCatalog.Stats[i].Name == "penis" {
+			appCatalog.Stats[i].DefaultValue = 7
+		}
+	}
 	statsService, err := stats.NewService(queries, appCatalog.Stats)
 	if err != nil {
 		t.Fatal(err)
