@@ -393,47 +393,49 @@
                 </h2>
                 <span class="admin-muted font-mono text-xs">{selected.user.id}</span>
               </div>
-              <div class="user-actions mt-3 flex flex-wrap items-center gap-2">
-                <button
-                  class="button button-secondary"
-                  onclick={displayStatsInChat}
-                  disabled={loading}
-                >
-                  Display stats in chat
-                </button>
-                <button
-                  class="button button-secondary"
-                  onclick={openRandomStatDialog}
-                  disabled={loading}
-                >
-                  Grant random stat
-                </button>
-                <button
-                  class="button button-danger"
-                  onclick={() => explodeDialog?.showModal()}
-                  disabled={loading}
-                >
-                  Explode
-                </button>
-                <button
-                  class="button button-secondary"
-                  onclick={() => undoExplodeDialog?.showModal()}
-                  disabled={loading}
-                >
-                  Undo explode
-                </button>
-                <button
-                  class="button button-danger"
-                  onclick={() => resetStatsDialog?.showModal()}
-                  disabled={loading}
-                >
-                  Reset stats
-                </button>
-              </div>
             </div>
 
             <section aria-labelledby="stats-heading">
-              <h3 class="detail-section-title" id="stats-heading">Stats</h3>
+              <div class="flex flex-wrap items-center justify-between gap-3">
+                <h3 class="detail-section-title" id="stats-heading">Stats</h3>
+                <div class="user-actions flex flex-wrap items-center justify-end gap-2">
+                  <button
+                    class="button button-secondary"
+                    onclick={displayStatsInChat}
+                    disabled={loading}
+                  >
+                    Display stats in chat
+                  </button>
+                  <button
+                    class="button button-secondary"
+                    onclick={openRandomStatDialog}
+                    disabled={loading}
+                  >
+                    Grant random stat
+                  </button>
+                  <button
+                    class="button button-danger"
+                    onclick={() => explodeDialog?.showModal()}
+                    disabled={loading}
+                  >
+                    Explode
+                  </button>
+                  <button
+                    class="button button-secondary"
+                    onclick={() => undoExplodeDialog?.showModal()}
+                    disabled={loading}
+                  >
+                    Undo explode
+                  </button>
+                  <button
+                    class="button button-danger"
+                    onclick={() => resetStatsDialog?.showModal()}
+                    disabled={loading}
+                  >
+                    Reset stats
+                  </button>
+                </div>
+              </div>
               <div class="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {#each selected.stats as stat (stat.name)}
                   <div class="stat-card p-4 text-center">
