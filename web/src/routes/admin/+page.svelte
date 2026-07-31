@@ -131,6 +131,21 @@
     );
   }
 
+  async function displayStatsInChat() {
+    if (!selected) return;
+    await mutate(`/api/admin/users/${encodeURIComponent(selected.user.id)}/stats/display`, {
+      method: 'POST',
+    });
+  }
+
+  async function displayCollection(collection: Collection) {
+    if (!selected) return;
+    await mutate(
+      `/api/admin/users/${encodeURIComponent(selected.user.id)}/collections/${encodeURIComponent(collection.config.series)}/display`,
+      { method: 'POST' },
+    );
+  }
+
   function openRandomStatDialog() {
     randomStatDialog?.showModal();
   }
@@ -381,6 +396,13 @@
               <div class="user-actions mt-3 flex flex-wrap items-center gap-2">
                 <button
                   class="button button-secondary"
+                  onclick={displayStatsInChat}
+                  disabled={loading}
+                >
+                  Display stats in chat
+                </button>
+                <button
+                  class="button button-secondary"
                   onclick={openRandomStatDialog}
                   disabled={loading}
                 >
@@ -462,6 +484,13 @@
                         </p>
                       </div>
                       <div class="flex flex-wrap justify-end gap-2">
+                        <button
+                          class="button button-secondary"
+                          onclick={() => displayCollection(collection)}
+                          disabled={loading}
+                        >
+                          Display overlay
+                        </button>
                         <button
                           class="button button-secondary"
                           onclick={() => openRandomPlushieDialog(collection)}

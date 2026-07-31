@@ -100,6 +100,7 @@ func (s *Server) registerAdminRoutes(api huma.API) {
 	huma.Register(admin, huma.Operation{OperationID: "list-admin-users", Method: http.MethodGet, Path: "/users", Tags: []string{"Admin"}}, s.listAdminUsers)
 	huma.Register(admin, huma.Operation{OperationID: "get-admin-user", Method: http.MethodGet, Path: "/users/{userID}", Tags: []string{"Admin"}}, s.getAdminUser)
 	huma.Register(admin, huma.Operation{OperationID: "update-admin-stat", Method: http.MethodPatch, Path: "/users/{userID}/stats/{statName}", Tags: []string{"Admin"}}, s.updateAdminStat)
+	huma.Register(admin, huma.Operation{OperationID: "display-admin-stats", Method: http.MethodPost, Path: "/users/{userID}/stats/display", Tags: []string{"Admin"}}, s.displayAdminStats)
 	huma.Register(admin, huma.Operation{OperationID: "grant-admin-random-stat", Method: http.MethodPost, Path: "/users/{userID}/stats/random", Tags: []string{"Admin"}}, s.grantAdminRandomStat)
 	huma.Register(admin, huma.Operation{OperationID: "reset-admin-stats", Method: http.MethodPost, Path: "/users/{userID}/stats/reset", Tags: []string{"Admin"}}, s.resetAdminStats)
 	huma.Register(admin, huma.Operation{OperationID: "explode-admin-user", Method: http.MethodPost, Path: "/users/{userID}/stats/explode", Tags: []string{"Admin"}}, s.explodeAdminUser)
@@ -107,6 +108,7 @@ func (s *Server) registerAdminRoutes(api huma.API) {
 	huma.Register(admin, huma.Operation{OperationID: "grant-admin-random-plushie", Method: http.MethodPost, Path: "/users/{userID}/collections/{series}/random", Tags: []string{"Admin"}}, s.grantAdminRandomPlushie)
 	huma.Register(admin, huma.Operation{OperationID: "grant-admin-plushie", Method: http.MethodPut, Path: "/users/{userID}/collections/{series}/{key}", Tags: []string{"Admin"}}, s.grantAdminPlushie)
 	huma.Register(admin, huma.Operation{OperationID: "remove-admin-plushie", Method: http.MethodDelete, Path: "/users/{userID}/collections/{series}/{key}", Tags: []string{"Admin"}}, s.removeAdminPlushie)
+	huma.Register(admin, huma.Operation{OperationID: "display-admin-collection", Method: http.MethodPost, Path: "/users/{userID}/collections/{series}/display", Tags: []string{"Admin"}}, s.displayAdminCollection)
 	huma.Register(admin, huma.Operation{OperationID: "reset-admin-collection", Method: http.MethodDelete, Path: "/users/{userID}/collections/{series}", Tags: []string{"Admin"}}, s.resetAdminCollection)
 }
 
@@ -140,6 +142,23 @@ func (s *Server) updateAdminStat(ctx context.Context, input *adminStatInput) (*a
 	}
 	if err != nil {
 		return nil, s.adminError("update stat", err)
+	}
+	return s.adminOutput(ctx, user.ID)
+}
+
+func (s *Server) displayAdminStats(ctx context.Context, input *adminUserInput) (*adminUserOutput, error) {
+	user, err := s.adminUser(ctx, input.UserID)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.ensureChat(true); err != nil {
+		return nil, err
+	}
+	if _, err := s.stats.GetOrCreateStats(ctx, user.ID, user.Username); err != nil {
+		return nil, s.adminError("initialize stats", err)
+	}
+	if err := s.displayStats(ctx, user, true); err != nil {
+		return nil, err
 	}
 	return s.adminOutput(ctx, user.ID)
 }
@@ -304,6 +323,25 @@ func (s *Server) resetAdminCollection(ctx context.Context, input *adminCollectio
 		return nil, s.adminError("reset collection", err)
 	}
 	return s.adminOutput(ctx, user.ID)
+}
+
+func (s *Server) displayAdminCollection(ctx context.Context, input *adminCollectionInput) (*adminUserOutput, error) {
+	user, err := s.adminUser(ctx, input.UserID)
+	if err != nil {
+		return nil, err
+	}
+	for _, cfg := range s.series {
+		if cfg.Series != input.Series {
+			continue
+		}
+		collection, err := s.blindbox.GetCollection(ctx, user.ID, cfg.Series)
+		if err != nil {
+			return nil, s.adminError("get collection", err)
+		}
+		s.Broadcast(OverlayEvent{Type: EventTypeCollectionDisplay, Data: blindbox.BlindBoxDisplayData{Username: user.Username, Collection: collection, Config: cfg}})
+		return s.adminOutput(ctx, user.ID)
+	}
+	return nil, huma.Error400BadRequest("unknown series")
 }
 
 func (s *Server) adminOutput(ctx context.Context, userID string) (*adminUserOutput, error) {

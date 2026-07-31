@@ -445,9 +445,26 @@ func TestAdminRemovePlushieDoesNotRequireBody(t *testing.T) {
 	}, slog.New(slog.NewTextHandler(testWriter{t}, nil)))
 	mux := http.NewServeMux()
 	srv.NewAPI(mux)
-	request := httptest.NewRequest(http.MethodDelete, "/api/admin/users/viewer-1/collections/"+series.Series+"/"+plushie.Key, nil)
+	events := make(chan OverlayEvent, 1)
+	srv.clients[events] = struct{}{}
+	request := httptest.NewRequest(http.MethodPost, "/api/admin/users/viewer-1/collections/"+series.Series+"/display", nil)
 	request.RemoteAddr = "127.0.0.1:12345"
 	response := httptest.NewRecorder()
+	mux.ServeHTTP(response, request)
+	if response.Code != http.StatusOK {
+		t.Fatalf("display status = %d, body = %s", response.Code, response.Body.String())
+	}
+	select {
+	case event := <-events:
+		if event.Type != EventTypeCollectionDisplay {
+			t.Errorf("event type = %q, want %q", event.Type, EventTypeCollectionDisplay)
+		}
+	default:
+		t.Error("expected collection display event")
+	}
+	request = httptest.NewRequest(http.MethodDelete, "/api/admin/users/viewer-1/collections/"+series.Series+"/"+plushie.Key, nil)
+	request.RemoteAddr = "127.0.0.1:12345"
+	response = httptest.NewRecorder()
 	mux.ServeHTTP(response, request)
 
 	if response.Code != http.StatusOK {

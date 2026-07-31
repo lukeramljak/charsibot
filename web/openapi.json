@@ -336,6 +336,32 @@
         "tags": ["Admin"]
       }
     },
+    "/api/admin/users/{userID}/collections/{series}/display": {
+      "post": {
+        "operationId": "display-admin-collection",
+        "parameters": [
+          { "in": "path", "name": "userID", "required": true, "schema": { "type": "string" } },
+          { "in": "path", "name": "series", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/AdminUserResponse" } }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ErrorModel" }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "tags": ["Admin"]
+      }
+    },
     "/api/admin/users/{userID}/collections/{series}/random": {
       "post": {
         "operationId": "grant-admin-random-plushie",
@@ -411,6 +437,37 @@
           },
           "required": true
         },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/AdminUserResponse" } }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ErrorModel" }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "tags": ["Admin"]
+      }
+    },
+    "/api/admin/users/{userID}/stats/display": {
+      "post": {
+        "operationId": "display-admin-stats",
+        "parameters": [
+          {
+            "description": "Twitch user ID",
+            "in": "path",
+            "name": "userID",
+            "required": true,
+            "schema": { "description": "Twitch user ID", "type": "string" }
+          }
+        ],
         "responses": {
           "200": {
             "content": {

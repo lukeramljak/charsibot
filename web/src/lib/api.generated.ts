@@ -52,6 +52,22 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/admin/users/{userID}/collections/{series}/display': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['display-admin-collection'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/admin/users/{userID}/collections/{series}/random': {
     parameters: {
       query?: never;
@@ -79,6 +95,22 @@ export interface paths {
     put: operations['grant-admin-plushie'];
     post?: never;
     delete: operations['remove-admin-plushie'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/admin/users/{userID}/stats/display': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['display-admin-stats'];
+    delete?: never;
     options?: never;
     head?: never;
     patch?: never;
@@ -446,6 +478,38 @@ export interface operations {
       };
     };
   };
+  'display-admin-collection': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        userID: string;
+        series: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AdminUserResponse'];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ErrorModel'];
+        };
+      };
+    };
+  };
   'grant-admin-random-plushie': {
     parameters: {
       query?: never;
@@ -527,6 +591,38 @@ export interface operations {
         userID: string;
         series: string;
         key: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AdminUserResponse'];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ErrorModel'];
+        };
+      };
+    };
+  };
+  'display-admin-stats': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Twitch user ID */
+        userID: string;
       };
       cookie?: never;
     };
