@@ -99,6 +99,7 @@ func (s *Server) registerAdminRoutes(api huma.API) {
 
 	huma.Register(admin, huma.Operation{OperationID: "list-admin-users", Method: http.MethodGet, Path: "/users", Tags: []string{"Admin"}}, s.listAdminUsers)
 	huma.Register(admin, huma.Operation{OperationID: "get-admin-user", Method: http.MethodGet, Path: "/users/{userID}", Tags: []string{"Admin"}}, s.getAdminUser)
+	huma.Register(admin, huma.Operation{OperationID: "delete-admin-user", Method: http.MethodDelete, Path: "/users/{userID}", Tags: []string{"Admin"}}, s.deleteAdminUser)
 	huma.Register(admin, huma.Operation{OperationID: "update-admin-stat", Method: http.MethodPatch, Path: "/users/{userID}/stats/{statName}", Tags: []string{"Admin"}}, s.updateAdminStat)
 	huma.Register(admin, huma.Operation{OperationID: "display-admin-stats", Method: http.MethodPost, Path: "/users/{userID}/stats/display", Tags: []string{"Admin"}}, s.displayAdminStats)
 	huma.Register(admin, huma.Operation{OperationID: "grant-admin-random-stat", Method: http.MethodPost, Path: "/users/{userID}/stats/random", Tags: []string{"Admin"}}, s.grantAdminRandomStat)
@@ -122,6 +123,16 @@ func (s *Server) listAdminUsers(ctx context.Context, _ *struct{}) (*adminUsersOu
 
 func (s *Server) getAdminUser(ctx context.Context, input *adminUserInput) (*adminUserOutput, error) {
 	return s.adminOutput(ctx, input.UserID)
+}
+
+func (s *Server) deleteAdminUser(ctx context.Context, input *adminUserInput) (*struct{}, error) {
+	if _, err := s.adminUser(ctx, input.UserID); err != nil {
+		return nil, err
+	}
+	if err := s.stats.DeleteUser(ctx, input.UserID); err != nil {
+		return nil, s.adminError("delete user", err)
+	}
+	return nil, nil
 }
 
 func (s *Server) updateAdminStat(ctx context.Context, input *adminStatInput) (*adminUserOutput, error) {

@@ -10,6 +10,7 @@
   type Collection = components['schemas']['AdminCollection'];
   type UserDetail = components['schemas']['AdminUserResponse'];
   type UsersResponse = components['schemas']['AdminUsersResponse'];
+  type ActivityFilter = 'all' | 'unknown' | 'inactive30' | 'inactive90' | 'recent';
 
   interface PendingPlushie {
     series: string;
@@ -19,11 +20,21 @@
 
   let users = $state.raw<User[]>([]);
   let usernameFilter = $state('');
-  let filteredUsers = $derived(
-    users.filter((user) =>
-      user.username.toLowerCase().includes(usernameFilter.trim().toLowerCase()),
-    ),
-  );
+  let activityFilter = $state<ActivityFilter>('all');
+  let filteredUsers = $derived.by(() => {
+    const query = usernameFilter.trim().toLowerCase();
+    const now = Date.now();
+    const matchesActivity = (user: User) => {
+      if (activityFilter === 'all') return true;
+      if (activityFilter === 'unknown') return !user.lastActiveAt;
+      if (activityFilter === 'recent') return !!user.lastActiveAt && now - Date.parse(user.lastActiveAt) < 30 * 86400000;
+      const days = activityFilter === 'inactive30' ? 30 : 90;
+      return !user.lastActiveAt || now - Date.parse(user.lastActiveAt) >= days * 86400000;
+    };
+    return users
+      .filter((user) => user.username.toLowerCase().includes(query) && matchesActivity(user))
+      .toSorted((a, b) => (a.lastActiveAt ?? '').localeCompare(b.lastActiveAt ?? '') || a.username.localeCompare(b.username));
+  });
   let selected = $state.raw<UserDetail | null>(null);
   let loading = $state(false);
   let mutatingPlushie = $state<string | null>(null);
@@ -36,6 +47,7 @@
   let explodeDialog = $state<HTMLDialogElement | undefined>(undefined);
   let undoExplodeDialog = $state<HTMLDialogElement | undefined>(undefined);
   let resetStatsDialog = $state<HTMLDialogElement | undefined>(undefined);
+  let deleteUserDialog = $state<HTMLDialogElement | undefined>(undefined);
   let randomStatDialog = $state<HTMLDialogElement | undefined>(undefined);
   let error = $state('');
   let statusMessage = $state('');
@@ -143,6 +155,40 @@
     await mutate(
       `/api/admin/users/${encodeURIComponent(selected.user.id)}/collections/${encodeURIComponent(collection.config.series)}/display`,
       { method: 'POST' },
+    );
+  }
+
+  function closeDeleteUserDialog() {
+    deleteUserDialog?.close();
+  }
+
+  async function deleteUser() {
+    const user = selected?.user;
+    if (!user) return;
+    closeDeleteUserDialog();
+    loading = true;
+    error = '';
+    try {
+      const response = await fetch(`/api/admin/users/${encodeURIComponent(user.id)}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) throw new Error((await response.text()) || 'Could not delete viewer');
+      users = users.filter((candidate) => candidate.id !== user.id);
+      selected = null;
+      statusMessage = `Deleted ${user.username}.`;
+      await goto(resolve('/admin'), { keepFocus: true, noScroll: true });
+    } catch (err) {
+      error = err instanceof Error ? err.message : 'Could not delete viewer';
+      statusMessage = '';
+    } finally {
+      loading = false;
+    }
+  }
+
+  function formatLastActive(value: string | undefined) {
+    if (!value) return 'Unknown';
+    return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(
+      new Date(value),
     );
   }
 
@@ -352,6 +398,14 @@
               bind:value={usernameFilter}
               placeholder="Filter by username…"
             />
+            <label class="sr-only" for="activity-filter">Filter by activity</label>
+            <select id="activity-filter" class="admin-input mt-2 w-full" bind:value={activityFilter}>
+              <option value="all">All activity</option>
+              <option value="unknown">Unknown activity</option>
+              <option value="inactive30">Inactive for 30+ days</option>
+              <option value="inactive90">Inactive for 90+ days</option>
+              <option value="recent">Active in the last 30 days</option>
+            </select>
             <ul class="viewer-list mt-4" aria-label="Viewers">
               {#each filteredUsers as user (user.id)}
                 <li>
@@ -388,10 +442,22 @@
           <section class="user-detail">
             <div class="user-detail-header mb-4">
               <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
-                <h2 class="section-title text-2xl" bind:this={selectedUserHeading} tabindex="-1">
-                  {selected.user.username}
-                </h2>
-                <span class="admin-muted font-mono text-xs">{selected.user.id}</span>
+                <div>
+                  <div class="flex min-w-0 items-center gap-2">
+                    <h2 class="section-title truncate text-2xl" bind:this={selectedUserHeading} tabindex="-1">
+                      {selected.user.username}
+                    </h2>
+                    <span class="admin-muted shrink-0 rounded-full border border-[var(--line)] px-2 py-0.5 font-mono text-[0.65rem]">
+                      {selected.user.id}
+                    </span>
+                  </div>
+                  <p class="admin-muted mt-1 text-xs">
+                    Last active: {formatLastActive(selected.user.lastActiveAt)}
+                  </p>
+                </div>
+                <button class="button button-danger" onclick={() => deleteUserDialog?.showModal()} disabled={loading}>
+                  Delete viewer
+                </button>
               </div>
             </div>
 
@@ -549,7 +615,23 @@
     </div>
   </div>
 
-  <dialog
+<dialog
+  class="admin-dialog p-6"
+  bind:this={deleteUserDialog}
+  aria-labelledby="delete-user-dialog-title"
+>
+  <p class="eyebrow">Prune viewer</p>
+  <h2 class="section-title mt-2 text-2xl" id="delete-user-dialog-title">
+    Delete {selected?.user.username ?? 'this viewer'}?
+  </h2>
+  <p class="admin-muted mt-2">This permanently removes their activity, stats, and blind-box collections.</p>
+  <div class="dialog-actions mt-6">
+    <button class="button button-secondary" onclick={closeDeleteUserDialog}>Cancel</button>
+    <button class="button button-danger" onclick={deleteUser}>Delete viewer</button>
+  </div>
+</dialog>
+
+<dialog
     class="admin-dialog p-6"
     bind:this={randomPlushieDialog}
     aria-labelledby="random-plushie-dialog-title"
@@ -1058,7 +1140,7 @@
     }
 
     .viewer-list {
-      max-height: calc(100vh - 15rem);
+      max-height: calc(100vh - 18rem);
     }
   }
 </style>

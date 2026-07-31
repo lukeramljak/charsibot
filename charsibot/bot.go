@@ -219,6 +219,13 @@ func (b *Bot) onMessage(event twitch.EventChannelChatMessage) {
 	if event.ChatterUserId == b.config.BotUserID {
 		return
 	}
+	if b.statsService != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), handlerTimeout)
+		if err := b.statsService.RecordActivity(ctx, event.ChatterUserId, event.ChatterUserName); err != nil {
+			b.logger.Error("record chat activity", "err", err, "user", event.ChatterUserName)
+		}
+		cancel()
+	}
 
 	b.logger.Debug("processing message",
 		"user", event.ChatterUserName,
@@ -293,13 +300,19 @@ func (b *Bot) onChannelPointRedemption(event twitch.EventChannelChannelPointsCus
 		"reward", event.Reward.Title,
 	)
 
+	ctx, cancel := context.WithTimeout(context.Background(), handlerTimeout)
+	defer cancel()
+	if b.statsService != nil {
+		if err := b.statsService.RecordActivity(ctx, event.UserID, event.UserName); err != nil {
+			b.logger.Error("record redemption activity", "err", err, "user", event.UserName)
+		}
+	}
+
 	fn, ok := b.redemptions[event.Reward.Title]
 	if !ok {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), handlerTimeout)
-	defer cancel()
 	fn(ctx, b, event)
 }
 

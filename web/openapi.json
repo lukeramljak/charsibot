@@ -246,7 +246,11 @@
       },
       "User": {
         "additionalProperties": false,
-        "properties": { "id": { "type": "string" }, "username": { "type": "string" } },
+        "properties": {
+          "id": { "type": "string" },
+          "lastActiveAt": { "format": "date-time", "type": "string" },
+          "username": { "type": "string" }
+        },
         "required": ["id", "username"],
         "type": "object"
       }
@@ -280,6 +284,30 @@
       }
     },
     "/api/admin/users/{userID}": {
+      "delete": {
+        "operationId": "delete-admin-user",
+        "parameters": [
+          {
+            "description": "Twitch user ID",
+            "in": "path",
+            "name": "userID",
+            "required": true,
+            "schema": { "description": "Twitch user ID", "type": "string" }
+          }
+        ],
+        "responses": {
+          "204": { "description": "No Content" },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ErrorModel" }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "tags": ["Admin"]
+      },
       "get": {
         "operationId": "get-admin-user",
         "parameters": [

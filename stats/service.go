@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/rand/v2"
 	"sort"
+	"time"
 
 	"github.com/lukeramljak/charsibot/db"
 )
@@ -35,8 +36,9 @@ type LeaderboardRow struct {
 
 // User is a viewer known to the bot through stats or blind-box collection data.
 type User struct {
-	ID       string `json:"id"`
-	Username string `json:"username"`
+	ID           string     `json:"id"`
+	Username     string     `json:"username"`
+	LastActiveAt *time.Time `json:"lastActiveAt,omitempty"`
 }
 
 type Service struct {
@@ -140,24 +142,32 @@ func (s *Service) GetStatLeaderboard(ctx context.Context) ([]LeaderboardRow, err
 
 // ListUsers returns all viewers known through stats or blind-box collection data.
 func (s *Service) ListUsers(ctx context.Context) ([]User, error) {
-	rows, err := s.queries.ListUsers(ctx)
+	rows, err := s.queries.ListViewers(ctx)
 	if err != nil {
 		return nil, err
 	}
 	users := make([]User, len(rows))
 	for i, row := range rows {
-		users[i] = User{ID: row.UserID, Username: row.Username}
+		users[i] = User{ID: row.UserID, Username: row.Username, LastActiveAt: row.LastActiveAt}
 	}
 	return users, nil
 }
 
 // GetUser returns a known viewer by Twitch user ID.
 func (s *Service) GetUser(ctx context.Context, userID string) (User, error) {
-	row, err := s.queries.GetUserByID(ctx, userID)
+	row, err := s.queries.GetViewer(ctx, userID)
 	if err != nil {
 		return User{}, err
 	}
-	return User{ID: row.UserID, Username: row.Username}, nil
+	return User{ID: row.UserID, Username: row.Username, LastActiveAt: row.LastActiveAt}, nil
+}
+
+func (s *Service) RecordActivity(ctx context.Context, userID, username string) error {
+	return s.queries.RecordViewerActivity(ctx, userID, username, time.Now())
+}
+
+func (s *Service) DeleteUser(ctx context.Context, userID string) error {
+	return s.queries.DeleteViewer(ctx, userID)
 }
 
 // Definitions returns the configured stat definitions in display order.

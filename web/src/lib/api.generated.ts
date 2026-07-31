@@ -30,7 +30,7 @@ export interface paths {
     get: operations['get-admin-user'];
     put?: never;
     post?: never;
-    delete?: never;
+    delete: operations['delete-admin-user'];
     options?: never;
     head?: never;
     patch?: never;
@@ -374,6 +374,8 @@ export interface components {
     };
     User: {
       id: string;
+      /** Format: date-time */
+      lastActiveAt?: string;
       username: string;
     };
   };
@@ -434,6 +436,36 @@ export interface operations {
         content: {
           'application/json': components['schemas']['AdminUserResponse'];
         };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ErrorModel'];
+        };
+      };
+    };
+  };
+  'delete-admin-user': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Twitch user ID */
+        userID: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
       /** @description Error */
       default: {
