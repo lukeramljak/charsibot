@@ -53,20 +53,16 @@ type SendMessageParams struct {
 	ReplyParentMessageID string
 }
 
-// New creates a Bot, loading blind box series from the DB to register commands
-// and redemptions. broadcast is called for each overlay event the bot emits.
+// New creates a Bot with commands and redemptions registered from the catalog.
+// broadcast is called for each overlay event the bot emits.
 func New(
 	cfg Config,
 	logger *slog.Logger,
 	statsService *stats.Service,
 	blindboxService *blindbox.Service,
+	seriesConfigs []blindbox.SeriesConfig,
 	broadcast func(server.OverlayEvent),
 ) (*Bot, error) {
-	seriesConfigs, err := blindboxService.LoadAllSeries(context.Background())
-	if err != nil {
-		return nil, fmt.Errorf("load blind box series: %w", err)
-	}
-
 	return &Bot{
 		config:          cfg,
 		logger:          logger,

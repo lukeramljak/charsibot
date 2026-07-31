@@ -12,6 +12,7 @@ import (
 	_ "modernc.org/sqlite"
 
 	"github.com/lukeramljak/charsibot/blindbox"
+	"github.com/lukeramljak/charsibot/catalog"
 	"github.com/lukeramljak/charsibot/charsibot"
 	"github.com/lukeramljak/charsibot/db"
 	"github.com/lukeramljak/charsibot/server"
@@ -37,13 +38,18 @@ func run() error {
 	}
 	defer sqlDB.Close()
 
+	appCatalog, err := catalog.Load()
+	if err != nil {
+		return fmt.Errorf("load catalog: %w", err)
+	}
+
 	queries := db.New(sqlDB)
 
-	blindboxService, err := blindbox.NewService(queries)
+	blindboxService, err := blindbox.NewService(queries, appCatalog.Series)
 	if err != nil {
 		return fmt.Errorf("blindbox service: %w", err)
 	}
-	statsService, err := stats.NewService(queries)
+	statsService, err := stats.NewService(queries, appCatalog.Stats)
 	if err != nil {
 		return fmt.Errorf("stats service: %w", err)
 	}
@@ -59,7 +65,7 @@ func run() error {
 	}
 	defer srv.Stop()
 
-	bot, err := charsibot.New(cfg, logger, statsService, blindboxService, srv.Broadcast)
+	bot, err := charsibot.New(cfg, logger, statsService, blindboxService, appCatalog.Series, srv.Broadcast)
 	if err != nil {
 		return fmt.Errorf("create bot: %w", err)
 	}

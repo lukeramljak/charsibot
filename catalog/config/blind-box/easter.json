@@ -1,0 +1,77 @@
+{
+  "series": "easter",
+  "assetDir": "easter",
+  "redemptionTitle": "Easter Series Blind Box",
+  "name": "Chocopups",
+  "revealSound": "reveal.mp3",
+  "boxFrontFace": "box-front.png",
+  "boxSideFace": "box-side.png",
+  "displayColor": "#ff81a9",
+  "textColor": "#ffffff",
+  "plushies": [
+    {
+      "key": "bunny",
+      "sortOrder": 1,
+      "weight": 5,
+      "name": "Bunny",
+      "image": "bunny.png",
+      "emptyImage": "bunny-blank.png"
+    },
+    {
+      "key": "chikky",
+      "sortOrder": 2,
+      "weight": 5,
+      "name": "Chikky",
+      "image": "chikky.png",
+      "emptyImage": "chikky-blank.png"
+    },
+    {
+      "key": "nesty",
+      "sortOrder": 3,
+      "weight": 5,
+      "name": "Nesty",
+      "image": "nesty.png",
+      "emptyImage": "nesty-blank.png"
+    },
+    {
+      "key": "lamby",
+      "sortOrder": 4,
+      "weight": 5,
+      "name": "Lamby",
+      "image": "lamby.png",
+      "emptyImage": "lamby-blank.png"
+    },
+    {
+      "key": "choccy",
+      "sortOrder": 5,
+      "weight": 5,
+      "name": "Choccy",
+      "image": "choccy.png",
+      "emptyImage": "choccy-blank.png"
+    },
+    {
+      "key": "eggy",
+      "sortOrder": 6,
+      "weight": 5,
+      "name": "Eggy",
+      "image": "eggy.png",
+      "emptyImage": "eggy-blank.png"
+    },
+    {
+      "key": "flowey",
+      "sortOrder": 7,
+      "weight": 5,
+      "name": "Flowey",
+      "image": "flowey.png",
+      "emptyImage": "flowey-blank.png"
+    },
+    {
+      "key": "secret",
+      "sortOrder": 8,
+      "weight": 1,
+      "name": "Secret",
+      "image": "secret.png",
+      "emptyImage": "secret-blank.png"
+    }
+  ]
+}

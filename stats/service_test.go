@@ -6,6 +6,7 @@ import (
 
 	_ "modernc.org/sqlite"
 
+	"github.com/lukeramljak/charsibot/catalog"
 	"github.com/lukeramljak/charsibot/db"
 	"github.com/lukeramljak/charsibot/stats"
 )
@@ -14,8 +15,12 @@ func TestGetOrCreateStats(t *testing.T) {
 	queries, sqlDB := db.NewTestDB(t)
 	defer sqlDB.Close()
 	ctx := context.Background()
+	catalog, err := catalog.Load()
+	if err != nil {
+		t.Fatalf("failed to load catalog: %v", err)
+	}
 
-	svc, err := stats.NewService(queries)
+	svc, err := stats.NewService(queries, catalog.Stats)
 	if err != nil {
 		t.Fatalf("failed to create stats service: %v", err)
 	}

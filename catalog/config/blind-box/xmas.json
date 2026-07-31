@@ -1,0 +1,77 @@
+{
+  "series": "xmas",
+  "assetDir": "xmas",
+  "redemptionTitle": "Christmas Series Blind Box",
+  "name": "Lil Helpers",
+  "revealSound": "reveal.mp3",
+  "boxFrontFace": "box-front.png",
+  "boxSideFace": "box-side.png",
+  "displayColor": "#9e0000",
+  "textColor": "#ffffff",
+  "plushies": [
+    {
+      "key": "snowy",
+      "sortOrder": 1,
+      "weight": 3,
+      "name": "Snowy",
+      "image": "snowy.png",
+      "emptyImage": "snowy-blank.png"
+    },
+    {
+      "key": "piney",
+      "sortOrder": 2,
+      "weight": 3,
+      "name": "Piney",
+      "image": "piney.png",
+      "emptyImage": "piney-blank.png"
+    },
+    {
+      "key": "starry",
+      "sortOrder": 3,
+      "weight": 3,
+      "name": "Starry",
+      "image": "starry.png",
+      "emptyImage": "starry-blank.png"
+    },
+    {
+      "key": "socky",
+      "sortOrder": 4,
+      "weight": 3,
+      "name": "Socky",
+      "image": "socky.png",
+      "emptyImage": "socky-blank.png"
+    },
+    {
+      "key": "gingey",
+      "sortOrder": 5,
+      "weight": 3,
+      "name": "Gingey",
+      "image": "gingey.png",
+      "emptyImage": "gingey-blank.png"
+    },
+    {
+      "key": "nicky",
+      "sortOrder": 6,
+      "weight": 3,
+      "name": "Nicky",
+      "image": "nicky.png",
+      "emptyImage": "nicky-blank.png"
+    },
+    {
+      "key": "dancey",
+      "sortOrder": 7,
+      "weight": 3,
+      "name": "Dancey",
+      "image": "dancey.png",
+      "emptyImage": "dancey-blank.png"
+    },
+    {
+      "key": "secret",
+      "sortOrder": 8,
+      "weight": 1,
+      "name": "Secret",
+      "image": "secret.png",
+      "emptyImage": "secret-blank.png"
+    }
+  ]
+}

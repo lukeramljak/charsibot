@@ -16,8 +16,9 @@ func TestDrinkAPotionCreatesStatsForNewUser(t *testing.T) {
 	queries, sqlDB := db.NewTestDB(t)
 	defer sqlDB.Close()
 	ctx := context.Background()
+	catalog := testCatalog(t)
 
-	svc, err := stats.NewService(queries)
+	svc, err := stats.NewService(queries, catalog.Stats)
 	if err != nil {
 		t.Fatalf("failed to create stats service: %v", err)
 	}
@@ -34,14 +35,14 @@ func TestDrinkAPotionCreatesStatsForNewUser(t *testing.T) {
 		Reward: twitch.CustomChannelPointReward{Title: "Drink a Potion"},
 	}
 
-	statsBefore, _ := queries.GetUserStats(ctx, "newuser1")
+	statsBefore, _ := queries.GetUserStatValues(ctx, "newuser1")
 	if len(statsBefore) != 0 {
 		t.Fatalf("expected no stats before redemption, got %d", len(statsBefore))
 	}
 
 	b.onChannelPointRedemption(event)
 
-	statsAfter, err := queries.GetUserStats(ctx, "newuser1")
+	statsAfter, err := queries.GetUserStatValues(ctx, "newuser1")
 	if err != nil {
 		t.Fatalf("GetUserStats failed: %v", err)
 	}
@@ -64,8 +65,9 @@ func TestDrinkAPotionModifiesStatForExistingUser(t *testing.T) {
 	queries, sqlDB := db.NewTestDB(t)
 	defer sqlDB.Close()
 	ctx := context.Background()
+	catalog := testCatalog(t)
 
-	svc, err := stats.NewService(queries)
+	svc, err := stats.NewService(queries, catalog.Stats)
 	if err != nil {
 		t.Fatalf("failed to create stats service: %v", err)
 	}
@@ -88,7 +90,7 @@ func TestDrinkAPotionModifiesStatForExistingUser(t *testing.T) {
 
 	b.onChannelPointRedemption(event)
 
-	stats, err := queries.GetUserStats(ctx, "existinguser1")
+	stats, err := queries.GetUserStatValues(ctx, "existinguser1")
 	if err != nil {
 		t.Fatalf("GetUserStats failed: %v", err)
 	}

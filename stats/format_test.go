@@ -3,12 +3,11 @@ package stats_test
 import (
 	"testing"
 
-	"github.com/lukeramljak/charsibot/db"
 	"github.com/lukeramljak/charsibot/stats"
 )
 
 func TestFormatStats(t *testing.T) {
-	userStats := []db.GetUserStatsRow{
+	userStats := []stats.UserStat{
 		{Name: "strength", ShortName: "STR", LongName: "Strength", Value: 5},
 		{Name: "intelligence", ShortName: "INT", LongName: "Intelligence", Value: 5},
 		{Name: "charisma", ShortName: "CHA", LongName: "Charisma", Value: 3},
@@ -26,7 +25,7 @@ func TestFormatStats(t *testing.T) {
 }
 
 func TestFormatStatsNegative(t *testing.T) {
-	userStats := []db.GetUserStatsRow{
+	userStats := []stats.UserStat{
 		{Name: "strength", ShortName: "STR", LongName: "Strength", Value: 3},
 		{Name: "intelligence", ShortName: "INT", LongName: "Intelligence", Value: 3},
 		{Name: "charisma", ShortName: "CHA", LongName: "Charisma", Value: 9},
@@ -44,7 +43,7 @@ func TestFormatStatsNegative(t *testing.T) {
 }
 
 func TestFormatStatsEmpty(t *testing.T) {
-	formatted := stats.FormatStats("testuser", []db.GetUserStatsRow{})
+	formatted := stats.FormatStats("testuser", []stats.UserStat{})
 	expected := "No stats found for testuser"
 
 	if formatted != expected {

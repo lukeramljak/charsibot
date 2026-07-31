@@ -16,6 +16,9 @@ func NewTestDB(t *testing.T) (*Queries, *sql.DB) {
 	if err != nil {
 		t.Fatalf("failed to open database: %v", err)
 	}
+	if _, pragmaErr := sqlDB.ExecContext(t.Context(), "PRAGMA foreign_keys = ON"); pragmaErr != nil {
+		t.Fatalf("failed to enable foreign keys: %v", pragmaErr)
+	}
 
 	migrations, err := fs.Sub(FS, "migrations")
 	if err != nil {

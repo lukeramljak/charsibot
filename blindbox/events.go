@@ -1,7 +1,5 @@
 package blindbox
 
-import "github.com/lukeramljak/charsibot/db"
-
 // BlindBoxDisplayData is the payload for a blindbox_display SSE event.
 type BlindBoxDisplayData struct {
 	Username   string       `json:"username"`
@@ -11,9 +9,9 @@ type BlindBoxDisplayData struct {
 
 // BlindBoxRedemptionData is the payload for a blindbox_redemption SSE event.
 type BlindBoxRedemptionData struct {
-	Username   string             `json:"username"`
-	Plushie    db.BlindBoxPlushie `json:"plushie"`
-	IsNew      bool               `json:"isNew"`
-	Collection []string           `json:"collection"`
-	Config     SeriesConfig       `json:"config"`
+	Username   string       `json:"username"`
+	Plushie    Plushie      `json:"plushie"`
+	IsNew      bool         `json:"isNew"`
+	Collection []string     `json:"collection"`
+	Config     SeriesConfig `json:"config"`
 }

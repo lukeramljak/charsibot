@@ -1,0 +1,77 @@
+{
+  "series": "coobubu",
+  "assetDir": "coobubu",
+  "redemptionTitle": "Cooper Series Blind Box",
+  "name": "Coobubus",
+  "revealSound": "reveal.mp3",
+  "boxFrontFace": "box-front.png",
+  "boxSideFace": "box-side.png",
+  "displayColor": "#ff8c82",
+  "textColor": "#ffffff",
+  "plushies": [
+    {
+      "key": "cutey",
+      "sortOrder": 1,
+      "weight": 23,
+      "name": "Cutey",
+      "image": "cutey.png",
+      "emptyImage": "empty-slot.png"
+    },
+    {
+      "key": "blueberry",
+      "sortOrder": 2,
+      "weight": 23,
+      "name": "Blueberry",
+      "image": "blueberry.png",
+      "emptyImage": "empty-slot.png"
+    },
+    {
+      "key": "lemony",
+      "sortOrder": 3,
+      "weight": 23,
+      "name": "Lemony",
+      "image": "lemony.png",
+      "emptyImage": "empty-slot.png"
+    },
+    {
+      "key": "bibi",
+      "sortOrder": 4,
+      "weight": 23,
+      "name": "Bibi",
+      "image": "bibi.png",
+      "emptyImage": "empty-slot.png"
+    },
+    {
+      "key": "pinky",
+      "sortOrder": 5,
+      "weight": 23,
+      "name": "Pinky",
+      "image": "pinky.png",
+      "emptyImage": "empty-slot.png"
+    },
+    {
+      "key": "minty",
+      "sortOrder": 6,
+      "weight": 23,
+      "name": "Minty",
+      "image": "minty.png",
+      "emptyImage": "empty-slot.png"
+    },
+    {
+      "key": "cherry",
+      "sortOrder": 7,
+      "weight": 23,
+      "name": "Cherry",
+      "image": "cherry.png",
+      "emptyImage": "empty-slot.png"
+    },
+    {
+      "key": "secret",
+      "sortOrder": 8,
+      "weight": 7,
+      "name": "Secret",
+      "image": "secret.png",
+      "emptyImage": "empty-slot.png"
+    }
+  ]
+}

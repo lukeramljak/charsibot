@@ -25,18 +25,8 @@ SELECT EXISTS(
 DELETE FROM user_plushies
 WHERE user_id = ? AND series = ?;
 
--- name: GetCompletedCollections :many
-WITH completed AS (
-  SELECT up.series, up.username
-  FROM user_plushies up
-  GROUP BY up.user_id, up.series
-  HAVING COUNT(*) = (
-    SELECT COUNT(*) FROM blind_box_plushies bp
-    WHERE bp.series = up.series
-  )
-)
-SELECT bbs.name AS series_name, GROUP_CONCAT(completed.username, ', ') AS usernames
-FROM completed
-JOIN blind_box_series bbs ON bbs.series = completed.series
-GROUP BY completed.series
-ORDER BY bbs.series;
+-- name: GetUserPlushieCounts :many
+SELECT series, CAST(MAX(username) AS TEXT) AS username, COUNT(*) AS count
+FROM user_plushies
+GROUP BY series, user_id
+ORDER BY series, username;

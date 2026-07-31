@@ -9,10 +9,20 @@ import (
 	"github.com/joeyak/go-twitch-eventsub/v3"
 
 	"github.com/lukeramljak/charsibot/blindbox"
+	"github.com/lukeramljak/charsibot/catalog"
 	"github.com/lukeramljak/charsibot/db"
 	"github.com/lukeramljak/charsibot/server"
 	"github.com/lukeramljak/charsibot/stats"
 )
+
+func testCatalog(t *testing.T) catalog.Catalog {
+	t.Helper()
+	cat, err := catalog.Load()
+	if err != nil {
+		t.Fatalf("failed to load catalog: %v", err)
+	}
+	return cat
+}
 
 func TestIsModerator(t *testing.T) {
 	tests := []struct {
@@ -297,8 +307,9 @@ func TestStatsCommandAddSetRm(t *testing.T) {
 	queries, sqlDB := db.NewTestDB(t)
 	defer sqlDB.Close()
 	ctx := context.Background()
+	catalog := testCatalog(t)
 
-	svc, err := stats.NewService(queries)
+	svc, err := stats.NewService(queries, catalog.Stats)
 	if err != nil {
 		t.Fatalf("failed to create stats service: %v", err)
 	}
@@ -332,12 +343,12 @@ func TestStatsCommandAddSetRm(t *testing.T) {
 
 	statValue := func(t *testing.T, userID, stat string) int64 {
 		t.Helper()
-		stats, err := queries.GetUserStats(ctx, userID)
+		stats, err := queries.GetUserStatValues(ctx, userID)
 		if err != nil {
 			t.Fatalf("GetUserStats failed: %v", err)
 		}
 		for _, s := range stats {
-			if s.Name == stat {
+			if s.StatName == stat {
 				return s.Value
 			}
 		}
@@ -464,7 +475,7 @@ func drainEvents(ch chan server.OverlayEvent) []server.OverlayEvent {
 
 func TestSeriesCommandRegistered(t *testing.T) {
 	cfg := blindbox.SeriesConfig{
-		BlindBoxSeries: db.BlindBoxSeries{Series: "coobubu", RedemptionTitle: "Cooper Series Blind Box"},
+		Series: "coobubu", RedemptionTitle: "Cooper Series Blind Box",
 	}
 
 	cmds := Commands([]blindbox.SeriesConfig{cfg})
@@ -478,8 +489,9 @@ func TestSeriesCommandShowCollection(t *testing.T) {
 	queries, sqlDB := db.NewTestDB(t)
 	defer sqlDB.Close()
 	ctx := context.Background()
+	catalog := testCatalog(t)
 
-	svc, err := blindbox.NewService(queries)
+	svc, err := blindbox.NewService(queries, catalog.Series)
 	if err != nil {
 		t.Fatalf("failed to create blindbox service: %v", err)
 	}
@@ -490,7 +502,7 @@ func TestSeriesCommandShowCollection(t *testing.T) {
 
 	broadcast, ch := newBroadcast()
 	cfg := blindbox.SeriesConfig{
-		BlindBoxSeries: db.BlindBoxSeries{Series: "coobubu", RedemptionTitle: "Cooper Series Blind Box"},
+		Series: "coobubu", RedemptionTitle: "Cooper Series Blind Box",
 	}
 
 	b := &Bot{
@@ -530,8 +542,9 @@ func TestSeriesCommandReset(t *testing.T) {
 	queries, sqlDB := db.NewTestDB(t)
 	defer sqlDB.Close()
 	ctx := context.Background()
+	catalog := testCatalog(t)
 
-	svc, err := blindbox.NewService(queries)
+	svc, err := blindbox.NewService(queries, catalog.Series)
 	if err != nil {
 		t.Fatalf("failed to create blindbox service: %v", err)
 	}
@@ -543,7 +556,7 @@ func TestSeriesCommandReset(t *testing.T) {
 	}
 
 	cfg := blindbox.SeriesConfig{
-		BlindBoxSeries: db.BlindBoxSeries{Series: "coobubu", RedemptionTitle: "Cooper Series Blind Box"},
+		Series: "coobubu", RedemptionTitle: "Cooper Series Blind Box",
 	}
 
 	b := &Bot{
@@ -592,7 +605,7 @@ func TestBlindboxModGuard(t *testing.T) {
 	// b.store and panics, so no panic = guard is in place.
 
 	cfg := blindbox.SeriesConfig{
-		BlindBoxSeries: db.BlindBoxSeries{Series: "test", RedemptionTitle: "Test"},
+		Series: "test", RedemptionTitle: "Test",
 	}
 
 	makeBot := func() *Bot {
