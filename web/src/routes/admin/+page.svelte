@@ -51,6 +51,7 @@
   let pendingResetCollection = $state.raw<Collection | null>(null);
   let resetDialog = $state<HTMLDialogElement | undefined>(undefined);
   let explodeDialog = $state<HTMLDialogElement | undefined>(undefined);
+  let undoExplodeDialog = $state<HTMLDialogElement | undefined>(undefined);
   let randomStatDialog = $state<HTMLDialogElement | undefined>(undefined);
   let error = $state('');
   let statusMessage = $state('');
@@ -175,6 +176,18 @@
     if (!selected) return;
     closeExplodeDialog();
     await mutate(`/api/admin/users/${encodeURIComponent(selected.user.id)}/stats/explode`, {
+      method: 'POST',
+    });
+  }
+
+  function closeUndoExplodeDialog() {
+    undoExplodeDialog?.close();
+  }
+
+  async function undoExplode() {
+    if (!selected) return;
+    closeUndoExplodeDialog();
+    await mutate(`/api/admin/users/${encodeURIComponent(selected.user.id)}/stats/explode/undo`, {
       method: 'POST',
     });
   }
@@ -380,6 +393,9 @@
                 <button class="button button-danger" onclick={() => explodeDialog?.showModal()} disabled={loading}>
                   Explode
                 </button>
+                <button class="button button-secondary" onclick={() => undoExplodeDialog?.showModal()} disabled={loading}>
+                  Undo explode
+                </button>
                 <span class="admin-muted font-mono text-xs">{selected.user.id}</span>
               </div>
             </div>
@@ -569,10 +585,26 @@
   <h2 class="section-title mt-2 text-2xl" id="explode-dialog-title">
     Explode {selected?.user.username ?? 'this viewer'}?
   </h2>
-  <p class="admin-muted mt-2">This reduces their PENIS stat by 1003 and displays their updated stats in chat.</p>
+  <p class="admin-muted mt-2">This sets their PENIS stat to -1000 and displays their updated stats in chat.</p>
   <div class="dialog-actions mt-6">
     <button class="button button-secondary" onclick={closeExplodeDialog}>Cancel</button>
     <button class="button button-danger" onclick={explode}>Explode</button>
+  </div>
+</dialog>
+
+<dialog
+  class="admin-dialog p-6"
+  bind:this={undoExplodeDialog}
+  aria-labelledby="undo-explode-dialog-title"
+>
+  <p class="eyebrow">Viewer stat</p>
+  <h2 class="section-title mt-2 text-2xl" id="undo-explode-dialog-title">
+    Undo {selected?.user.username ?? 'this viewer'}'s explosion?
+  </h2>
+  <p class="admin-muted mt-2">This restores their PENIS stat to its configured default and displays their updated stats in chat.</p>
+  <div class="dialog-actions mt-6">
+    <button class="button button-secondary" onclick={closeUndoExplodeDialog}>Cancel</button>
+    <button class="button button-primary" onclick={undoExplode}>Undo explode</button>
   </div>
 </dialog>
 

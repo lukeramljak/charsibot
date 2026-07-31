@@ -167,15 +167,37 @@ func TestAdminExplodeReducesPenisAndDisplaysStats(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if got := statValue(userStats, "penis"); got != -1000 {
+		t.Errorf("penis stat = %d, want -1000", got)
+	}
+	if want := stats.FormatStats("viewer", userStats); chatMessage != want {
+		t.Errorf("chat message = %q, want %q", chatMessage, want)
+	}
+
+	request = httptest.NewRequest(http.MethodPost, "/api/admin/users/viewer-1/stats/explode/undo", nil)
+	request.RemoteAddr = "127.0.0.1:12345"
+	request.SetPathValue("userID", "viewer-1")
+	response = httptest.NewRecorder()
+	srv.handleAdminUndoExplode(response, request)
+	if response.Code != http.StatusOK {
+		t.Fatalf("undo status = %d, body = %s", response.Code, response.Body.String())
+	}
+	userStats, err = statsService.GetUserStats(t.Context(), "viewer-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := statValue(userStats, "penis"); got != 7 {
+		t.Errorf("penis stat after undo = %d, want 7", got)
+	}
+}
+
+func statValue(userStats []stats.UserStat, name string) int64 {
 	for _, stat := range userStats {
-		if stat.Name == "penis" && stat.Value == -1000 {
-			if want := stats.FormatStats("viewer", userStats); chatMessage != want {
-				t.Errorf("chat message = %q, want %q", chatMessage, want)
-			}
-			return
+		if stat.Name == name {
+			return stat.Value
 		}
 	}
-	t.Error("penis stat was not reduced by 1003")
+	return 0
 }
 
 func TestAdminRandomPlushieGrantsFromSeries(t *testing.T) {

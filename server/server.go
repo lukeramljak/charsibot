@@ -90,6 +90,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("GET /api/admin/users", s.handleAdminUsers)
 	mux.HandleFunc("GET /api/admin/users/{userID}", s.handleAdminUser)
 	mux.HandleFunc("POST /api/admin/users/{userID}/stats/explode", s.handleAdminExplode)
+	mux.HandleFunc("POST /api/admin/users/{userID}/stats/explode/undo", s.handleAdminUndoExplode)
 	mux.HandleFunc("POST /api/admin/users/{userID}/stats/random", s.handleAdminRandomStat)
 	mux.HandleFunc("PATCH /api/admin/users/{userID}/stats/{statName}", s.handleAdminStat)
 	mux.HandleFunc("POST /api/admin/users/{userID}/collections/{series}/random", s.handleAdminRandomPlushie)
