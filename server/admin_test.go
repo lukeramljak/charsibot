@@ -113,6 +113,69 @@ func TestAdminRandomStatIncrementsOneStat(t *testing.T) {
 	}
 }
 
+func TestAdminRandomPlushieGrantsFromSeries(t *testing.T) {
+	queries, sqlDB := db.NewTestDB(t)
+	defer sqlDB.Close()
+	appCatalog, err := catalog.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	statsService, err := stats.NewService(queries, appCatalog.Stats)
+	if err != nil {
+		t.Fatal(err)
+	}
+	blindboxService, err := blindbox.NewService(queries, appCatalog.Series)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := statsService.GetOrCreateStats(t.Context(), "viewer-1", "viewer"); err != nil {
+		t.Fatal(err)
+	}
+
+	series := appCatalog.Series[0]
+	srv := NewServer(ServerConfig{
+		StatsService:    statsService,
+		BlindBoxService: blindboxService,
+		Series:          appCatalog.Series,
+	}, slog.New(slog.NewTextHandler(testWriter{t}, nil)))
+	request := httptest.NewRequest(http.MethodPost, "/api/admin/users/viewer-1/collections/"+series.Series+"/random", strings.NewReader(`{"triggerOverlay":true}`))
+	request.RemoteAddr = "127.0.0.1:12345"
+	request.SetPathValue("userID", "viewer-1")
+	request.SetPathValue("series", series.Series)
+	response := httptest.NewRecorder()
+	events := make(chan OverlayEvent, 1)
+	srv.clients[events] = struct{}{}
+
+	srv.handleAdminRandomPlushie(response, request)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", response.Code, response.Body.String())
+	}
+	var body adminUserResponse
+	if err := json.NewDecoder(response.Body).Decode(&body); err != nil {
+		t.Fatal(err)
+	}
+	if len(body.Collections) == 0 || len(body.Collections[0].Collected) != 1 {
+		t.Fatalf("collected = %#v, want one plushie", body.Collections)
+	}
+	key := body.Collections[0].Collected[0]
+	for _, plushie := range series.Plushies {
+		if plushie.Key == key {
+			select {
+			case event := <-events:
+				if event.Type != EventTypeBlindBoxRedemption {
+					t.Errorf("event type = %q, want %q", event.Type, EventTypeBlindBoxRedemption)
+				}
+				return
+			default:
+				t.Error("expected redemption event")
+				return
+			}
+		}
+	}
+	t.Errorf("granted plushie %q is not in series %q", key, series.Series)
+}
+
 type testWriter struct{ t *testing.T }
 
 func (w testWriter) Write(p []byte) (int, error) {

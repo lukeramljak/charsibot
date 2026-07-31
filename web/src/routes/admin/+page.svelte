@@ -38,6 +38,8 @@
   let selected = $state.raw<UserDetail | null>(null);
   let loading = $state(false);
   let mutatingPlushie = $state<string | null>(null);
+  let pendingRandomCollection = $state.raw<Collection | null>(null);
+  let randomPlushieDialog = $state<HTMLDialogElement | undefined>(undefined);
   let error = $state('');
   let statusMessage = $state('');
   let selectedUserHeading = $state<HTMLHeadingElement | undefined>(undefined);
@@ -149,6 +151,31 @@
     } finally {
       mutatingPlushie = null;
     }
+  }
+
+  function openRandomPlushieDialog(collection: Collection) {
+    pendingRandomCollection = collection;
+    randomPlushieDialog?.showModal();
+  }
+
+  function closeRandomPlushieDialog() {
+    randomPlushieDialog?.close();
+    pendingRandomCollection = null;
+  }
+
+  async function grantRandomPlushie(triggerOverlay: boolean) {
+    if (!selected) return;
+    const collection = pendingRandomCollection;
+    closeRandomPlushieDialog();
+    if (!collection) return;
+    await mutate(
+      `/api/admin/users/${encodeURIComponent(selected.user.id)}/collections/${encodeURIComponent(collection.config.series)}/random`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ triggerOverlay }),
+      },
+    );
   }
 
   async function resetSeries(series: string) {
@@ -323,12 +350,21 @@
                           {collection.collected.length}/{collection.config.plushies.length} collected
                         </p>
                       </div>
-                      <button
-                        class="button button-danger"
-                        onclick={() => resetSeries(collection.config.series)}
-                        disabled={loading || collection.collected.length === 0}
-                        aria-label={`Reset ${collection.config.name} collection`}>Reset</button
-                      >
+                      <div class="flex flex-wrap justify-end gap-2">
+                        <button
+                          class="button button-secondary"
+                          onclick={() => openRandomPlushieDialog(collection)}
+                          disabled={loading}
+                        >
+                          Grant random
+                        </button>
+                        <button
+                          class="button button-danger"
+                          onclick={() => resetSeries(collection.config.series)}
+                          disabled={loading || collection.collected.length === 0}
+                          aria-label={`Reset ${collection.config.name} collection`}>Reset</button
+                        >
+                      </div>
                     </div>
                     <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
                       {#each collection.config.plushies as plushie (plushie.key)}
@@ -369,6 +405,32 @@
       </div>
     </div>
   </div>
+
+<dialog
+  class="admin-dialog p-6"
+  bind:this={randomPlushieDialog}
+  aria-labelledby="random-plushie-dialog-title"
+  oncancel={() => {
+    pendingRandomCollection = null;
+  }}
+>
+  <p class="eyebrow">Blind-box redemption</p>
+  <h2 class="section-title mt-2 text-2xl" id="random-plushie-dialog-title">
+    Grant a random plushie?
+  </h2>
+  <p class="admin-muted mt-2">
+    {pendingRandomCollection?.config.name ?? 'This series'} uses its normal weighted drop chances.
+  </p>
+  <div class="dialog-actions mt-6">
+    <button class="button button-secondary" onclick={closeRandomPlushieDialog}>Cancel</button>
+    <button class="button button-secondary" onclick={() => grantRandomPlushie(false)}>
+      Grant silently
+    </button>
+    <button class="button button-primary" onclick={() => grantRandomPlushie(true)}>
+      Grant &amp; show overlay
+    </button>
+  </div>
+</dialog>
 </main>
 
 <style>
@@ -537,6 +599,23 @@
     background: rgb(242 161 186 / 16%);
   }
 
+  .button-primary {
+    border: 1px solid var(--accent);
+    border-radius: 999px;
+    padding: 0.5rem 1rem;
+    background: var(--accent);
+    color: var(--ink);
+    font-size: 0.75rem;
+    font-weight: 900;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .button-primary:hover:not(:disabled) {
+    border-color: var(--accent-strong);
+    background: var(--accent-strong);
+  }
+
   .admin-input,
   .stat-input {
     border: 1px solid var(--line);
@@ -636,6 +715,30 @@
 
   .button-danger:hover:not(:disabled) {
     background: rgb(255 108 108 / 15%);
+  }
+
+  .admin-dialog {
+    position: fixed;
+    inset: 0;
+    width: min(100% - 2rem, 32rem);
+    height: fit-content;
+    margin: auto;
+    border: 1px solid rgb(214 198 223 / 26%);
+    border-radius: 1.25rem;
+    background: linear-gradient(145deg, rgb(43 34 54), rgb(31 24 41));
+    color: var(--text);
+    box-shadow: 0 24px 60px rgb(5 3 9 / 52%);
+  }
+
+  .admin-dialog::backdrop {
+    background: rgb(10 7 15 / 70%);
+  }
+
+  .dialog-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.5rem;
   }
 
   .plushie-button {

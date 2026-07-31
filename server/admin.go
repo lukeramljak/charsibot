@@ -35,6 +35,10 @@ type updateStatRequest struct {
 	Value int64  `json:"value"`
 }
 
+type randomPlushieRequest struct {
+	TriggerOverlay bool `json:"triggerOverlay"`
+}
+
 func (s *Server) handleAdminUsers(w http.ResponseWriter, r *http.Request) {
 	if !s.requireLocalAdmin(w, r) {
 		return
@@ -114,6 +118,51 @@ func (s *Server) handleAdminRandomStat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.writeAdminUser(w, r, user.ID)
+}
+
+func (s *Server) handleAdminRandomPlushie(w http.ResponseWriter, r *http.Request) {
+	if !s.requireLocalAdmin(w, r) {
+		return
+	}
+	user, ok := s.adminUser(w, r)
+	if !ok {
+		return
+	}
+	var input randomPlushieRequest
+	if !decodeJSON(w, r, &input) {
+		return
+	}
+	series := r.PathValue("series")
+	for _, cfg := range s.series {
+		if cfg.Series != series {
+			continue
+		}
+		plushie, err := blindbox.PickPlushie(cfg.Plushies)
+		if err != nil {
+			s.adminError(w, "choose random plushie", err)
+			return
+		}
+		result, err := s.blindbox.Redeem(r.Context(), user.ID, user.Username, series, plushie.Key)
+		if err != nil {
+			s.adminError(w, "grant random plushie", err)
+			return
+		}
+		if input.TriggerOverlay {
+			s.Broadcast(OverlayEvent{
+				Type: EventTypeBlindBoxRedemption,
+				Data: blindbox.BlindBoxRedemptionData{
+					Username:   result.Username,
+					Plushie:    plushie,
+					IsNew:      result.IsNew,
+					Collection: result.Collection,
+					Config:     cfg,
+				},
+			})
+		}
+		s.writeAdminUser(w, r, user.ID)
+		return
+	}
+	http.Error(w, "unknown series", http.StatusBadRequest)
 }
 
 func (s *Server) handleAdminGrantPlushie(w http.ResponseWriter, r *http.Request) {
