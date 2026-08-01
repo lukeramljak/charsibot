@@ -465,7 +465,7 @@
 </svelte:head>
 
 <main class="admin-shell p-6 sm:p-10" aria-busy={loading}>
-  <div class="admin-frame mx-auto max-w-[96rem]">
+  <div class="admin-frame mx-auto max-w-384">
     <p class="sr-only" role="status">{statusMessage}</p>
 
     <div class="admin-layout">
@@ -1141,21 +1141,51 @@
     }
 
     @media (min-width: 900px) {
+      .admin-shell {
+        height: 100dvh;
+        min-height: 0;
+        overflow: hidden;
+      }
+
+      .admin-frame,
+      .admin-layout {
+        height: 100%;
+      }
+
       .admin-layout {
         grid-template-areas:
           'sidebar header'
           'sidebar workspace';
         grid-template-columns: minmax(17rem, 21rem) minmax(0, 1fr);
+        grid-template-rows: auto minmax(0, 1fr);
         gap: 2rem;
       }
 
       .viewer-directory {
-        position: sticky;
-        top: 2.5rem;
+        height: 100%;
+        min-height: 0;
+      }
+
+      .viewer-directory > .admin-surface {
+        display: flex;
+        height: 100%;
+        min-height: 0;
+        flex-direction: column;
       }
 
       .viewer-list {
-        max-height: calc(100vh - 18rem);
+        max-height: none;
+        min-height: 0;
+        flex: 1 1 auto;
+      }
+
+      .admin-workspace {
+        height: 100%;
+        min-height: 0;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        padding-right: 0.75rem;
+        scrollbar-gutter: stable;
       }
 
       .viewer-bulk-actions {
