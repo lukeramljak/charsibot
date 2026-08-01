@@ -4,6 +4,9 @@
   import { resolve } from '$app/paths';
   import { page } from '$app/state';
   import type { components } from '$lib/api.generated';
+  import UserCollections from '$lib/admin/UserCollections.svelte';
+  import UserStats from '$lib/admin/UserStats.svelte';
+  import ViewerDirectory from '$lib/admin/ViewerDirectory.svelte';
 
   type User = components['schemas']['User'];
   type UserStat = components['schemas']['AdminStat'];
@@ -28,13 +31,18 @@
     const matchesActivity = (user: User) => {
       if (activityFilter === 'all') return true;
       if (activityFilter === 'unknown') return !user.lastActiveAt;
-      if (activityFilter === 'recent') return !!user.lastActiveAt && now - Date.parse(user.lastActiveAt) < 30 * 86400000;
+      if (activityFilter === 'recent')
+        return !!user.lastActiveAt && now - Date.parse(user.lastActiveAt) < 30 * 86400000;
       const days = activityFilter === 'inactive30' ? 30 : 90;
-      return !user.lastActiveAt || now - Date.parse(user.lastActiveAt) >= days * 86400000;
+      return !!user.lastActiveAt && now - Date.parse(user.lastActiveAt) >= days * 86400000;
     };
     return users
       .filter((user) => user.username.toLowerCase().includes(query) && matchesActivity(user))
-      .toSorted((a, b) => (a.lastActiveAt ?? '').localeCompare(b.lastActiveAt ?? '') || a.username.localeCompare(b.username));
+      .toSorted(
+        (a, b) =>
+          (a.lastActiveAt ?? '').localeCompare(b.lastActiveAt ?? '') ||
+          a.username.localeCompare(b.username),
+      );
   });
   let selected = $state.raw<UserDetail | null>(null);
   let loading = $state(false);
@@ -54,6 +62,15 @@
   let error = $state('');
   let statusMessage = $state('');
   let selectedUserHeading = $state<HTMLHeadingElement | undefined>(undefined);
+  let selectedUserRequest = 0;
+
+  function adminUserURL(userID: string, path = '') {
+    return `/api/admin/users/${encodeURIComponent(userID)}${path}`;
+  }
+
+  function isCurrentUserRequest(requestID: number, userID: string) {
+    return selectedUserRequest === requestID && page.url.searchParams.get('user') === userID;
+  }
 
   async function request<T>(url: string, options?: RequestInit): Promise<T> {
     const response = await fetch(url, options);
@@ -98,6 +115,7 @@
     if (user && selected?.user.id !== user.id) {
       await selectUser(user, false);
     } else if (!user) {
+      selectedUserRequest += 1;
       selected = null;
     }
   }
@@ -113,19 +131,24 @@
         return;
       }
     }
+    const requestID = ++selectedUserRequest;
     loading = true;
     error = '';
     statusMessage = `Loading ${user.username}…`;
     try {
-      selected = await request<UserDetail>(`/api/admin/users/${encodeURIComponent(user.id)}`);
+      const response = await request<UserDetail>(adminUserURL(user.id));
+      if (!isCurrentUserRequest(requestID, user.id)) return;
+      selected = response;
       statusMessage = `Loaded ${user.username}.`;
       await tick();
       selectedUserHeading?.focus();
     } catch (err) {
-      error = err instanceof Error ? err.message : 'Could not load user';
-      statusMessage = '';
+      if (isCurrentUserRequest(requestID, user.id)) {
+        error = err instanceof Error ? err.message : 'Could not load user';
+        statusMessage = '';
+      }
     } finally {
-      loading = false;
+      if (isCurrentUserRequest(requestID, user.id)) loading = false;
     }
   }
 
@@ -135,19 +158,16 @@
     mode: 'set' | 'adjust',
   ): Promise<boolean> {
     if (!selected || !Number.isFinite(value)) return false;
-    return mutate(
-      `/api/admin/users/${encodeURIComponent(selected.user.id)}/stats/${encodeURIComponent(stat.name)}`,
-      {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode, value }),
-      },
-    );
+    return mutate(adminUserURL(selected.user.id, `/stats/${encodeURIComponent(stat.name)}`), {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode, value }),
+    });
   }
 
   async function displayStatsInChat() {
     if (!selected) return;
-    await mutate(`/api/admin/users/${encodeURIComponent(selected.user.id)}/stats/display`, {
+    await mutate(adminUserURL(selected.user.id, '/stats/display'), {
       method: 'POST',
     });
   }
@@ -155,7 +175,10 @@
   async function displayCollection(collection: Collection) {
     if (!selected) return;
     await mutate(
-      `/api/admin/users/${encodeURIComponent(selected.user.id)}/collections/${encodeURIComponent(collection.config.series)}/display`,
+      adminUserURL(
+        selected.user.id,
+        `/collections/${encodeURIComponent(collection.config.series)}/display`,
+      ),
       { method: 'POST' },
     );
   }
@@ -171,7 +194,7 @@
     loading = true;
     error = '';
     try {
-      const response = await fetch(`/api/admin/users/${encodeURIComponent(user.id)}`, {
+      const response = await fetch(adminUserURL(user.id), {
         method: 'DELETE',
       });
       if (!response.ok) throw new Error((await response.text()) || 'Could not delete viewer');
@@ -215,7 +238,7 @@
     const deletedUserIDs: string[] = [];
     try {
       for (const userID of userIDs) {
-        const response = await fetch(`/api/admin/users/${encodeURIComponent(userID)}`, {
+        const response = await fetch(adminUserURL(userID), {
           method: 'DELETE',
         });
         if (!response.ok) throw new Error((await response.text()) || 'Could not delete viewers');
@@ -237,7 +260,10 @@
         await goto(resolve('/admin'), { keepFocus: true, noScroll: true });
       }
       error = err instanceof Error ? err.message : 'Could not delete viewers';
-      statusMessage = deletedUserIDs.length > 0 ? `Deleted ${deletedUserIDs.length} viewers before stopping.` : '';
+      statusMessage =
+        deletedUserIDs.length > 0
+          ? `Deleted ${deletedUserIDs.length} viewers before stopping.`
+          : '';
     } finally {
       loading = false;
     }
@@ -261,7 +287,7 @@
   async function grantRandomStat(displayInChat: boolean) {
     if (!selected) return;
     closeRandomStatDialog();
-    await mutate(`/api/admin/users/${encodeURIComponent(selected.user.id)}/stats/random`, {
+    await mutate(adminUserURL(selected.user.id, '/stats/random'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ displayInChat }),
@@ -275,7 +301,7 @@
   async function explode() {
     if (!selected) return;
     closeExplodeDialog();
-    await mutate(`/api/admin/users/${encodeURIComponent(selected.user.id)}/stats/explode`, {
+    await mutate(adminUserURL(selected.user.id, '/stats/explode'), {
       method: 'POST',
     });
   }
@@ -287,7 +313,7 @@
   async function undoExplode() {
     if (!selected) return;
     closeUndoExplodeDialog();
-    await mutate(`/api/admin/users/${encodeURIComponent(selected.user.id)}/stats/explode/undo`, {
+    await mutate(adminUserURL(selected.user.id, '/stats/explode/undo'), {
       method: 'POST',
     });
   }
@@ -299,7 +325,7 @@
   async function resetStats(displayInChat: boolean) {
     if (!selected) return;
     closeResetStatsDialog();
-    await mutate(`/api/admin/users/${encodeURIComponent(selected.user.id)}/stats/reset`, {
+    await mutate(adminUserURL(selected.user.id, '/stats/reset'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ displayInChat }),
@@ -315,7 +341,10 @@
     }
     const plushieID = `${series}:${key}`;
     mutatingPlushie = plushieID;
-    const base = `/api/admin/users/${encodeURIComponent(selected.user.id)}/collections/${encodeURIComponent(series)}/${encodeURIComponent(key)}`;
+    const base = adminUserURL(
+      selected.user.id,
+      `/collections/${encodeURIComponent(series)}/${encodeURIComponent(key)}`,
+    );
     try {
       await mutate(base, { method: owned ? 'DELETE' : 'PUT' });
     } finally {
@@ -337,7 +366,10 @@
     mutatingPlushie = plushieID;
     try {
       await mutate(
-        `/api/admin/users/${encodeURIComponent(selected.user.id)}/collections/${encodeURIComponent(plushie.series)}/${encodeURIComponent(plushie.key)}`,
+        adminUserURL(
+          selected.user.id,
+          `/collections/${encodeURIComponent(plushie.series)}/${encodeURIComponent(plushie.key)}`,
+        ),
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -365,7 +397,10 @@
     closeRandomPlushieDialog();
     if (!collection) return;
     await mutate(
-      `/api/admin/users/${encodeURIComponent(selected.user.id)}/collections/${encodeURIComponent(collection.config.series)}/random`,
+      adminUserURL(
+        selected.user.id,
+        `/collections/${encodeURIComponent(collection.config.series)}/random`,
+      ),
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -390,7 +425,10 @@
     closeResetDialog();
     if (!collection) return;
     await mutate(
-      `/api/admin/users/${encodeURIComponent(selected.user.id)}/collections/${encodeURIComponent(collection.config.series)}`,
+      adminUserURL(
+        selected.user.id,
+        `/collections/${encodeURIComponent(collection.config.series)}`,
+      ),
       {
         method: 'DELETE',
       },
@@ -398,19 +436,26 @@
   }
 
   async function mutate(url: string, options: RequestInit): Promise<boolean> {
+    const userID = selected?.user.id;
+    if (!userID) return false;
+    const requestID = ++selectedUserRequest;
     loading = true;
     error = '';
     statusMessage = 'Saving changes…';
     try {
-      selected = await request<UserDetail>(url, options);
+      const response = await request<UserDetail>(url, options);
+      if (!isCurrentUserRequest(requestID, userID)) return false;
+      selected = response;
       statusMessage = 'Changes saved.';
       return true;
     } catch (err) {
-      error = err instanceof Error ? err.message : 'Could not save change';
-      statusMessage = '';
+      if (isCurrentUserRequest(requestID, userID)) {
+        error = err instanceof Error ? err.message : 'Could not save change';
+        statusMessage = '';
+      }
       return false;
     } finally {
-      loading = false;
+      if (isCurrentUserRequest(requestID, userID)) loading = false;
     }
   }
 </script>
@@ -434,88 +479,23 @@
       </header>
 
       <aside class="viewer-directory">
-        <section class="admin-surface p-5">
-          <div class="flex items-center justify-between gap-4">
-            <div>
-              <p class="eyebrow">Viewer directory</p>
-              <h2 class="section-title mt-1">Viewers</h2>
-              <p class="admin-muted text-sm">
-                {filteredUsers.length} of {users.length} known users
-              </p>
-            </div>
-            <button class="button button-secondary" onclick={loadUsers} disabled={loading}>
-              Refresh
-            </button>
-          </div>
-
-          {#if users.length > 0}
-            <label class="sr-only" for="username-filter">Filter by username</label>
-            <input
-              id="username-filter"
-              class="admin-input mt-4 w-full"
-              bind:value={usernameFilter}
-              placeholder="Filter by username…"
-            />
-            <label class="sr-only" for="activity-filter">Filter by activity</label>
-            <select id="activity-filter" class="admin-input mt-2 w-full" bind:value={activityFilter}>
-              <option value="all">All activity</option>
-              <option value="unknown">Unknown activity</option>
-              <option value="inactive30">Inactive for 30+ days</option>
-              <option value="inactive90">Inactive for 90+ days</option>
-              <option value="recent">Active in the last 30 days</option>
-            </select>
-            <div class="viewer-bulk-actions mt-3">
-              <button
-                class="button button-secondary"
-                onclick={selectFilteredUsers}
-                disabled={loading || filteredUsers.length === 0}
-              >
-                Select filtered
-              </button>
-              {#if selectedUserIDs.length > 0}
-                <button class="button button-secondary" onclick={clearUserSelection} disabled={loading}>
-                  Clear selection
-                </button>
-                <button
-                  class="button button-danger"
-                  onclick={() => bulkDeleteDialog?.showModal()}
-                  disabled={loading}
-                >
-                  Prune {selectedUserIDs.length} selected
-                </button>
-              {/if}
-            </div>
-            <ul class="viewer-list mt-4" aria-label="Viewers">
-              {#each filteredUsers as user (user.id)}
-                <li class={['viewer-list-item', selected?.user.id === user.id && 'is-selected']}>
-                  <input
-                    class="viewer-selection"
-                    type="checkbox"
-                    checked={selectedUserIDs.includes(user.id)}
-                    onchange={(event) => toggleUserSelection(user.id, event.currentTarget.checked)}
-                    aria-label={`Select ${user.username} for pruning`}
-                    disabled={loading}
-                  />
-                  <button
-                    class="viewer-row"
-                    onclick={() => selectUser(user)}
-                    disabled={loading}
-                    aria-current={selected?.user.id === user.id ? 'true' : undefined}
-                    aria-label={`Manage ${user.username}`}
-                  >
-                    <span class="truncate font-medium">{user.username}</span>
-                    <span class="viewer-row-action" aria-hidden="true">Manage</span>
-                  </button>
-                </li>
-              {/each}
-            </ul>
-            {#if filteredUsers.length === 0}
-              <p class="admin-muted mt-3 text-sm">No usernames match that filter.</p>
-            {/if}
-          {:else if !loading}
-            <p class="admin-muted mt-4 text-sm">No users have been recorded yet.</p>
-          {/if}
-        </section>
+        <ViewerDirectory
+          {users}
+          {filteredUsers}
+          {usernameFilter}
+          {activityFilter}
+          {selectedUserIDs}
+          selectedUserID={selected?.user.id}
+          {loading}
+          onRefresh={loadUsers}
+          onUsernameFilterChange={(value) => (usernameFilter = value)}
+          onActivityFilterChange={(value) => (activityFilter = value)}
+          onSelectFiltered={selectFilteredUsers}
+          onClearSelection={clearUserSelection}
+          onOpenBulkDelete={() => bulkDeleteDialog?.showModal()}
+          onToggleUserSelection={toggleUserSelection}
+          onSelectUser={selectUser}
+        />
       </aside>
 
       <div class="admin-workspace">
@@ -531,10 +511,16 @@
               <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
                 <div>
                   <div class="flex min-w-0 items-center gap-2">
-                    <h2 class="section-title truncate text-2xl" bind:this={selectedUserHeading} tabindex="-1">
+                    <h2
+                      class="section-title truncate text-2xl"
+                      bind:this={selectedUserHeading}
+                      tabindex="-1"
+                    >
                       {selected.user.username}
                     </h2>
-                    <span class="admin-muted shrink-0 rounded-full border border-[var(--line)] px-2 py-0.5 font-mono text-[0.65rem]">
+                    <span
+                      class="admin-muted shrink-0 rounded-full border border-[var(--line)] px-2 py-0.5 font-mono text-[0.65rem]"
+                    >
                       {selected.user.id}
                     </span>
                   </div>
@@ -542,152 +528,36 @@
                     Last active: {formatLastActive(selected.user.lastActiveAt)}
                   </p>
                 </div>
-                <button class="button button-danger" onclick={() => deleteUserDialog?.showModal()} disabled={loading}>
+                <button
+                  class="button button-danger"
+                  onclick={() => deleteUserDialog?.showModal()}
+                  disabled={loading}
+                >
                   Delete viewer
                 </button>
               </div>
             </div>
 
-            <section aria-labelledby="stats-heading">
-              <div class="flex flex-wrap items-center justify-between gap-3">
-                <h3 class="detail-section-title" id="stats-heading">Stats</h3>
-                <div class="user-actions flex flex-wrap items-center justify-end gap-2">
-                  <button
-                    class="button button-secondary"
-                    onclick={displayStatsInChat}
-                    disabled={loading}
-                  >
-                    Display stats in chat
-                  </button>
-                  <button
-                    class="button button-secondary"
-                    onclick={openRandomStatDialog}
-                    disabled={loading}
-                  >
-                    Grant random stat
-                  </button>
-                  <button
-                    class="button button-danger"
-                    onclick={() => explodeDialog?.showModal()}
-                    disabled={loading}
-                  >
-                    Explode
-                  </button>
-                  <button
-                    class="button button-secondary"
-                    onclick={() => undoExplodeDialog?.showModal()}
-                    disabled={loading}
-                  >
-                    Undo explode
-                  </button>
-                  <button
-                    class="button button-danger"
-                    onclick={() => resetStatsDialog?.showModal()}
-                    disabled={loading}
-                  >
-                    Reset stats
-                  </button>
-                </div>
-              </div>
-              <div class="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {#each selected.stats as stat (stat.name)}
-                  <div class="stat-card p-4 text-center">
-                    <p class="font-semibold">
-                      {stat.longName} <span class="admin-muted">({stat.shortName})</span>
-                    </p>
-                    <div class="mt-3 flex items-center justify-center gap-2">
-                      <button
-                        class="stat-stepper"
-                        onclick={() => updateStat(stat, -1, 'adjust')}
-                        disabled={loading}
-                        aria-label={`Decrease ${stat.longName} by 1`}>−</button
-                      >
-                      <input
-                        class="stat-input w-20 appearance-none px-3 py-2 text-center tabular-nums [-moz-appearance:textfield] [&::-webkit-inner-spin-button]:m-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:m-0 [&::-webkit-outer-spin-button]:appearance-none"
-                        type="number"
-                        value={stat.value}
-                        aria-label={`Set ${stat.longName}`}
-                        onchange={async (event) => {
-                          const input = event.currentTarget;
-                          const saved = await updateStat(stat, Number(input.value), 'set');
-                          if (!saved) input.value = String(stat.value);
-                        }}
-                        disabled={loading}
-                      />
-                      <button
-                        class="stat-stepper"
-                        onclick={() => updateStat(stat, 1, 'adjust')}
-                        disabled={loading}
-                        aria-label={`Increase ${stat.longName} by 1`}>+</button
-                      >
-                    </div>
-                  </div>
-                {/each}
-              </div>
-            </section>
+            <UserStats
+              stats={selected.stats}
+              {loading}
+              onUpdateStat={updateStat}
+              onDisplayStats={displayStatsInChat}
+              onOpenRandomStat={openRandomStatDialog}
+              onOpenExplode={() => explodeDialog?.showModal()}
+              onOpenUndoExplode={() => undoExplodeDialog?.showModal()}
+              onOpenResetStats={() => resetStatsDialog?.showModal()}
+            />
 
-            <section class="mt-8" aria-labelledby="blind-boxes-heading">
-              <h3 class="detail-section-title" id="blind-boxes-heading">Blind boxes</h3>
-              <div class="mt-4 grid gap-6 lg:grid-cols-2">
-                {#each selected.collections as collection (collection.config.series)}
-                  <section class="collection-card p-5">
-                    <div class="mb-4 flex items-center justify-between gap-4">
-                      <div>
-                        <h3 class="font-bold">{collection.config.name}</h3>
-                        <p class="admin-muted text-sm">
-                          {collection.collected.length}/{collection.config.plushies.length} collected
-                        </p>
-                      </div>
-                      <div class="flex flex-wrap justify-end gap-2">
-                        <button
-                          class="button button-secondary"
-                          onclick={() => displayCollection(collection)}
-                          disabled={loading}
-                        >
-                          Display overlay
-                        </button>
-                        <button
-                          class="button button-secondary"
-                          onclick={() => openRandomPlushieDialog(collection)}
-                          disabled={loading}
-                        >
-                          Grant random
-                        </button>
-                        <button
-                          class="button button-danger"
-                          onclick={() => openResetDialog(collection)}
-                          disabled={loading || collection.collected.length === 0}
-                          aria-label={`Reset ${collection.config.name} collection`}>Reset</button
-                        >
-                      </div>
-                    </div>
-                    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                      {#each collection.config.plushies as plushie (plushie.key)}
-                        {@const owned = collection.collected.includes(plushie.key)}
-                        {@const plushieID = `${collection.config.series}:${plushie.key}`}
-                        <button
-                          class={['plushie-button p-2 text-left', !owned && 'is-unowned']}
-                          onclick={() =>
-                            setPlushie(collection.config.series, plushie.key, plushie.name, owned)}
-                          disabled={mutatingPlushie === plushieID}
-                          title={owned ? `Remove ${plushie.name}` : `Grant ${plushie.name}`}
-                          aria-label={owned ? `Remove ${plushie.name}` : `Grant ${plushie.name}`}
-                          aria-pressed={owned}
-                        >
-                          <img
-                            class="mx-auto h-16 w-16 object-contain"
-                            src={plushie.image}
-                            alt=""
-                          />
-                          <span class="mt-1 block truncate text-center text-xs">{plushie.name}</span
-                          >
-                        </button>
-                      {/each}
-                    </div>
-                  </section>
-                {/each}
-              </div>
-            </section>
+            <UserCollections
+              collections={selected.collections}
+              {loading}
+              {mutatingPlushie}
+              onDisplayCollection={displayCollection}
+              onOpenRandomPlushie={openRandomPlushieDialog}
+              onOpenResetCollection={openResetDialog}
+              onSetPlushie={setPlushie}
+            />
           </section>
         {:else if !loading}
           <section class="empty-workspace">
@@ -702,43 +572,45 @@
     </div>
   </div>
 
-<dialog
-  class="admin-dialog p-6"
-  bind:this={deleteUserDialog}
-  aria-labelledby="delete-user-dialog-title"
->
-  <p class="eyebrow">Prune viewer</p>
-  <h2 class="section-title mt-2 text-2xl" id="delete-user-dialog-title">
-    Delete {selected?.user.username ?? 'this viewer'}?
-  </h2>
-  <p class="admin-muted mt-2">This permanently removes their activity, stats, and blind-box collections.</p>
-  <div class="dialog-actions mt-6">
-    <button class="button button-secondary" onclick={closeDeleteUserDialog}>Cancel</button>
-    <button class="button button-danger" onclick={deleteUser}>Delete viewer</button>
-  </div>
-</dialog>
+  <dialog
+    class="admin-dialog p-6"
+    bind:this={deleteUserDialog}
+    aria-labelledby="delete-user-dialog-title"
+  >
+    <p class="eyebrow">Prune viewer</p>
+    <h2 class="section-title mt-2 text-2xl" id="delete-user-dialog-title">
+      Delete {selected?.user.username ?? 'this viewer'}?
+    </h2>
+    <p class="admin-muted mt-2">
+      This permanently removes their activity, stats, and blind-box collections.
+    </p>
+    <div class="dialog-actions mt-6">
+      <button class="button button-secondary" onclick={closeDeleteUserDialog}>Cancel</button>
+      <button class="button button-danger" onclick={deleteUser}>Delete viewer</button>
+    </div>
+  </dialog>
 
-<dialog
-  class="admin-dialog p-6"
-  bind:this={bulkDeleteDialog}
-  aria-labelledby="bulk-delete-dialog-title"
->
-  <p class="eyebrow">Prune viewers</p>
-  <h2 class="section-title mt-2 text-2xl" id="bulk-delete-dialog-title">
-    Delete {selectedUserIDs.length} selected viewers?
-  </h2>
-  <p class="admin-muted mt-2">
-    This permanently removes their activity, stats, and blind-box collections.
-  </p>
-  <div class="dialog-actions mt-6">
-    <button class="button button-secondary" onclick={closeBulkDeleteDialog}>Cancel</button>
-    <button class="button button-danger" onclick={deleteSelectedUsers}>
-      Delete {selectedUserIDs.length} viewers
-    </button>
-  </div>
-</dialog>
+  <dialog
+    class="admin-dialog p-6"
+    bind:this={bulkDeleteDialog}
+    aria-labelledby="bulk-delete-dialog-title"
+  >
+    <p class="eyebrow">Prune viewers</p>
+    <h2 class="section-title mt-2 text-2xl" id="bulk-delete-dialog-title">
+      Delete {selectedUserIDs.length} selected viewers?
+    </h2>
+    <p class="admin-muted mt-2">
+      This permanently removes their activity, stats, and blind-box collections.
+    </p>
+    <div class="dialog-actions mt-6">
+      <button class="button button-secondary" onclick={closeBulkDeleteDialog}>Cancel</button>
+      <button class="button button-danger" onclick={deleteSelectedUsers}>
+        Delete {selectedUserIDs.length} viewers
+      </button>
+    </div>
+  </dialog>
 
-<dialog
+  <dialog
     class="admin-dialog p-6"
     bind:this={randomPlushieDialog}
     aria-labelledby="random-plushie-dialog-title"
@@ -882,416 +754,418 @@
 </main>
 
 <style>
-  .admin-shell {
-    --ink: #15111c;
-    --panel: #211a2a;
-    --panel-raised: #2b2236;
-    --line: #4b3c58;
-    --text: #fff8ff;
-    --muted: #d6c6df;
-    --accent: #f2a1ba;
-    --accent-strong: #ffbfce;
-    --danger: #ff9a9a;
-    min-height: 100vh;
-    color: var(--text);
-    background:
-      radial-gradient(circle at 8% 0%, rgb(148 80 127 / 28%), transparent 30rem),
-      radial-gradient(circle at 92% 15%, rgb(237 153 124 / 16%), transparent 26rem), var(--ink);
-  }
+  :global {
+    .admin-shell {
+      --ink: #15111c;
+      --panel: #211a2a;
+      --panel-raised: #2b2236;
+      --line: #4b3c58;
+      --text: #fff8ff;
+      --muted: #d6c6df;
+      --accent: #f2a1ba;
+      --accent-strong: #ffbfce;
+      --danger: #ff9a9a;
+      min-height: 100vh;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 8% 0%, rgb(148 80 127 / 28%), transparent 30rem),
+        radial-gradient(circle at 92% 15%, rgb(237 153 124 / 16%), transparent 26rem), var(--ink);
+    }
 
-  .admin-frame {
-    position: relative;
-  }
+    .admin-frame {
+      position: relative;
+    }
 
-  .admin-layout {
-    display: grid;
-    gap: 1.5rem;
-    align-items: start;
-    grid-template-areas:
-      'header'
-      'sidebar'
-      'workspace';
-  }
-
-  .viewer-directory,
-  .admin-workspace {
-    min-width: 0;
-  }
-
-  .admin-header {
-    grid-area: header;
-  }
-
-  .viewer-directory {
-    grid-area: sidebar;
-  }
-
-  .admin-workspace {
-    display: grid;
-    gap: 1.25rem;
-    grid-area: workspace;
-  }
-
-  .admin-header {
-    border-bottom: 1px solid rgb(214 198 223 / 24%);
-    padding-bottom: 2rem;
-  }
-
-  .eyebrow {
-    color: var(--accent-strong);
-    font-size: 0.68rem;
-    font-weight: 800;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-  }
-
-  .admin-title,
-  .section-title {
-    font-family: Nunito, sans-serif;
-    font-weight: 800;
-    letter-spacing: -0.035em;
-  }
-
-  .admin-title {
-    font-size: clamp(2.25rem, 6vw, 3.5rem);
-    line-height: 0.95;
-  }
-
-  .section-title {
-    line-height: 1.05;
-  }
-
-  .detail-section-title {
-    color: var(--muted);
-    font-size: 0.72rem;
-    font-weight: 800;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-  }
-
-  .admin-subtitle,
-  .admin-muted {
-    color: var(--muted);
-  }
-
-  .back-link {
-    color: var(--muted);
-    font-size: 0.8rem;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-  }
-
-  .back-link:hover {
-    color: var(--accent-strong);
-  }
-
-  .admin-surface,
-  .stat-card,
-  .collection-card {
-    border: 1px solid rgb(214 198 223 / 18%);
-    background: linear-gradient(145deg, rgb(43 34 54 / 96%), rgb(31 24 41 / 96%));
-    box-shadow: 0 24px 60px rgb(5 3 9 / 26%);
-  }
-
-  .admin-surface {
-    border-radius: 1.25rem;
-  }
-
-  .stat-card {
-    border-radius: 1rem;
-  }
-
-  .collection-card {
-    border-radius: 1.25rem;
-  }
-
-  .button,
-  .stat-stepper,
-  .plushie-button {
-    transition:
-      transform 150ms ease,
-      background-color 150ms ease,
-      border-color 150ms ease,
-      color 150ms ease;
-  }
-
-  .button:hover:not(:disabled),
-  .stat-stepper:hover:not(:disabled),
-  .plushie-button:hover:not(:disabled) {
-    transform: translateY(-1px);
-  }
-
-  .button:focus-visible,
-  .stat-stepper:focus-visible,
-  .plushie-button:focus-visible,
-  .admin-input:focus-visible,
-  .stat-input:focus-visible {
-    outline: 2px solid var(--accent-strong);
-    outline-offset: 3px;
-  }
-
-  .button:disabled,
-  .stat-stepper:disabled,
-  .plushie-button:disabled {
-    cursor: not-allowed;
-    opacity: 0.5;
-  }
-
-  .button-secondary,
-  .stat-stepper {
-    border: 1px solid var(--line);
-    background: rgb(255 255 255 / 6%);
-    color: var(--text);
-    font-weight: 800;
-  }
-
-  .button-secondary {
-    border-radius: 999px;
-    padding: 0.5rem 1rem;
-    font-size: 0.75rem;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-  }
-
-  .button-secondary,
-  .button-primary,
-  .button-danger {
-    flex: none;
-    white-space: nowrap;
-  }
-
-  .button-secondary:hover:not(:disabled),
-  .stat-stepper:hover:not(:disabled) {
-    border-color: var(--accent);
-    background: rgb(242 161 186 / 16%);
-  }
-
-  .button-primary {
-    border: 1px solid var(--accent);
-    border-radius: 999px;
-    padding: 0.5rem 1rem;
-    background: var(--accent);
-    color: var(--ink);
-    font-size: 0.75rem;
-    font-weight: 900;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-  }
-
-  .button-primary:hover:not(:disabled) {
-    border-color: var(--accent-strong);
-    background: var(--accent-strong);
-  }
-
-  .admin-input,
-  .stat-input {
-    border: 1px solid var(--line);
-    border-radius: 0.7rem;
-    background: rgb(10 7 15 / 44%);
-    color: var(--text);
-  }
-
-  .admin-input {
-    padding: 0.65rem 0.9rem;
-  }
-
-  .admin-input::placeholder {
-    color: var(--muted);
-  }
-
-  .viewer-list {
-    max-height: 22rem;
-    overflow-y: auto;
-    border: 1px solid var(--line);
-    border-radius: 0.85rem;
-  }
-
-  .viewer-bulk-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-
-  .viewer-bulk-actions .button {
-    text-align: center;
-  }
-
-  .viewer-list li + li {
-    border-top: 1px solid rgb(214 198 223 / 12%);
-  }
-
-  .viewer-list-item {
-    display: flex;
-    min-width: 0;
-    align-items: center;
-    transition: background-color 150ms ease;
-  }
-
-  .viewer-list-item:has(.viewer-selection:not(:disabled)):hover {
-    background: rgb(242 161 186 / 16%);
-  }
-
-  .viewer-list-item.is-selected {
-    background: rgb(242 161 186 / 13%);
-    box-shadow: inset 3px 0 var(--accent);
-  }
-
-  .viewer-selection {
-    width: 1rem;
-    height: 1rem;
-    flex: none;
-    margin-left: 1rem;
-    accent-color: var(--accent);
-  }
-
-  .viewer-selection:focus-visible {
-    outline: 2px solid var(--accent-strong);
-    outline-offset: 3px;
-  }
-
-  .viewer-selection:hover:not(:disabled) {
-    cursor: pointer;
-    filter: brightness(1.2);
-  }
-
-  .viewer-row {
-    display: flex;
-    flex: 1;
-    min-width: 0;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    padding: 0.85rem 1rem;
-    color: var(--text);
-    text-align: left;
-  }
-
-  .viewer-row:focus-visible {
-    outline: 2px solid var(--accent-strong);
-    outline-offset: -2px;
-  }
-
-  .viewer-row:disabled {
-    cursor: not-allowed;
-    opacity: 0.5;
-  }
-
-  .viewer-row-action {
-    flex: none;
-    color: var(--accent-strong);
-    font-size: 0.68rem;
-    font-weight: 800;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-  }
-
-  .user-detail-header {
-    border-bottom: 1px solid rgb(214 198 223 / 22%);
-    padding-bottom: 1rem;
-  }
-
-  .empty-workspace {
-    min-height: 18rem;
-    border: 1px dashed rgb(214 198 223 / 30%);
-    border-radius: 1.25rem;
-    padding: clamp(2rem, 8vw, 5rem);
-    background: rgb(43 34 54 / 34%);
-  }
-
-  .stat-stepper {
-    min-width: 2.5rem;
-    border-radius: 0.55rem;
-    padding: 0.5rem 0.75rem;
-  }
-
-  .button-danger {
-    border: 1px solid rgb(255 154 154 / 60%);
-    border-radius: 999px;
-    padding: 0.45rem 0.8rem;
-    color: #ffd1d1;
-    font-size: 0.72rem;
-    font-weight: 800;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-  }
-
-  .button-danger:hover:not(:disabled) {
-    background: rgb(255 108 108 / 15%);
-  }
-
-  .admin-dialog {
-    position: fixed;
-    inset: 0;
-    width: min(100% - 2rem, 32rem);
-    height: fit-content;
-    margin: auto;
-    border: 1px solid rgb(214 198 223 / 26%);
-    border-radius: 1.25rem;
-    background: linear-gradient(145deg, rgb(43 34 54), rgb(31 24 41));
-    color: var(--text);
-    box-shadow: 0 24px 60px rgb(5 3 9 / 52%);
-  }
-
-  .admin-dialog::backdrop {
-    background: rgb(10 7 15 / 70%);
-  }
-
-  .dialog-actions {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-    gap: 0.5rem;
-  }
-
-  .plushie-button {
-    border: 1px solid rgb(214 198 223 / 18%);
-    border-radius: 0.75rem;
-    background: rgb(255 255 255 / 5%);
-    color: var(--text);
-  }
-
-  .plushie-button[aria-pressed='true'] {
-    border-color: rgb(242 161 186 / 80%);
-    background: linear-gradient(145deg, rgb(242 161 186 / 18%), rgb(255 255 255 / 5%));
-  }
-
-  .plushie-button.is-unowned {
-    opacity: 0.48;
-  }
-
-  .admin-error {
-    border: 1px solid rgb(255 154 154 / 56%);
-    border-radius: 0.85rem;
-    background: rgb(116 38 55 / 42%);
-    color: #ffe0e0;
-  }
-
-  @media (min-width: 900px) {
     .admin-layout {
+      display: grid;
+      gap: 1.5rem;
+      align-items: start;
       grid-template-areas:
-        'sidebar header'
-        'sidebar workspace';
-      grid-template-columns: minmax(17rem, 21rem) minmax(0, 1fr);
-      gap: 2rem;
+        'header'
+        'sidebar'
+        'workspace';
+    }
+
+    .viewer-directory,
+    .admin-workspace {
+      min-width: 0;
+    }
+
+    .admin-header {
+      grid-area: header;
     }
 
     .viewer-directory {
-      position: sticky;
-      top: 2.5rem;
+      grid-area: sidebar;
+    }
+
+    .admin-workspace {
+      display: grid;
+      gap: 1.25rem;
+      grid-area: workspace;
+    }
+
+    .admin-header {
+      border-bottom: 1px solid rgb(214 198 223 / 24%);
+      padding-bottom: 2rem;
+    }
+
+    .eyebrow {
+      color: var(--accent-strong);
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    .admin-title,
+    .section-title {
+      font-family: Nunito, sans-serif;
+      font-weight: 800;
+      letter-spacing: -0.035em;
+    }
+
+    .admin-title {
+      font-size: clamp(2.25rem, 6vw, 3.5rem);
+      line-height: 0.95;
+    }
+
+    .section-title {
+      line-height: 1.05;
+    }
+
+    .detail-section-title {
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    .admin-subtitle,
+    .admin-muted {
+      color: var(--muted);
+    }
+
+    .back-link {
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .back-link:hover {
+      color: var(--accent-strong);
+    }
+
+    .admin-surface,
+    .stat-card,
+    .collection-card {
+      border: 1px solid rgb(214 198 223 / 18%);
+      background: linear-gradient(145deg, rgb(43 34 54 / 96%), rgb(31 24 41 / 96%));
+      box-shadow: 0 24px 60px rgb(5 3 9 / 26%);
+    }
+
+    .admin-surface {
+      border-radius: 1.25rem;
+    }
+
+    .stat-card {
+      border-radius: 1rem;
+    }
+
+    .collection-card {
+      border-radius: 1.25rem;
+    }
+
+    .button,
+    .stat-stepper,
+    .plushie-button {
+      transition:
+        transform 150ms ease,
+        background-color 150ms ease,
+        border-color 150ms ease,
+        color 150ms ease;
+    }
+
+    .button:hover:not(:disabled),
+    .stat-stepper:hover:not(:disabled),
+    .plushie-button:hover:not(:disabled) {
+      transform: translateY(-1px);
+    }
+
+    .button:focus-visible,
+    .stat-stepper:focus-visible,
+    .plushie-button:focus-visible,
+    .admin-input:focus-visible,
+    .stat-input:focus-visible {
+      outline: 2px solid var(--accent-strong);
+      outline-offset: 3px;
+    }
+
+    .button:disabled,
+    .stat-stepper:disabled,
+    .plushie-button:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
+    .button-secondary,
+    .stat-stepper {
+      border: 1px solid var(--line);
+      background: rgb(255 255 255 / 6%);
+      color: var(--text);
+      font-weight: 800;
+    }
+
+    .button-secondary {
+      border-radius: 999px;
+      padding: 0.5rem 1rem;
+      font-size: 0.75rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .button-secondary,
+    .button-primary,
+    .button-danger {
+      flex: none;
+      white-space: nowrap;
+    }
+
+    .button-secondary:hover:not(:disabled),
+    .stat-stepper:hover:not(:disabled) {
+      border-color: var(--accent);
+      background: rgb(242 161 186 / 16%);
+    }
+
+    .button-primary {
+      border: 1px solid var(--accent);
+      border-radius: 999px;
+      padding: 0.5rem 1rem;
+      background: var(--accent);
+      color: var(--ink);
+      font-size: 0.75rem;
+      font-weight: 900;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .button-primary:hover:not(:disabled) {
+      border-color: var(--accent-strong);
+      background: var(--accent-strong);
+    }
+
+    .admin-input,
+    .stat-input {
+      border: 1px solid var(--line);
+      border-radius: 0.7rem;
+      background: rgb(10 7 15 / 44%);
+      color: var(--text);
+    }
+
+    .admin-input {
+      padding: 0.65rem 0.9rem;
+    }
+
+    .admin-input::placeholder {
+      color: var(--muted);
     }
 
     .viewer-list {
-      max-height: calc(100vh - 18rem);
+      max-height: 22rem;
+      overflow-y: auto;
+      border: 1px solid var(--line);
+      border-radius: 0.85rem;
     }
 
     .viewer-bulk-actions {
-      flex-direction: column;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
     }
 
     .viewer-bulk-actions .button {
-      width: 100%;
       text-align: center;
+    }
+
+    .viewer-list li + li {
+      border-top: 1px solid rgb(214 198 223 / 12%);
+    }
+
+    .viewer-list-item {
+      display: flex;
+      min-width: 0;
+      align-items: center;
+      transition: background-color 150ms ease;
+    }
+
+    .viewer-list-item:has(.viewer-selection:not(:disabled)):hover {
+      background: rgb(242 161 186 / 16%);
+    }
+
+    .viewer-list-item.is-selected {
+      background: rgb(242 161 186 / 13%);
+      box-shadow: inset 3px 0 var(--accent);
+    }
+
+    .viewer-selection {
+      width: 1rem;
+      height: 1rem;
+      flex: none;
+      margin-left: 1rem;
+      accent-color: var(--accent);
+    }
+
+    .viewer-selection:focus-visible {
+      outline: 2px solid var(--accent-strong);
+      outline-offset: 3px;
+    }
+
+    .viewer-selection:hover:not(:disabled) {
+      cursor: pointer;
+      filter: brightness(1.2);
+    }
+
+    .viewer-row {
+      display: flex;
+      flex: 1;
+      min-width: 0;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.85rem 1rem;
+      color: var(--text);
+      text-align: left;
+    }
+
+    .viewer-row:focus-visible {
+      outline: 2px solid var(--accent-strong);
+      outline-offset: -2px;
+    }
+
+    .viewer-row:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
+    .viewer-row-action {
+      flex: none;
+      color: var(--accent-strong);
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .user-detail-header {
+      border-bottom: 1px solid rgb(214 198 223 / 22%);
+      padding-bottom: 1rem;
+    }
+
+    .empty-workspace {
+      min-height: 18rem;
+      border: 1px dashed rgb(214 198 223 / 30%);
+      border-radius: 1.25rem;
+      padding: clamp(2rem, 8vw, 5rem);
+      background: rgb(43 34 54 / 34%);
+    }
+
+    .stat-stepper {
+      min-width: 2.5rem;
+      border-radius: 0.55rem;
+      padding: 0.5rem 0.75rem;
+    }
+
+    .button-danger {
+      border: 1px solid rgb(255 154 154 / 60%);
+      border-radius: 999px;
+      padding: 0.45rem 0.8rem;
+      color: #ffd1d1;
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .button-danger:hover:not(:disabled) {
+      background: rgb(255 108 108 / 15%);
+    }
+
+    .admin-dialog {
+      position: fixed;
+      inset: 0;
+      width: min(100% - 2rem, 32rem);
+      height: fit-content;
+      margin: auto;
+      border: 1px solid rgb(214 198 223 / 26%);
+      border-radius: 1.25rem;
+      background: linear-gradient(145deg, rgb(43 34 54), rgb(31 24 41));
+      color: var(--text);
+      box-shadow: 0 24px 60px rgb(5 3 9 / 52%);
+    }
+
+    .admin-dialog::backdrop {
+      background: rgb(10 7 15 / 70%);
+    }
+
+    .dialog-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 0.5rem;
+    }
+
+    .plushie-button {
+      border: 1px solid rgb(214 198 223 / 18%);
+      border-radius: 0.75rem;
+      background: rgb(255 255 255 / 5%);
+      color: var(--text);
+    }
+
+    .plushie-button[aria-pressed='true'] {
+      border-color: rgb(242 161 186 / 80%);
+      background: linear-gradient(145deg, rgb(242 161 186 / 18%), rgb(255 255 255 / 5%));
+    }
+
+    .plushie-button.is-unowned {
+      opacity: 0.48;
+    }
+
+    .admin-error {
+      border: 1px solid rgb(255 154 154 / 56%);
+      border-radius: 0.85rem;
+      background: rgb(116 38 55 / 42%);
+      color: #ffe0e0;
+    }
+
+    @media (min-width: 900px) {
+      .admin-layout {
+        grid-template-areas:
+          'sidebar header'
+          'sidebar workspace';
+        grid-template-columns: minmax(17rem, 21rem) minmax(0, 1fr);
+        gap: 2rem;
+      }
+
+      .viewer-directory {
+        position: sticky;
+        top: 2.5rem;
+      }
+
+      .viewer-list {
+        max-height: calc(100vh - 18rem);
+      }
+
+      .viewer-bulk-actions {
+        flex-direction: column;
+      }
+
+      .viewer-bulk-actions .button {
+        width: 100%;
+        text-align: center;
+      }
     }
   }
 </style>
