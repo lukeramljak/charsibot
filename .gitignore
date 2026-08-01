@@ -8,3 +8,4 @@ server/web/
 .DS_Store
 .gocache
 .gomodcache
+.pnpm-store
