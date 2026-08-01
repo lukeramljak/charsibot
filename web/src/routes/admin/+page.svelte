@@ -3,6 +3,7 @@
   import { afterNavigate, goto } from '$app/navigation';
   import { resolve } from '$app/paths';
   import { page } from '$app/state';
+  import { api } from '$lib/api';
   import type { components } from '$lib/api.generated';
   import UserCollections from '$lib/admin/UserCollections.svelte';
   import UserStats from '$lib/admin/UserStats.svelte';
@@ -13,6 +14,7 @@
   type Collection = components['schemas']['AdminCollection'];
   type UserDetail = components['schemas']['AdminUserResponse'];
   type UsersResponse = components['schemas']['AdminUsersResponse'];
+  type APIError = components['schemas']['ErrorModel'];
   type ActivityFilter = 'all' | 'unknown' | 'inactive30' | 'inactive90' | 'recent';
 
   interface PendingPlushie {
@@ -64,20 +66,28 @@
   let selectedUserHeading = $state<HTMLHeadingElement | undefined>(undefined);
   let selectedUserRequest = 0;
 
-  function adminUserURL(userID: string, path = '') {
-    return `/api/admin/users/${encodeURIComponent(userID)}${path}`;
-  }
-
   function isCurrentUserRequest(requestID: number, userID: string) {
     return selectedUserRequest === requestID && page.url.searchParams.get('user') === userID;
   }
 
-  async function request<T>(url: string, options?: RequestInit): Promise<T> {
-    const response = await fetch(url, options);
-    if (!response.ok) {
-      throw new Error((await response.text()) || 'Request failed');
+  async function readJSON<T>(
+    operation: Promise<{ data?: T; error?: APIError; response: Response }>,
+  ): Promise<T> {
+    const { data, error: apiError, response } = await operation;
+    if (apiError) {
+      throw new Error(apiError.detail || apiError.title || response.statusText || 'Request failed');
     }
-    return response.json() as Promise<T>;
+    if (data === undefined) throw new Error(response.statusText || 'Request returned no data');
+    return data;
+  }
+
+  async function ensureSuccess(
+    operation: Promise<{ error?: APIError; response: Response }>,
+  ): Promise<void> {
+    const { error: apiError, response } = await operation;
+    if (apiError) {
+      throw new Error(apiError.detail || apiError.title || response.statusText || 'Request failed');
+    }
   }
 
   async function loadUsers() {
@@ -85,7 +95,7 @@
     error = '';
     statusMessage = 'Loading viewers…';
     try {
-      const response = await request<UsersResponse>('/api/admin/users');
+      const response = await readJSON<UsersResponse>(api.GET('/api/admin/users'));
       users = response.users;
       statusMessage = `Loaded ${users.length} viewers.`;
     } catch (err) {
@@ -136,7 +146,9 @@
     error = '';
     statusMessage = `Loading ${user.username}…`;
     try {
-      const response = await request<UserDetail>(adminUserURL(user.id));
+      const response = await readJSON<UserDetail>(
+        api.GET('/api/admin/users/{userID}', { params: { path: { userID: user.id } } }),
+      );
       if (!isCurrentUserRequest(requestID, user.id)) return;
       selected = response;
       statusMessage = `Loaded ${user.username}.`;
@@ -158,28 +170,29 @@
     mode: 'set' | 'adjust',
   ): Promise<boolean> {
     if (!selected || !Number.isFinite(value)) return false;
-    return mutate(adminUserURL(selected.user.id, `/stats/${encodeURIComponent(stat.name)}`), {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mode, value }),
-    });
+    return mutate(
+      api.PATCH('/api/admin/users/{userID}/stats/{statName}', {
+        params: { path: { userID: selected.user.id, statName: stat.name } },
+        body: { mode, value },
+      }),
+    );
   }
 
   async function displayStatsInChat() {
     if (!selected) return;
-    await mutate(adminUserURL(selected.user.id, '/stats/display'), {
-      method: 'POST',
-    });
+    await mutate(
+      api.POST('/api/admin/users/{userID}/stats/display', {
+        params: { path: { userID: selected.user.id } },
+      }),
+    );
   }
 
   async function displayCollection(collection: Collection) {
     if (!selected) return;
     await mutate(
-      adminUserURL(
-        selected.user.id,
-        `/collections/${encodeURIComponent(collection.config.series)}/display`,
-      ),
-      { method: 'POST' },
+      api.POST('/api/admin/users/{userID}/collections/{series}/display', {
+        params: { path: { userID: selected.user.id, series: collection.config.series } },
+      }),
     );
   }
 
@@ -194,10 +207,9 @@
     loading = true;
     error = '';
     try {
-      const response = await fetch(adminUserURL(user.id), {
-        method: 'DELETE',
-      });
-      if (!response.ok) throw new Error((await response.text()) || 'Could not delete viewer');
+      await ensureSuccess(
+        api.DELETE('/api/admin/users/{userID}', { params: { path: { userID: user.id } } }),
+      );
       users = users.filter((candidate) => candidate.id !== user.id);
       selected = null;
       statusMessage = `Deleted ${user.username}.`;
@@ -238,10 +250,9 @@
     const deletedUserIDs: string[] = [];
     try {
       for (const userID of userIDs) {
-        const response = await fetch(adminUserURL(userID), {
-          method: 'DELETE',
-        });
-        if (!response.ok) throw new Error((await response.text()) || 'Could not delete viewers');
+        await ensureSuccess(
+          api.DELETE('/api/admin/users/{userID}', { params: { path: { userID } } }),
+        );
         deletedUserIDs.push(userID);
       }
 
@@ -287,11 +298,12 @@
   async function grantRandomStat(displayInChat: boolean) {
     if (!selected) return;
     closeRandomStatDialog();
-    await mutate(adminUserURL(selected.user.id, '/stats/random'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ displayInChat }),
-    });
+    await mutate(
+      api.POST('/api/admin/users/{userID}/stats/random', {
+        params: { path: { userID: selected.user.id } },
+        body: { displayInChat },
+      }),
+    );
   }
 
   function closeExplodeDialog() {
@@ -301,9 +313,11 @@
   async function explode() {
     if (!selected) return;
     closeExplodeDialog();
-    await mutate(adminUserURL(selected.user.id, '/stats/explode'), {
-      method: 'POST',
-    });
+    await mutate(
+      api.POST('/api/admin/users/{userID}/stats/explode', {
+        params: { path: { userID: selected.user.id } },
+      }),
+    );
   }
 
   function closeUndoExplodeDialog() {
@@ -313,9 +327,11 @@
   async function undoExplode() {
     if (!selected) return;
     closeUndoExplodeDialog();
-    await mutate(adminUserURL(selected.user.id, '/stats/explode/undo'), {
-      method: 'POST',
-    });
+    await mutate(
+      api.POST('/api/admin/users/{userID}/stats/explode/undo', {
+        params: { path: { userID: selected.user.id } },
+      }),
+    );
   }
 
   function closeResetStatsDialog() {
@@ -325,11 +341,12 @@
   async function resetStats(displayInChat: boolean) {
     if (!selected) return;
     closeResetStatsDialog();
-    await mutate(adminUserURL(selected.user.id, '/stats/reset'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ displayInChat }),
-    });
+    await mutate(
+      api.POST('/api/admin/users/{userID}/stats/reset', {
+        params: { path: { userID: selected.user.id } },
+        body: { displayInChat },
+      }),
+    );
   }
 
   async function setPlushie(series: string, key: string, name: string, owned: boolean) {
@@ -341,12 +358,12 @@
     }
     const plushieID = `${series}:${key}`;
     mutatingPlushie = plushieID;
-    const base = adminUserURL(
-      selected.user.id,
-      `/collections/${encodeURIComponent(series)}/${encodeURIComponent(key)}`,
-    );
     try {
-      await mutate(base, { method: owned ? 'DELETE' : 'PUT' });
+      await mutate(
+        api.DELETE('/api/admin/users/{userID}/collections/{series}/{key}', {
+          params: { path: { userID: selected.user.id, series, key } },
+        }),
+      );
     } finally {
       mutatingPlushie = null;
     }
@@ -366,15 +383,12 @@
     mutatingPlushie = plushieID;
     try {
       await mutate(
-        adminUserURL(
-          selected.user.id,
-          `/collections/${encodeURIComponent(plushie.series)}/${encodeURIComponent(plushie.key)}`,
-        ),
-        {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ triggerOverlay }),
-        },
+        api.PUT('/api/admin/users/{userID}/collections/{series}/{key}', {
+          params: {
+            path: { userID: selected.user.id, series: plushie.series, key: plushie.key },
+          },
+          body: { triggerOverlay },
+        }),
       );
     } finally {
       mutatingPlushie = null;
@@ -397,15 +411,10 @@
     closeRandomPlushieDialog();
     if (!collection) return;
     await mutate(
-      adminUserURL(
-        selected.user.id,
-        `/collections/${encodeURIComponent(collection.config.series)}/random`,
-      ),
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ triggerOverlay }),
-      },
+      api.POST('/api/admin/users/{userID}/collections/{series}/random', {
+        params: { path: { userID: selected.user.id, series: collection.config.series } },
+        body: { triggerOverlay },
+      }),
     );
   }
 
@@ -425,17 +434,15 @@
     closeResetDialog();
     if (!collection) return;
     await mutate(
-      adminUserURL(
-        selected.user.id,
-        `/collections/${encodeURIComponent(collection.config.series)}`,
-      ),
-      {
-        method: 'DELETE',
-      },
+      api.DELETE('/api/admin/users/{userID}/collections/{series}', {
+        params: { path: { userID: selected.user.id, series: collection.config.series } },
+      }),
     );
   }
 
-  async function mutate(url: string, options: RequestInit): Promise<boolean> {
+  async function mutate(
+    operation: Promise<{ data?: UserDetail; error?: APIError; response: Response }>,
+  ): Promise<boolean> {
     const userID = selected?.user.id;
     if (!userID) return false;
     const requestID = ++selectedUserRequest;
@@ -443,7 +450,7 @@
     error = '';
     statusMessage = 'Saving changes…';
     try {
-      const response = await request<UserDetail>(url, options);
+      const response = await readJSON(operation);
       if (!isCurrentUserRequest(requestID, userID)) return false;
       selected = response;
       statusMessage = 'Changes saved.';
