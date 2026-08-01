@@ -482,9 +482,7 @@
           <div class="flex flex-col gap-2">
             <p class="eyebrow">Control room</p>
             <h1 class="admin-title">Charsibot Admin</h1>
-            <p class="admin-subtitle">
-              Local-only controls for viewer stats and blind-box collections.
-            </p>
+            <p class="admin-subtitle">Controls for viewer stats and blind-box collections.</p>
           </div>
         </header>
 
