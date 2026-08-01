@@ -13,6 +13,7 @@
     selectedUserID,
     loading,
     onRefresh,
+    onClose,
     onUsernameFilterChange,
     onActivityFilterChange,
     onSelectFiltered,
@@ -29,6 +30,7 @@
     selectedUserID: string | undefined;
     loading: boolean;
     onRefresh: () => void;
+    onClose?: () => void;
     onUsernameFilterChange: (value: string) => void;
     onActivityFilterChange: (value: ActivityFilter) => void;
     onSelectFiltered: () => void;
@@ -46,7 +48,12 @@
       <h2 class="section-title">Viewers</h2>
       <p class="admin-muted text-sm">{filteredUsers.length} of {users.length} known users</p>
     </div>
-    <button class="button button-secondary" onclick={onRefresh} disabled={loading}>Refresh</button>
+    <div class="flex items-center gap-2">
+      {#if onClose}
+        <button class="button button-secondary" onclick={onClose}>Close</button>
+      {/if}
+      <button class="button button-secondary" onclick={onRefresh} disabled={loading}>Refresh</button>
+    </div>
   </div>
 
   {#if users.length > 0}

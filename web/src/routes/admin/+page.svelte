@@ -66,6 +66,17 @@
   let statusMessage = $state('');
   let lastGrant = $state.raw<GrantResult | null>(null);
   let selectedUserHeading = $state<HTMLHeadingElement | undefined>(undefined);
+  let viewerManagementDialog = $state<HTMLDialogElement | undefined>(undefined);
+  let userSearchDialog = $state<HTMLDialogElement | undefined>(undefined);
+  let userSearchInput = $state<HTMLInputElement | undefined>(undefined);
+  let userSearchQuery = $state('');
+  let userSearchIndex = $state(0);
+  let userSearchResultElements = $state.raw<(HTMLButtonElement | undefined)[]>([]);
+  let userSearchResults = $derived(
+    users
+      .filter((user) => user.username.toLowerCase().includes(userSearchQuery.trim().toLowerCase()))
+      .toSorted((a, b) => a.username.localeCompare(b.username)),
+  );
   let selectedUserRequest = 0;
 
   function isCurrentUserRequest(requestID: number, userID: string) {
@@ -166,6 +177,64 @@
       }
     } finally {
       if (isCurrentUserRequest(requestID, user.id)) loading = false;
+    }
+  }
+
+  async function openUserSearch() {
+    if (!userSearchDialog?.open) userSearchDialog?.showModal();
+    await tick();
+    userSearchInput?.focus();
+    userSearchInput?.select();
+  }
+
+  function closeUserSearch() {
+    userSearchDialog?.close();
+    userSearchQuery = '';
+    userSearchIndex = 0;
+  }
+
+  async function selectUserSearchResult(user: User) {
+    closeUserSearch();
+    await selectUser(user);
+  }
+
+  async function selectUserFromManagement(user: User) {
+    viewerManagementDialog?.close();
+    await selectUser(user);
+  }
+
+  function handleUserSearchInput(value: string) {
+    userSearchQuery = value;
+    userSearchIndex = 0;
+  }
+
+  async function moveUserSearchSelection(offset: number) {
+    userSearchIndex =
+      (userSearchIndex + offset + userSearchResults.length) % userSearchResults.length;
+    await tick();
+    userSearchResultElements[userSearchIndex]?.scrollIntoView({ block: 'nearest' });
+  }
+
+  function handleUserSearchKeydown(event: KeyboardEvent) {
+    if (event.key === 'ArrowDown' && userSearchResults.length > 0) {
+      event.preventDefault();
+      void moveUserSearchSelection(1);
+    } else if (event.key === 'ArrowUp' && userSearchResults.length > 0) {
+      event.preventDefault();
+      void moveUserSearchSelection(-1);
+    } else if (event.key === 'Enter') {
+      const user = userSearchResults[userSearchIndex];
+      if (user) {
+        event.preventDefault();
+        void selectUserSearchResult(user);
+      }
+    }
+  }
+
+  function handleGlobalKeydown(event: KeyboardEvent) {
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+      event.preventDefault();
+      void openUserSearch();
     }
   }
 
@@ -475,6 +544,8 @@
   }
 </script>
 
+<svelte:window onkeydown={handleGlobalKeydown} />
+
 <svelte:head>
   <title>Charsibot Admin</title>
 </svelte:head>
@@ -487,10 +558,23 @@
       <div class="admin-content">
         <header class="admin-header flex flex-col gap-6">
           <a class="back-link" href={resolve('/')}>← Overlay</a>
-          <div class="flex flex-col gap-2">
-            <p class="eyebrow">Control room</p>
-            <h1 class="admin-title">Charsibot Admin</h1>
-            <p class="admin-subtitle">Controls for viewer stats and blind-box collections.</p>
+          <div class="flex flex-wrap items-start justify-between gap-4">
+            <div class="flex flex-col gap-2">
+              <p class="eyebrow">Control room</p>
+              <h1 class="admin-title">Charsibot Admin</h1>
+              <p class="admin-subtitle">Controls for viewer stats and blind-box collections.</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <button class="user-search-trigger" onclick={() => void openUserSearch()}>
+                Search viewers <kbd>⌘ K</kbd>
+              </button>
+              <button
+                class="button button-secondary"
+                onclick={() => viewerManagementDialog?.showModal()}
+              >
+                Manage viewers
+              </button>
+            </div>
           </div>
         </header>
 
@@ -599,27 +683,82 @@
         </div>
       </div>
 
-      <aside class="viewer-directory">
-        <ViewerDirectory
-          {users}
-          {filteredUsers}
-          {usernameFilter}
-          {activityFilter}
-          {selectedUserIDs}
-          selectedUserID={selected?.user.id}
-          {loading}
-          onRefresh={loadUsers}
-          onUsernameFilterChange={(value) => (usernameFilter = value)}
-          onActivityFilterChange={(value) => (activityFilter = value)}
-          onSelectFiltered={selectFilteredUsers}
-          onClearSelection={clearUserSelection}
-          onOpenBulkDelete={() => bulkDeleteDialog?.showModal()}
-          onToggleUserSelection={toggleUserSelection}
-          onSelectUser={selectUser}
-        />
-      </aside>
     </div>
   </div>
+
+  <dialog
+    class="admin-dialog user-search-dialog p-0"
+    bind:this={userSearchDialog}
+    aria-labelledby="user-search-dialog-title"
+    onclose={closeUserSearch}
+  >
+    <div class="user-search-header p-5">
+      <label class="sr-only" for="user-search-input">Search viewers by username</label>
+      <input
+        id="user-search-input"
+        class="user-search-input"
+        bind:this={userSearchInput}
+        value={userSearchQuery}
+        oninput={(event) => handleUserSearchInput(event.currentTarget.value)}
+        onkeydown={handleUserSearchKeydown}
+        placeholder="Search by username…"
+        autocomplete="off"
+      />
+      <p class="user-search-help" id="user-search-dialog-title">
+        <span>Search viewers</span>
+        <span>↑↓ to navigate · Enter to open · Esc to close</span>
+      </p>
+    </div>
+    <div
+      class={['user-search-results', userSearchResults.length > 5 && 'is-scrollable']}
+      role="listbox"
+      aria-label="Matching viewers"
+    >
+      {#each userSearchResults as user, index (user.id)}
+        <button
+          class={['user-search-result', index === userSearchIndex && 'is-active']}
+          role="option"
+          aria-selected={index === userSearchIndex}
+          bind:this={userSearchResultElements[index]}
+          onclick={() => void selectUserSearchResult(user)}
+          onmousemove={() => (userSearchIndex = index)}
+        >
+          <span class="font-semibold">{user.username}</span>
+          <span class="user-search-user-id">{user.id}</span>
+        </button>
+      {:else}
+        <p class="user-search-empty">No viewers match “{userSearchQuery}”.</p>
+      {/each}
+    </div>
+  </dialog>
+
+  <dialog
+    class="viewer-management-dialog p-0"
+    bind:this={viewerManagementDialog}
+    aria-label="Viewer management"
+  >
+    <ViewerDirectory
+      {users}
+      {filteredUsers}
+      {usernameFilter}
+      {activityFilter}
+      {selectedUserIDs}
+      selectedUserID={selected?.user.id}
+      {loading}
+      onRefresh={loadUsers}
+      onClose={() => viewerManagementDialog?.close()}
+      onUsernameFilterChange={(value) => (usernameFilter = value)}
+      onActivityFilterChange={(value) => (activityFilter = value)}
+      onSelectFiltered={selectFilteredUsers}
+      onClearSelection={clearUserSelection}
+      onOpenBulkDelete={() => {
+        viewerManagementDialog?.close();
+        bulkDeleteDialog?.showModal();
+      }}
+      onToggleUserSelection={toggleUserSelection}
+      onSelectUser={selectUserFromManagement}
+    />
+  </dialog>
 
   <dialog
     class="admin-dialog gap-2 p-6"
@@ -1171,6 +1310,140 @@
       background: rgb(10 7 15 / 70%);
     }
 
+    .user-search-trigger {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      border: 1px solid var(--line);
+      border-radius: 0.7rem;
+      padding: 0.55rem 0.65rem 0.55rem 0.85rem;
+      background: rgb(10 7 15 / 28%);
+      color: var(--muted);
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    .user-search-trigger:hover,
+    .user-search-trigger:focus-visible {
+      border-color: var(--accent);
+      color: var(--text);
+    }
+
+    .user-search-trigger:focus-visible,
+    .user-search-input:focus-visible,
+    .user-search-result:focus-visible {
+      outline: 2px solid var(--accent-strong);
+      outline-offset: 3px;
+    }
+
+    .user-search-trigger kbd {
+      border: 1px solid rgb(214 198 223 / 24%);
+      border-radius: 0.35rem;
+      padding: 0.12rem 0.32rem;
+      background: rgb(255 255 255 / 8%);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.68rem;
+    }
+
+    .user-search-dialog {
+      width: min(100% - 2rem, 38rem);
+      overflow: hidden;
+    }
+
+    .viewer-management-dialog {
+      position: fixed;
+      inset: 0;
+      width: min(100% - 2rem, 38rem);
+      height: fit-content;
+      margin: auto;
+      border: 0;
+      background: transparent;
+      color: var(--text);
+      overflow: hidden;
+    }
+
+    .viewer-management-dialog::backdrop {
+      background: rgb(10 7 15 / 70%);
+    }
+
+    .user-search-header {
+      border-bottom: 1px solid rgb(214 198 223 / 18%);
+    }
+
+    .user-search-input {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 0.7rem;
+      padding: 0.7rem 0.85rem;
+      background: rgb(10 7 15 / 44%);
+      color: var(--text);
+      font-size: 1.15rem;
+      font-weight: 600;
+    }
+
+    .user-search-input::placeholder {
+      color: var(--muted);
+    }
+
+    .user-search-help {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-top: 1rem;
+      color: var(--muted);
+      font-size: 0.7rem;
+    }
+
+    .user-search-help span:first-child {
+      color: var(--accent-strong);
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .user-search-results {
+      max-height: min(24rem, 55vh);
+      overflow: hidden;
+      padding: 0.5rem;
+    }
+
+    .user-search-results.is-scrollable {
+      overflow-y: auto;
+    }
+
+    .user-search-result {
+      display: flex;
+      width: 100%;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      border-radius: 0.75rem;
+      padding: 0.8rem 0.9rem;
+      color: var(--text);
+      text-align: left;
+    }
+
+    .user-search-result:hover,
+    .user-search-result.is-active {
+      background: rgb(242 161 186 / 16%);
+    }
+
+    .user-search-user-id {
+      overflow: hidden;
+      color: var(--muted);
+      font-family: monospace;
+      font-size: 0.7rem;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .user-search-empty {
+      padding: 1.25rem 0.9rem;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
     .dialog-actions {
       display: flex;
       flex-wrap: wrap;
@@ -1232,8 +1505,8 @@
       }
 
       .admin-layout {
-        grid-template-areas: 'sidebar content';
-        grid-template-columns: minmax(17rem, 21rem) minmax(0, 1fr);
+        grid-template-areas: 'content';
+        grid-template-columns: minmax(0, 1fr);
         grid-template-rows: minmax(0, 1fr);
         gap: 2rem;
       }
@@ -1256,35 +1529,8 @@
         grid-area: auto;
       }
 
-      .viewer-directory {
-        height: 100%;
-        min-height: 0;
-      }
-
-      .viewer-directory > .admin-surface {
-        display: flex;
-        height: 100%;
-        min-height: 0;
-        flex-direction: column;
-      }
-
-      .viewer-list {
-        max-height: none;
-        min-height: 0;
-        flex: 1 1 auto;
-      }
-
       .admin-workspace {
         height: auto;
-      }
-
-      .viewer-bulk-actions {
-        flex-direction: column;
-      }
-
-      .viewer-bulk-actions .button {
-        width: 100%;
-        text-align: center;
       }
     }
   }
