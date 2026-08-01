@@ -476,14 +476,92 @@
     <p class="sr-only" role="status">{statusMessage}</p>
 
     <div class="admin-layout">
-      <header class="admin-header">
-        <a class="back-link" href={resolve('/')}>← Overlay</a>
-        <p class="eyebrow mt-6">Control room</p>
-        <h1 class="admin-title mt-2">Charsibot Admin</h1>
-        <p class="admin-subtitle mt-2">
-          Local-only controls for viewer stats and blind-box collections.
-        </p>
-      </header>
+      <div class="admin-content">
+        <header class="admin-header flex flex-col gap-6">
+          <a class="back-link" href={resolve('/')}>← Overlay</a>
+          <div class="flex flex-col gap-2">
+            <p class="eyebrow">Control room</p>
+            <h1 class="admin-title">Charsibot Admin</h1>
+            <p class="admin-subtitle">
+              Local-only controls for viewer stats and blind-box collections.
+            </p>
+          </div>
+        </header>
+
+        <div class="admin-workspace">
+        {#if error}
+          <p class="admin-error px-4 py-3" role="alert">
+            {error}
+          </p>
+        {/if}
+
+        {#if selected}
+          <section class="user-detail flex flex-col gap-8">
+            <div class="flex flex-col gap-4">
+              <div class="user-detail-header">
+                <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
+                  <div>
+                    <div class="flex min-w-0 items-center gap-2">
+                      <h2
+                        class="section-title truncate text-2xl"
+                        bind:this={selectedUserHeading}
+                        tabindex="-1"
+                      >
+                        {selected.user.username}
+                      </h2>
+                      <span
+                        class="admin-muted shrink-0 rounded-full border border-(--line) px-2 py-0.5 font-mono text-[0.65rem]"
+                      >
+                        {selected.user.id}
+                      </span>
+                    </div>
+                    <p class="admin-muted text-xs">
+                      Last active: {formatLastActive(selected.user.lastActiveAt)}
+                    </p>
+                  </div>
+                  <button
+                    class="button button-danger"
+                    onclick={() => deleteUserDialog?.showModal()}
+                    disabled={loading}
+                  >
+                    Delete viewer
+                  </button>
+                </div>
+              </div>
+
+              <UserStats
+                stats={selected.stats}
+                {loading}
+                onUpdateStat={updateStat}
+                onDisplayStats={displayStatsInChat}
+                onOpenRandomStat={openRandomStatDialog}
+                onOpenExplode={() => explodeDialog?.showModal()}
+                onOpenUndoExplode={() => undoExplodeDialog?.showModal()}
+                onOpenResetStats={() => resetStatsDialog?.showModal()}
+              />
+            </div>
+
+            <UserCollections
+              collections={selected.collections}
+              {loading}
+              {mutatingPlushie}
+              onDisplayCollection={displayCollection}
+              onOpenRandomPlushie={openRandomPlushieDialog}
+              onOpenResetCollection={openResetDialog}
+              onSetPlushie={setPlushie}
+            />
+          </section>
+        {:else if !loading}
+          <section class="empty-workspace flex flex-col gap-2">
+            <p class="eyebrow">Ready when you are</p>
+            <h2 class="section-title text-2xl">Choose a viewer to manage</h2>
+            <p class="admin-muted max-w-md">
+              Their stats and blind-box collections will appear here.
+            </p>
+          </section>
+        {/if}
+        </div>
+      </div>
 
       <aside class="viewer-directory">
         <ViewerDirectory
@@ -504,112 +582,40 @@
           onSelectUser={selectUser}
         />
       </aside>
-
-      <div class="admin-workspace">
-        {#if error}
-          <p class="admin-error px-4 py-3" role="alert">
-            {error}
-          </p>
-        {/if}
-
-        {#if selected}
-          <section class="user-detail">
-            <div class="user-detail-header mb-4">
-              <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
-                <div>
-                  <div class="flex min-w-0 items-center gap-2">
-                    <h2
-                      class="section-title truncate text-2xl"
-                      bind:this={selectedUserHeading}
-                      tabindex="-1"
-                    >
-                      {selected.user.username}
-                    </h2>
-                    <span
-                      class="admin-muted shrink-0 rounded-full border border-(--line) px-2 py-0.5 font-mono text-[0.65rem]"
-                    >
-                      {selected.user.id}
-                    </span>
-                  </div>
-                  <p class="admin-muted mt-1 text-xs">
-                    Last active: {formatLastActive(selected.user.lastActiveAt)}
-                  </p>
-                </div>
-                <button
-                  class="button button-danger"
-                  onclick={() => deleteUserDialog?.showModal()}
-                  disabled={loading}
-                >
-                  Delete viewer
-                </button>
-              </div>
-            </div>
-
-            <UserStats
-              stats={selected.stats}
-              {loading}
-              onUpdateStat={updateStat}
-              onDisplayStats={displayStatsInChat}
-              onOpenRandomStat={openRandomStatDialog}
-              onOpenExplode={() => explodeDialog?.showModal()}
-              onOpenUndoExplode={() => undoExplodeDialog?.showModal()}
-              onOpenResetStats={() => resetStatsDialog?.showModal()}
-            />
-
-            <UserCollections
-              collections={selected.collections}
-              {loading}
-              {mutatingPlushie}
-              onDisplayCollection={displayCollection}
-              onOpenRandomPlushie={openRandomPlushieDialog}
-              onOpenResetCollection={openResetDialog}
-              onSetPlushie={setPlushie}
-            />
-          </section>
-        {:else if !loading}
-          <section class="empty-workspace">
-            <p class="eyebrow">Ready when you are</p>
-            <h2 class="section-title mt-2 text-2xl">Choose a viewer to manage</h2>
-            <p class="admin-muted mt-2 max-w-md">
-              Their stats and blind-box collections will appear here.
-            </p>
-          </section>
-        {/if}
-      </div>
     </div>
   </div>
 
   <dialog
-    class="admin-dialog p-6"
+    class="admin-dialog gap-2 p-6"
     bind:this={deleteUserDialog}
     aria-labelledby="delete-user-dialog-title"
   >
     <p class="eyebrow">Prune viewer</p>
-    <h2 class="section-title mt-2 text-2xl" id="delete-user-dialog-title">
+    <h2 class="section-title text-2xl" id="delete-user-dialog-title">
       Delete {selected?.user.username ?? 'this viewer'}?
     </h2>
-    <p class="admin-muted mt-2">
+    <p class="admin-muted">
       This permanently removes their activity, stats, and blind-box collections.
     </p>
-    <div class="dialog-actions mt-6">
+    <div class="dialog-actions pt-4">
       <button class="button button-secondary" onclick={closeDeleteUserDialog}>Cancel</button>
       <button class="button button-danger" onclick={deleteUser}>Delete viewer</button>
     </div>
   </dialog>
 
   <dialog
-    class="admin-dialog p-6"
+    class="admin-dialog gap-2 p-6"
     bind:this={bulkDeleteDialog}
     aria-labelledby="bulk-delete-dialog-title"
   >
     <p class="eyebrow">Prune viewers</p>
-    <h2 class="section-title mt-2 text-2xl" id="bulk-delete-dialog-title">
+    <h2 class="section-title text-2xl" id="bulk-delete-dialog-title">
       Delete {selectedUserIDs.length} selected viewers?
     </h2>
-    <p class="admin-muted mt-2">
+    <p class="admin-muted">
       This permanently removes their activity, stats, and blind-box collections.
     </p>
-    <div class="dialog-actions mt-6">
+    <div class="dialog-actions pt-4">
       <button class="button button-secondary" onclick={closeBulkDeleteDialog}>Cancel</button>
       <button class="button button-danger" onclick={deleteSelectedUsers}>
         Delete {selectedUserIDs.length} viewers
@@ -618,7 +624,7 @@
   </dialog>
 
   <dialog
-    class="admin-dialog p-6"
+    class="admin-dialog gap-2 p-6"
     bind:this={randomPlushieDialog}
     aria-labelledby="random-plushie-dialog-title"
     oncancel={() => {
@@ -626,13 +632,13 @@
     }}
   >
     <p class="eyebrow">Blind-box redemption</p>
-    <h2 class="section-title mt-2 text-2xl" id="random-plushie-dialog-title">
+    <h2 class="section-title text-2xl" id="random-plushie-dialog-title">
       Grant a random plushie?
     </h2>
-    <p class="admin-muted mt-2">
+    <p class="admin-muted">
       {pendingRandomCollection?.config.name ?? 'This series'} uses its normal weighted drop chances.
     </p>
-    <div class="dialog-actions mt-6">
+    <div class="dialog-actions pt-4">
       <button class="button button-secondary" onclick={closeRandomPlushieDialog}>Cancel</button>
       <button class="button button-secondary" onclick={() => grantRandomPlushie(false)}>
         Grant silently
@@ -644,16 +650,16 @@
   </dialog>
 
   <dialog
-    class="admin-dialog p-6"
+    class="admin-dialog gap-2 p-6"
     bind:this={resetStatsDialog}
     aria-labelledby="reset-stats-dialog-title"
   >
     <p class="eyebrow">Viewer stats</p>
-    <h2 class="section-title mt-2 text-2xl" id="reset-stats-dialog-title">
+    <h2 class="section-title text-2xl" id="reset-stats-dialog-title">
       Reset {selected?.user.username ?? 'this viewer'}'s stats?
     </h2>
-    <p class="admin-muted mt-2">This restores every stat to its configured default.</p>
-    <div class="dialog-actions mt-6">
+    <p class="admin-muted">This restores every stat to its configured default.</p>
+    <div class="dialog-actions pt-4">
       <button class="button button-secondary" onclick={closeResetStatsDialog}>Cancel</button>
       <button class="button button-danger" onclick={() => resetStats(false)}>Reset silently</button>
       <button class="button button-primary" onclick={() => resetStats(true)}>
@@ -663,7 +669,7 @@
   </dialog>
 
   <dialog
-    class="admin-dialog p-6"
+    class="admin-dialog gap-2 p-6"
     bind:this={resetDialog}
     aria-labelledby="reset-dialog-title"
     oncancel={() => {
@@ -671,20 +677,20 @@
     }}
   >
     <p class="eyebrow">Blind-box collection</p>
-    <h2 class="section-title mt-2 text-2xl" id="reset-dialog-title">
+    <h2 class="section-title text-2xl" id="reset-dialog-title">
       Reset {pendingResetCollection?.config.name ?? 'this collection'}?
     </h2>
-    <p class="admin-muted mt-2">
+    <p class="admin-muted">
       This permanently removes all {pendingResetCollection?.collected.length ?? 0} collected plushies.
     </p>
-    <div class="dialog-actions mt-6">
+    <div class="dialog-actions pt-4">
       <button class="button button-secondary" onclick={closeResetDialog}>Cancel</button>
       <button class="button button-danger" onclick={resetSeries}>Reset collection</button>
     </div>
   </dialog>
 
   <dialog
-    class="admin-dialog p-6"
+    class="admin-dialog gap-2 p-6"
     bind:this={plushieDialog}
     aria-labelledby="plushie-dialog-title"
     oncancel={() => {
@@ -692,11 +698,11 @@
     }}
   >
     <p class="eyebrow">Blind-box redemption</p>
-    <h2 class="section-title mt-2 text-2xl" id="plushie-dialog-title">
+    <h2 class="section-title text-2xl" id="plushie-dialog-title">
       Grant {pendingPlushie?.name ?? 'this plushie'}?
     </h2>
-    <p class="admin-muted mt-2">Choose whether to announce this redemption on the overlay.</p>
-    <div class="dialog-actions mt-6">
+    <p class="admin-muted">Choose whether to announce this redemption on the overlay.</p>
+    <div class="dialog-actions pt-4">
       <button class="button button-secondary" onclick={closePlushieDialog}>Cancel</button>
       <button class="button button-secondary" onclick={() => grantPlushie(false)}
         >Grant silently</button
@@ -707,48 +713,48 @@
     </div>
   </dialog>
 
-  <dialog class="admin-dialog p-6" bind:this={explodeDialog} aria-labelledby="explode-dialog-title">
+  <dialog class="admin-dialog gap-2 p-6" bind:this={explodeDialog} aria-labelledby="explode-dialog-title">
     <p class="eyebrow">Viewer stat</p>
-    <h2 class="section-title mt-2 text-2xl" id="explode-dialog-title">
+    <h2 class="section-title text-2xl" id="explode-dialog-title">
       Explode {selected?.user.username ?? 'this viewer'}?
     </h2>
-    <p class="admin-muted mt-2">
+    <p class="admin-muted">
       This sets their PENIS stat to -1000 and displays their updated stats in chat.
     </p>
-    <div class="dialog-actions mt-6">
+    <div class="dialog-actions pt-4">
       <button class="button button-secondary" onclick={closeExplodeDialog}>Cancel</button>
       <button class="button button-danger" onclick={explode}>Explode</button>
     </div>
   </dialog>
 
   <dialog
-    class="admin-dialog p-6"
+    class="admin-dialog gap-2 p-6"
     bind:this={undoExplodeDialog}
     aria-labelledby="undo-explode-dialog-title"
   >
     <p class="eyebrow">Viewer stat</p>
-    <h2 class="section-title mt-2 text-2xl" id="undo-explode-dialog-title">
+    <h2 class="section-title text-2xl" id="undo-explode-dialog-title">
       Undo {selected?.user.username ?? 'this viewer'}'s explosion?
     </h2>
-    <p class="admin-muted mt-2">
+    <p class="admin-muted">
       This restores their PENIS stat to its configured default and displays their updated stats in
       chat.
     </p>
-    <div class="dialog-actions mt-6">
+    <div class="dialog-actions pt-4">
       <button class="button button-secondary" onclick={closeUndoExplodeDialog}>Cancel</button>
       <button class="button button-primary" onclick={undoExplode}>Undo explode</button>
     </div>
   </dialog>
 
   <dialog
-    class="admin-dialog p-6"
+    class="admin-dialog gap-2 p-6"
     bind:this={randomStatDialog}
     aria-labelledby="random-stat-dialog-title"
   >
     <p class="eyebrow">Random stat</p>
-    <h2 class="section-title mt-2 text-2xl" id="random-stat-dialog-title">Grant a random stat?</h2>
-    <p class="admin-muted mt-2">Choose whether to display the viewer's updated stats in chat.</p>
-    <div class="dialog-actions mt-6">
+    <h2 class="section-title text-2xl" id="random-stat-dialog-title">Grant a random stat?</h2>
+    <p class="admin-muted">Choose whether to display the viewer's updated stats in chat.</p>
+    <div class="dialog-actions pt-4">
       <button class="button button-secondary" onclick={closeRandomStatDialog}>Cancel</button>
       <button class="button button-secondary" onclick={() => grantRandomStat(false)}>
         Grant silently
@@ -791,6 +797,10 @@
         'header'
         'sidebar'
         'workspace';
+    }
+
+    .admin-content {
+      display: contents;
     }
 
     .viewer-directory,
@@ -1005,6 +1015,8 @@
       display: flex;
       min-width: 0;
       align-items: center;
+      gap: 1rem;
+      padding-inline-start: 1rem;
       transition: background-color 150ms ease;
     }
 
@@ -1021,7 +1033,6 @@
       width: 1rem;
       height: 1rem;
       flex: none;
-      margin-left: 1rem;
       accent-color: var(--accent);
     }
 
@@ -1042,7 +1053,7 @@
       align-items: center;
       justify-content: space-between;
       gap: 1rem;
-      padding: 0.85rem 1rem;
+      padding: 0.85rem 1rem 0.85rem 0;
       color: var(--text);
       text-align: left;
     }
@@ -1113,6 +1124,11 @@
       box-shadow: 0 24px 60px rgb(5 3 9 / 52%);
     }
 
+    .admin-dialog[open] {
+      display: flex;
+      flex-direction: column;
+    }
+
     .admin-dialog::backdrop {
       background: rgb(10 7 15 / 70%);
     }
@@ -1161,11 +1177,28 @@
 
       .admin-layout {
         grid-template-areas:
-          'sidebar header'
-          'sidebar workspace';
+          'sidebar content';
         grid-template-columns: minmax(17rem, 21rem) minmax(0, 1fr);
-        grid-template-rows: auto minmax(0, 1fr);
+        grid-template-rows: minmax(0, 1fr);
         gap: 2rem;
+      }
+
+      .admin-content {
+        display: grid;
+        height: 100%;
+        min-height: 0;
+        align-content: start;
+        gap: 2rem;
+        grid-area: content;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        padding-right: 0.75rem;
+        scrollbar-gutter: stable;
+      }
+
+      .admin-content > .admin-header,
+      .admin-content > .admin-workspace {
+        grid-area: auto;
       }
 
       .viewer-directory {
@@ -1187,12 +1220,7 @@
       }
 
       .admin-workspace {
-        height: 100%;
-        min-height: 0;
-        overflow-y: auto;
-        overscroll-behavior: contain;
-        padding-right: 0.75rem;
-        scrollbar-gutter: stable;
+        height: auto;
       }
 
       .viewer-bulk-actions {

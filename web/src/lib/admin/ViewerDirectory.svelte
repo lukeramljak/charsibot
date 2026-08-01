@@ -39,11 +39,11 @@
   } = $props();
 </script>
 
-<section class="admin-surface p-5">
+<section class="admin-surface flex flex-col gap-4 p-5">
   <div class="flex items-center justify-between gap-4">
-    <div>
+    <div class="flex flex-col gap-1">
       <p class="eyebrow">Viewer directory</p>
-      <h2 class="section-title mt-1">Viewers</h2>
+      <h2 class="section-title">Viewers</h2>
       <p class="admin-muted text-sm">{filteredUsers.length} of {users.length} known users</p>
     </div>
     <button class="button button-secondary" onclick={onRefresh} disabled={loading}>Refresh</button>
@@ -51,27 +51,29 @@
 
   {#if users.length > 0}
     <label class="sr-only" for="username-filter">Filter by username</label>
-    <input
-      id="username-filter"
-      class="admin-input mt-4 w-full"
-      value={usernameFilter}
-      oninput={(event) => onUsernameFilterChange(event.currentTarget.value)}
-      placeholder="Filter by username…"
-    />
-    <label class="sr-only" for="activity-filter">Filter by activity</label>
-    <select
-      id="activity-filter"
-      class="admin-input mt-2 w-full"
-      value={activityFilter}
-      onchange={(event) => onActivityFilterChange(event.currentTarget.value as ActivityFilter)}
-    >
-      <option value="all">All activity</option>
-      <option value="unknown">Unknown activity</option>
-      <option value="inactive30">Inactive for 30+ days</option>
-      <option value="inactive90">Inactive for 90+ days</option>
-      <option value="recent">Active in the last 30 days</option>
-    </select>
-    <div class="viewer-bulk-actions mt-3">
+    <div class="flex flex-col gap-2">
+      <input
+        id="username-filter"
+        class="admin-input w-full"
+        value={usernameFilter}
+        oninput={(event) => onUsernameFilterChange(event.currentTarget.value)}
+        placeholder="Filter by username…"
+      />
+      <label class="sr-only" for="activity-filter">Filter by activity</label>
+      <select
+        id="activity-filter"
+        class="admin-input w-full"
+        value={activityFilter}
+        onchange={(event) => onActivityFilterChange(event.currentTarget.value as ActivityFilter)}
+      >
+        <option value="all">All activity</option>
+        <option value="unknown">Unknown activity</option>
+        <option value="inactive30">Inactive for 30+ days</option>
+        <option value="inactive90">Inactive for 90+ days</option>
+        <option value="recent">Active in the last 30 days</option>
+      </select>
+    </div>
+    <div class="viewer-bulk-actions">
       <button
         class="button button-secondary"
         onclick={onSelectFiltered}
@@ -88,7 +90,7 @@
         </button>
       {/if}
     </div>
-    <ul class="viewer-list mt-4" aria-label="Viewers">
+    <ul class="viewer-list" aria-label="Viewers">
       {#each filteredUsers as user (user.id)}
         <li class={['viewer-list-item', selectedUserID === user.id && 'is-selected']}>
           <input
@@ -113,9 +115,9 @@
       {/each}
     </ul>
     {#if filteredUsers.length === 0}
-      <p class="admin-muted mt-3 text-sm">No usernames match that filter.</p>
+      <p class="admin-muted text-sm">No usernames match that filter.</p>
     {/if}
   {:else if !loading}
-    <p class="admin-muted mt-4 text-sm">No users have been recorded yet.</p>
+    <p class="admin-muted text-sm">No users have been recorded yet.</p>
   {/if}
 </section>

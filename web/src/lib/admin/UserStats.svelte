@@ -24,7 +24,7 @@
   } = $props();
 </script>
 
-<section aria-labelledby="stats-heading">
+<section class="flex flex-col gap-4" aria-labelledby="stats-heading">
   <div class="flex flex-wrap items-center justify-between gap-3">
     <h3 class="detail-section-title" id="stats-heading">Stats</h3>
     <div class="user-actions flex flex-wrap items-center justify-end gap-2">
@@ -45,13 +45,13 @@
       >
     </div>
   </div>
-  <div class="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+  <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
     {#each stats as stat (stat.name)}
-      <div class="stat-card p-4 text-center">
+      <div class="stat-card flex flex-col gap-3 p-4 text-center">
         <p class="font-semibold">
           {stat.longName} <span class="admin-muted">({stat.shortName})</span>
         </p>
-        <div class="mt-3 flex items-center justify-center gap-2">
+        <div class="flex items-center justify-center gap-2">
           <button
             class="stat-stepper"
             onclick={() => onUpdateStat(stat, -1, 'adjust')}

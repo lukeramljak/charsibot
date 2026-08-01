@@ -22,12 +22,12 @@
   } = $props();
 </script>
 
-<section class="mt-8" aria-labelledby="blind-boxes-heading">
+<section class="flex flex-col gap-4" aria-labelledby="blind-boxes-heading">
   <h3 class="detail-section-title" id="blind-boxes-heading">Blind boxes</h3>
-  <div class="mt-4 grid gap-6 lg:grid-cols-2">
+  <div class="grid gap-6 lg:grid-cols-2">
     {#each collections as collection (collection.config.series)}
-      <section class="collection-card p-5">
-        <div class="mb-4 flex items-center justify-between gap-4">
+      <section class="collection-card flex flex-col gap-4 p-5">
+        <div class="flex items-center justify-between gap-4">
           <div>
             <h3 class="font-bold">{collection.config.name}</h3>
             <p class="admin-muted text-sm">
@@ -58,7 +58,7 @@
             {@const owned = collection.collected.includes(plushie.key)}
             {@const plushieID = `${collection.config.series}:${plushie.key}`}
             <button
-              class={['plushie-button p-2 text-left', !owned && 'is-unowned']}
+              class={['plushie-button flex flex-col items-center gap-1 p-2 text-left', !owned && 'is-unowned']}
               onclick={() =>
                 onSetPlushie(collection.config.series, plushie.key, plushie.name, owned)}
               disabled={mutatingPlushie === plushieID}
@@ -66,8 +66,8 @@
               aria-label={owned ? `Remove ${plushie.name}` : `Grant ${plushie.name}`}
               aria-pressed={owned}
             >
-              <img class="mx-auto h-16 w-16 object-contain" src={plushie.image} alt="" />
-              <span class="mt-1 block truncate text-center text-xs">{plushie.name}</span>
+              <img class="h-16 w-16 object-contain" src={plushie.image} alt="" />
+              <span class="block truncate text-center text-xs">{plushie.name}</span>
             </button>
           {/each}
         </div>
