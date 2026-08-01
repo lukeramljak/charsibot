@@ -519,7 +519,7 @@
                       {selected.user.username}
                     </h2>
                     <span
-                      class="admin-muted shrink-0 rounded-full border border-[var(--line)] px-2 py-0.5 font-mono text-[0.65rem]"
+                      class="admin-muted shrink-0 rounded-full border border-(--line) px-2 py-0.5 font-mono text-[0.65rem]"
                     >
                       {selected.user.id}
                     </span>
