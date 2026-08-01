@@ -480,7 +480,7 @@
 </svelte:head>
 
 <main class="admin-shell p-6 sm:p-10" aria-busy={loading}>
-  <div class="admin-frame mx-auto max-w-384">
+  <div class="admin-frame mx-auto">
     <p class="sr-only" role="status">{statusMessage}</p>
 
     <div class="admin-layout">
