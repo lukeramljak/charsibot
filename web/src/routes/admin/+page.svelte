@@ -77,6 +77,7 @@
       .filter((user) => user.username.toLowerCase().includes(userSearchQuery.trim().toLowerCase()))
       .toSorted((a, b) => a.username.localeCompare(b.username)),
   );
+  let userSearchSelectionID: string | undefined;
   let selectedUserRequest = 0;
 
   function isCurrentUserRequest(requestID: number, userID: string) {
@@ -155,6 +156,8 @@
         return;
       }
     }
+    const suppressSelectedUserFocus = userSearchSelectionID === user.id;
+    if (suppressSelectedUserFocus) userSearchSelectionID = undefined;
     const requestID = ++selectedUserRequest;
     loading = true;
     error = '';
@@ -169,7 +172,7 @@
       lastGrant = null;
       statusMessage = `Loaded ${user.username}.`;
       await tick();
-      selectedUserHeading?.focus();
+      if (!suppressSelectedUserFocus) selectedUserHeading?.focus();
     } catch (err) {
       if (isCurrentUserRequest(requestID, user.id)) {
         error = err instanceof Error ? err.message : 'Could not load user';
@@ -194,6 +197,7 @@
   }
 
   async function selectUserSearchResult(user: User) {
+    userSearchSelectionID = user.id;
     closeUserSearch();
     await selectUser(user);
   }

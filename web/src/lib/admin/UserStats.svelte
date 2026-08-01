@@ -45,7 +45,7 @@
       >
     </div>
   </div>
-  <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+  <div class="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
     {#each stats as stat (stat.name)}
       <div class="stat-card flex flex-col gap-3 p-4 text-center">
         <p class="font-semibold">

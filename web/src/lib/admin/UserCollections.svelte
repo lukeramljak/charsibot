@@ -24,7 +24,7 @@
 
 <section class="flex flex-col gap-4" aria-labelledby="blind-boxes-heading">
   <h3 class="detail-section-title" id="blind-boxes-heading">Blind boxes</h3>
-  <div class="grid gap-6 lg:grid-cols-2">
+  <div class="grid gap-6 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
     {#each collections as collection (collection.config.series)}
       <section class="collection-card flex flex-col gap-4 p-5">
         <div class="flex items-center justify-between gap-4">
