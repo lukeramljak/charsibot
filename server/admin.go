@@ -34,6 +34,14 @@ type AdminUserResponse struct {
 	User        stats.User        `json:"user"`
 	Stats       []AdminStat       `json:"stats" nullable:"false"`
 	Collections []AdminCollection `json:"collections" nullable:"false"`
+	Grant       *AdminGrantResult `json:"grant,omitempty" doc:"Result of a random admin grant, when applicable"`
+}
+
+type AdminGrantResult struct {
+	Kind        string `json:"kind" enum:"stat,plushie"`
+	StatName    string `json:"statName,omitempty"`
+	PlushieName string `json:"plushieName,omitempty"`
+	IsDuplicate bool   `json:"isDuplicate"`
 }
 
 type adminUsersResponse struct {
@@ -195,7 +203,7 @@ func (s *Server) grantAdminRandomStat(ctx context.Context, input *adminChatInput
 	if err := s.displayStats(ctx, user, input.Body.DisplayInChat); err != nil {
 		return nil, err
 	}
-	return s.adminOutput(ctx, user.ID)
+	return s.adminOutputWithGrant(ctx, user.ID, AdminGrantResult{Kind: "stat", StatName: definition.Name})
 }
 
 func (s *Server) resetAdminStats(ctx context.Context, input *adminChatInput) (*adminUserOutput, error) {
@@ -283,7 +291,11 @@ func (s *Server) grantAdminRandomPlushie(ctx context.Context, input *adminRandom
 			if input.Body.TriggerOverlay {
 				s.Broadcast(OverlayEvent{Type: EventTypeBlindBoxRedemption, Data: blindbox.BlindBoxRedemptionData{Username: result.Username, Plushie: plushie, IsNew: result.IsNew, Collection: result.Collection, Config: cfg}})
 			}
-			return s.adminOutput(ctx, user.ID)
+			return s.adminOutputWithGrant(ctx, user.ID, AdminGrantResult{
+				Kind:        "plushie",
+				PlushieName: plushie.Name,
+				IsDuplicate: !result.IsNew,
+			})
 		}
 	}
 	return nil, huma.Error400BadRequest("unknown series")
@@ -386,6 +398,15 @@ func (s *Server) adminOutput(ctx context.Context, userID string) (*adminUserOutp
 		collections = append(collections, AdminCollection{Config: cfg, Collected: collected})
 	}
 	return &adminUserOutput{Body: AdminUserResponse{User: user, Stats: statValues, Collections: collections}}, nil
+}
+
+func (s *Server) adminOutputWithGrant(ctx context.Context, userID string, grant AdminGrantResult) (*adminUserOutput, error) {
+	output, err := s.adminOutput(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	output.Body.Grant = &grant
+	return output, nil
 }
 
 func (s *Server) adminUser(ctx context.Context, userID string) (stats.User, error) {

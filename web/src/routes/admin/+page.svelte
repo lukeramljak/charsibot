@@ -13,6 +13,7 @@
   type UserStat = components['schemas']['AdminStat'];
   type Collection = components['schemas']['AdminCollection'];
   type UserDetail = components['schemas']['AdminUserResponse'];
+  type GrantResult = components['schemas']['AdminGrantResult'];
   type UsersResponse = components['schemas']['AdminUsersResponse'];
   type APIError = components['schemas']['ErrorModel'];
   type ActivityFilter = 'all' | 'unknown' | 'inactive30' | 'inactive90' | 'recent';
@@ -63,6 +64,7 @@
   let randomStatDialog = $state<HTMLDialogElement | undefined>(undefined);
   let error = $state('');
   let statusMessage = $state('');
+  let lastGrant = $state.raw<GrantResult | null>(null);
   let selectedUserHeading = $state<HTMLHeadingElement | undefined>(undefined);
   let selectedUserRequest = 0;
 
@@ -127,6 +129,7 @@
     } else if (!user) {
       selectedUserRequest += 1;
       selected = null;
+      lastGrant = null;
     }
   }
 
@@ -144,6 +147,7 @@
     const requestID = ++selectedUserRequest;
     loading = true;
     error = '';
+    lastGrant = null;
     statusMessage = `Loading ${user.username}…`;
     try {
       const response = await readJSON<UserDetail>(
@@ -151,6 +155,7 @@
       );
       if (!isCurrentUserRequest(requestID, user.id)) return;
       selected = response;
+      lastGrant = null;
       statusMessage = `Loaded ${user.username}.`;
       await tick();
       selectedUserHeading?.focus();
@@ -298,6 +303,7 @@
   async function grantRandomStat(displayInChat: boolean) {
     if (!selected) return;
     closeRandomStatDialog();
+    lastGrant = null;
     await mutate(
       api.POST('/api/admin/users/{userID}/stats/random', {
         params: { path: { userID: selected.user.id } },
@@ -410,6 +416,7 @@
     const collection = pendingRandomCollection;
     closeRandomPlushieDialog();
     if (!collection) return;
+    lastGrant = null;
     await mutate(
       api.POST('/api/admin/users/{userID}/collections/{series}/random', {
         params: { path: { userID: selected.user.id, series: collection.config.series } },
@@ -453,6 +460,7 @@
       const response = await readJSON(operation);
       if (!isCurrentUserRequest(requestID, userID)) return false;
       selected = response;
+      lastGrant = response.grant ?? null;
       statusMessage = 'Changes saved.';
       return true;
     } catch (err) {
@@ -487,77 +495,107 @@
         </header>
 
         <div class="admin-workspace">
-        {#if error}
-          <p class="admin-error px-4 py-3" role="alert">
-            {error}
-          </p>
-        {/if}
+          {#if error}
+            <p class="admin-error px-4 py-3" role="alert">
+              {error}
+            </p>
+          {/if}
 
-        {#if selected}
-          <section class="user-detail flex flex-col gap-8">
-            <div class="flex flex-col gap-4">
-              <div class="user-detail-header">
-                <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
-                  <div>
-                    <div class="flex min-w-0 items-center gap-2">
-                      <h2
-                        class="section-title truncate text-2xl"
-                        bind:this={selectedUserHeading}
-                        tabindex="-1"
-                      >
-                        {selected.user.username}
-                      </h2>
-                      <span
-                        class="admin-muted shrink-0 rounded-full border border-(--line) px-2 py-0.5 font-mono text-[0.65rem]"
-                      >
-                        {selected.user.id}
-                      </span>
+          {#if selected}
+            <section class="user-detail flex flex-col gap-8">
+              <div class="flex flex-col gap-4">
+                <div class="user-detail-header">
+                  <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
+                    <div>
+                      <div class="flex min-w-0 items-center gap-2">
+                        <h2
+                          class="section-title truncate text-2xl"
+                          bind:this={selectedUserHeading}
+                          tabindex="-1"
+                        >
+                          {selected.user.username}
+                        </h2>
+                        <span
+                          class="admin-muted shrink-0 rounded-full border border-(--line) px-2 py-0.5 font-mono text-[0.65rem]"
+                        >
+                          {selected.user.id}
+                        </span>
+                      </div>
+                      <p class="admin-muted text-xs">
+                        Last active: {formatLastActive(selected.user.lastActiveAt)}
+                      </p>
                     </div>
-                    <p class="admin-muted text-xs">
-                      Last active: {formatLastActive(selected.user.lastActiveAt)}
-                    </p>
+                    <button
+                      class="button button-danger"
+                      onclick={() => deleteUserDialog?.showModal()}
+                      disabled={loading}
+                    >
+                      Delete viewer
+                    </button>
                   </div>
-                  <button
-                    class="button button-danger"
-                    onclick={() => deleteUserDialog?.showModal()}
-                    disabled={loading}
-                  >
-                    Delete viewer
-                  </button>
                 </div>
+
+                {#if lastGrant}
+                  {@const grantedStat = selected.stats.find(
+                    (stat) => stat.name === lastGrant?.statName,
+                  )}
+                  <aside
+                    class={[
+                      'grant-result px-4 py-3',
+                      lastGrant.kind === 'plushie' && lastGrant.isDuplicate && 'is-duplicate',
+                    ]}
+                    role="status"
+                    aria-live="polite"
+                  >
+                    {#if lastGrant.kind === 'stat'}
+                      <p class="eyebrow">Random stat granted</p>
+                      <p class="grant-result-title">
+                        +1 {grantedStat?.longName ?? lastGrant.statName}
+                      </p>
+                    {:else if lastGrant.isDuplicate}
+                      <p class="eyebrow">Duplicate plushie</p>
+                      <p class="grant-result-title">{lastGrant.plushieName}</p>
+                      <p class="admin-muted text-sm">
+                        Already owned. The collection was unchanged.
+                      </p>
+                    {:else}
+                      <p class="eyebrow">Random plushie granted</p>
+                      <p class="grant-result-title">{lastGrant.plushieName}</p>
+                    {/if}
+                  </aside>
+                {/if}
+
+                <UserStats
+                  stats={selected.stats}
+                  {loading}
+                  onUpdateStat={updateStat}
+                  onDisplayStats={displayStatsInChat}
+                  onOpenRandomStat={openRandomStatDialog}
+                  onOpenExplode={() => explodeDialog?.showModal()}
+                  onOpenUndoExplode={() => undoExplodeDialog?.showModal()}
+                  onOpenResetStats={() => resetStatsDialog?.showModal()}
+                />
               </div>
 
-              <UserStats
-                stats={selected.stats}
+              <UserCollections
+                collections={selected.collections}
                 {loading}
-                onUpdateStat={updateStat}
-                onDisplayStats={displayStatsInChat}
-                onOpenRandomStat={openRandomStatDialog}
-                onOpenExplode={() => explodeDialog?.showModal()}
-                onOpenUndoExplode={() => undoExplodeDialog?.showModal()}
-                onOpenResetStats={() => resetStatsDialog?.showModal()}
+                {mutatingPlushie}
+                onDisplayCollection={displayCollection}
+                onOpenRandomPlushie={openRandomPlushieDialog}
+                onOpenResetCollection={openResetDialog}
+                onSetPlushie={setPlushie}
               />
-            </div>
-
-            <UserCollections
-              collections={selected.collections}
-              {loading}
-              {mutatingPlushie}
-              onDisplayCollection={displayCollection}
-              onOpenRandomPlushie={openRandomPlushieDialog}
-              onOpenResetCollection={openResetDialog}
-              onSetPlushie={setPlushie}
-            />
-          </section>
-        {:else if !loading}
-          <section class="empty-workspace flex flex-col gap-2">
-            <p class="eyebrow">Ready when you are</p>
-            <h2 class="section-title text-2xl">Choose a viewer to manage</h2>
-            <p class="admin-muted max-w-md">
-              Their stats and blind-box collections will appear here.
-            </p>
-          </section>
-        {/if}
+            </section>
+          {:else if !loading}
+            <section class="empty-workspace flex flex-col gap-2">
+              <p class="eyebrow">Ready when you are</p>
+              <h2 class="section-title text-2xl">Choose a viewer to manage</h2>
+              <p class="admin-muted max-w-md">
+                Their stats and blind-box collections will appear here.
+              </p>
+            </section>
+          {/if}
         </div>
       </div>
 
@@ -630,9 +668,7 @@
     }}
   >
     <p class="eyebrow">Blind-box redemption</p>
-    <h2 class="section-title text-2xl" id="random-plushie-dialog-title">
-      Grant a random plushie?
-    </h2>
+    <h2 class="section-title text-2xl" id="random-plushie-dialog-title">Grant a random plushie?</h2>
     <p class="admin-muted">
       {pendingRandomCollection?.config.name ?? 'This series'} uses its normal weighted drop chances.
     </p>
@@ -711,7 +747,11 @@
     </div>
   </dialog>
 
-  <dialog class="admin-dialog gap-2 p-6" bind:this={explodeDialog} aria-labelledby="explode-dialog-title">
+  <dialog
+    class="admin-dialog gap-2 p-6"
+    bind:this={explodeDialog}
+    aria-labelledby="explode-dialog-title"
+  >
     <p class="eyebrow">Viewer stat</p>
     <h2 class="section-title text-2xl" id="explode-dialog-title">
       Explode {selected?.user.username ?? 'this viewer'}?
@@ -1161,6 +1201,24 @@
       color: #ffe0e0;
     }
 
+    .grant-result {
+      border: 1px solid rgb(242 161 186 / 70%);
+      border-radius: 0.85rem;
+      background: linear-gradient(135deg, rgb(242 161 186 / 20%), rgb(255 255 255 / 5%));
+    }
+
+    .grant-result.is-duplicate {
+      border-color: rgb(255 191 126 / 76%);
+      background: linear-gradient(135deg, rgb(255 191 126 / 24%), rgb(255 255 255 / 5%));
+    }
+
+    .grant-result-title {
+      margin-top: 0.2rem;
+      font-family: Nunito, sans-serif;
+      font-size: 1.3rem;
+      font-weight: 800;
+    }
+
     @media (min-width: 900px) {
       .admin-shell {
         height: 100dvh;
@@ -1174,8 +1232,7 @@
       }
 
       .admin-layout {
-        grid-template-areas:
-          'sidebar content';
+        grid-template-areas: 'sidebar content';
         grid-template-columns: minmax(17rem, 21rem) minmax(0, 1fr);
         grid-template-rows: minmax(0, 1fr);
         gap: 2rem;

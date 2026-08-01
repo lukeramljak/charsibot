@@ -230,6 +230,13 @@ export interface components {
       collected: string[];
       config: components['schemas']['SeriesConfig'];
     };
+    AdminGrantResult: {
+      isDuplicate: boolean;
+      /** @enum {string} */
+      kind: 'stat' | 'plushie';
+      plushieName?: string;
+      statName?: string;
+    };
     AdminPlushieInputBody: {
       /**
        * Format: uri
@@ -276,6 +283,8 @@ export interface components {
        */
       readonly $schema?: string;
       collections: components['schemas']['AdminCollection'][];
+      /** @description Result of a random admin grant, when applicable */
+      grant?: components['schemas']['AdminGrantResult'];
       stats: components['schemas']['AdminStat'][];
       user: components['schemas']['User'];
     };

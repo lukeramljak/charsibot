@@ -25,6 +25,17 @@
         "required": ["config", "collected"],
         "type": "object"
       },
+      "AdminGrantResult": {
+        "additionalProperties": false,
+        "properties": {
+          "isDuplicate": { "type": "boolean" },
+          "kind": { "enum": ["stat", "plushie"], "type": "string" },
+          "plushieName": { "type": "string" },
+          "statName": { "type": "string" }
+        },
+        "required": ["kind", "isDuplicate"],
+        "type": "object"
+      },
       "AdminPlushieInputBody": {
         "additionalProperties": false,
         "properties": {
@@ -95,6 +106,10 @@
           "collections": {
             "items": { "$ref": "#/components/schemas/AdminCollection" },
             "type": "array"
+          },
+          "grant": {
+            "$ref": "#/components/schemas/AdminGrantResult",
+            "description": "Result of a random admin grant, when applicable"
           },
           "stats": { "items": { "$ref": "#/components/schemas/AdminStat" }, "type": "array" },
           "user": { "$ref": "#/components/schemas/User" }
