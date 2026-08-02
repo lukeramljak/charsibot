@@ -333,42 +333,45 @@ Exclusive ownership: `web/src/lib/server/twitch/**`, `bot/**`, and their tests/f
 
 ### Helix and conduit
 
-- [ ] Port app-token acquisition with expiry caching and one refresh/retry on authorization failure.
-- [ ] Port authenticated Helix requests and chat sending with optional reply parent ID.
-- [ ] List conduits and use the first, or create one one-shard conduit.
-- [ ] Connect to `wss://eventsub.wss.twitch.tv/ws`.
-- [ ] On welcome, assign shard `0` within the Twitch deadline.
-- [ ] Ensure the four current subscriptions and treat HTTP 409 as success:
-  - [ ] `channel.chat.message` v1.
-  - [ ] `channel.channel_points_custom_reward_redemption.add` v1.
-  - [ ] `channel.raid` v1.
-  - [ ] `conduit.shard.disabled` v1.
-- [ ] Parse welcome, notification, keepalive, reconnect, revocation, and shard-disabled messages with runtime validation.
-- [ ] Implement seamless reconnect handoff using Twitch's supplied reconnect URL.
-- [ ] Implement watchdog expiry and abortable 10-second ordinary reconnect delay.
-- [ ] Let the WebSocket library handle ping/pong; send no application frames.
-- [ ] Add bounded TTL deduplication by Twitch `metadata.message_id` before dispatch.
-- [ ] Make token, REST, and WebSocket base URLs injectable in mock mode.
+- [x] Port app-token acquisition with expiry caching and one refresh/retry on authorization failure.
+- [x] Validate the app token at startup and hourly, invalidating and reacquiring it after a failed validation.
+- [x] Port authenticated Helix requests and chat sending with optional reply parent ID; treat `is_sent: false` and `drop_reason` as failures while preserving source-only shared-chat behavior.
+- [x] Reuse an existing one-shard conduit, or create one; do not attach only shard 0 of a multi-shard conduit.
+- [x] Connect to `wss://eventsub.wss.twitch.tv/ws`.
+- [x] On welcome, assign shard `0` within the Twitch deadline.
+- [x] Ensure the four current subscriptions; on HTTP 409, verify the existing version, condition, and selected-conduit transport before accepting it:
+  - [x] `channel.chat.message` v1.
+  - [x] `channel.channel_points_custom_reward_redemption.add` v1.
+  - [x] `channel.raid` v1.
+  - [x] `conduit.shard.disabled` v1, scoped to the selected conduit.
+- [x] Parse welcome, notification, keepalive, reconnect, revocation, and shard-disabled messages with runtime validation.
+- [x] Implement seamless reconnect handoff using Twitch's supplied reconnect URL.
+- [x] Implement watchdog expiry and abortable 10-second ordinary reconnect delay.
+- [x] Let the WebSocket library handle ping/pong; send no application frames.
+- [x] Add bounded TTL deduplication by Twitch `metadata.message_id` before dispatch.
+- [x] Make token, REST, and WebSocket base URLs injectable in mock mode.
 
 ### Bot behavior
 
-- [ ] Ignore messages from the configured bot user.
-- [ ] Record activity before commands/triggers and for all redemptions, including unknown rewards.
-- [ ] Preserve concurrent handler execution with a 10-second cancellation deadline.
-- [ ] Port exact parsing and behavior for `!collections`, `!leaderboard`, `!stats`, and all catalog commands.
-- [ ] Port the standalone-word `come`/`coming`/`cum`/`came` trigger, `no coming` exclusion, and current probability boundary semantics.
-- [ ] Port `Drink a Potion`, `Tempt the Dice`, all catalog redemptions, and exact failure messages.
-- [ ] Port the five-second raid shoutout delay.
-- [ ] Preserve exact chat strings, reply IDs, overlay payloads, and case sensitivity.
-- [ ] Track all handler/raid tasks so shutdown can await or cancel them.
+- [x] Ignore messages from the configured bot user.
+- [x] Record activity before commands/triggers and for all redemptions, including unknown rewards.
+- [x] Preserve concurrent handler execution with a 10-second cancellation deadline.
+- [x] Port exact parsing and behavior for `!collections`, `!leaderboard`, `!stats`, and all catalog commands.
+- [x] Port the standalone-word `come`/`coming`/`cum`/`came` trigger, `no coming` exclusion, and current probability boundary semantics.
+- [x] Port `Drink a Potion`, `Tempt the Dice`, all catalog redemptions, and exact failure messages.
+- [x] Port the five-second raid shoutout delay.
+- [x] Preserve exact chat strings, reply IDs, overlay payloads, and case sensitivity.
+- [x] Track all handler/raid tasks so shutdown can await or cancel them.
 
 ### Twitch gate
 
-- [ ] Command, trigger, redemption, and chat payload snapshot tests pass.
-- [ ] Token/Helix request and error tests pass.
+- [x] Command, trigger, redemption, and chat payload snapshot tests pass.
+- [x] Token/Helix request and error tests pass.
 - [ ] Fake-WebSocket tests cover welcome, keepalive timeout, reconnect handoff, unexpected close, revocation, disabled shard, deduplication, and shutdown.
 - [ ] Mock mode contacts no real Twitch endpoint.
 - [ ] Recorded EventSub fixtures pass.
+
+Checkpoint 3 implementation note: the Twitch transport and bot behavior are implemented behind injectable boundaries and are not connected to process startup yet. Focused bot and Twitch suites, the full web test suite, Svelte checks, scoped lint, adapter build, and diff checks passed before integration review. The remaining Wave 2B gate work is an explicit unexpected-close test, an integrated offline mock-runtime assertion, recorded Twitch EventSub fixtures, and later live validation.
 
 ## Wave 2C: admin remote functions and UI
 
