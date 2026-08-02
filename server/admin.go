@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
-	"net"
 	"net/http"
 	"strings"
 
@@ -110,7 +109,7 @@ type adminCollectionInput struct {
 func (s *Server) registerAdminRoutes(api huma.API) {
 	admin := huma.NewGroup(api, "/api/admin")
 	admin.UseMiddleware(func(ctx huma.Context, next func(huma.Context)) {
-		if err := s.requireLocalAdmin(ctx.RemoteAddr()); err != nil {
+		if err := s.requireAdmin(); err != nil {
 			status := http.StatusInternalServerError
 			var statusErr huma.StatusError
 			if errors.As(err, &statusErr) {
@@ -624,13 +623,9 @@ func (s *Server) displayStats(ctx context.Context, user stats.User, display bool
 	return nil
 }
 
-func (s *Server) requireLocalAdmin(remoteAddr string) error {
+func (s *Server) requireAdmin() error {
 	if s.stats == nil || s.blindbox == nil {
 		return huma.Error503ServiceUnavailable("admin is not configured")
-	}
-	host, _, err := net.SplitHostPort(remoteAddr)
-	if err != nil || !net.ParseIP(host).IsLoopback() {
-		return huma.Error403Forbidden("admin is available only on localhost")
 	}
 	return nil
 }
@@ -706,7 +701,7 @@ func (s *Server) writeLegacyAdmin(w http.ResponseWriter, _ *http.Request, respon
 }
 
 func (s *Server) handleAdminUser(w http.ResponseWriter, r *http.Request) {
-	if err := s.requireLocalAdmin(r.RemoteAddr); err != nil {
+	if err := s.requireAdmin(); err != nil {
 		s.writeLegacyAdmin(w, r, nil, err)
 		return
 	}
