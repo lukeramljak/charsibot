@@ -59,6 +59,9 @@ func run() error {
 		ClientID:         cfg.ClientID,
 		ClientSecret:     cfg.ClientSecret,
 		OAuthRedirectURI: cfg.OAuthRedirectURI,
+		StatsService:     statsService,
+		BlindBoxService:  blindboxService,
+		Series:           appCatalog.Series,
 	}, logger)
 	if err = srv.Start(); err != nil {
 		return fmt.Errorf("start server: %w", err)
@@ -69,6 +72,9 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("create bot: %w", err)
 	}
+	srv.SetAdminChatMessage(func(message string) {
+		bot.SendMessage(charsibot.SendMessageParams{Message: message})
+	})
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)

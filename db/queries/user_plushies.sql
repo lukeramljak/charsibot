@@ -25,6 +25,10 @@ SELECT EXISTS(
 DELETE FROM user_plushies
 WHERE user_id = ? AND series = ?;
 
+-- name: DeleteUserPlushie :exec
+DELETE FROM user_plushies
+WHERE user_id = ? AND series = ? AND key = ?;
+
 -- name: GetUserPlushieCounts :many
 SELECT series, CAST(MAX(username) AS TEXT) AS username, COUNT(*) AS count
 FROM user_plushies

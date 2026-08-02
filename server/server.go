@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"embed"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -13,7 +12,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/danielgtaylor/huma/v2"
+	"github.com/danielgtaylor/huma/v2/adapters/humago"
+	"github.com/danielgtaylor/huma/v2/sse"
 	helix "github.com/nicklaw5/helix/v2"
+
+	"github.com/lukeramljak/charsibot/blindbox"
+	"github.com/lukeramljak/charsibot/stats"
 )
 
 //go:embed all:web
@@ -31,31 +36,59 @@ type ServerConfig struct {
 	ClientID         string
 	ClientSecret     string
 	OAuthRedirectURI string
+	StatsService     *stats.Service
+	BlindBoxService  *blindbox.Service
+	Series           []blindbox.SeriesConfig
 }
 
 // Server handles SSE streaming and OAuth.
 type Server struct {
-	cfg     ServerConfig
-	logger  *slog.Logger
-	server  *http.Server
-	clients map[chan OverlayEvent]struct{}
-	mu      sync.RWMutex
+	cfg              ServerConfig
+	logger           *slog.Logger
+	server           *http.Server
+	clients          map[chan OverlayEvent]struct{}
+	mu               sync.RWMutex
+	stats            *stats.Service
+	blindbox         *blindbox.Service
+	series           []blindbox.SeriesConfig
+	adminChatMessage func(string)
 }
 
 func NewServer(cfg ServerConfig, logger *slog.Logger) *Server {
 	return &Server{
-		cfg:     cfg,
-		logger:  logger,
-		clients: make(map[chan OverlayEvent]struct{}),
+		cfg:      cfg,
+		logger:   logger,
+		clients:  make(map[chan OverlayEvent]struct{}),
+		stats:    cfg.StatsService,
+		blindbox: cfg.BlindBoxService,
+		series:   append([]blindbox.SeriesConfig(nil), cfg.Series...),
 	}
+}
+
+// SetAdminChatMessage configures how the local admin API posts a message to chat.
+func (s *Server) SetAdminChatMessage(send func(string)) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.adminChatMessage = send
+}
+
+func (s *Server) sendAdminChatMessage(message string) bool {
+	s.mu.RLock()
+	send := s.adminChatMessage
+	s.mu.RUnlock()
+	if send == nil {
+		return false
+	}
+	send(message)
+	return true
 }
 
 func (s *Server) Start() error {
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /events", s.handleSSE)
 	mux.HandleFunc("GET /health", s.handleHealth)
 	mux.HandleFunc("GET /oauth/start", s.handleOAuthStart)
 	mux.HandleFunc("GET /oauth/callback", s.handleOAuthCallback)
+	s.NewAPI(mux)
 
 	webContent, err := fs.Sub(webFS, "web")
 	if err != nil {
@@ -91,6 +124,20 @@ func (s *Server) Start() error {
 	return nil
 }
 
+// NewAPI registers the overlay and local admin API contracts on mux.
+//
+//nolint:ireturn // Huma exposes the adapter-agnostic API only as an interface.
+func (s *Server) NewAPI(mux *http.ServeMux) huma.API {
+	config := huma.DefaultConfig("Charsibot local admin API", "1.0.0")
+	config.DocsPath = "/api/admin/docs"
+	config.OpenAPIPath = "/api/admin/openapi"
+	config.DocsRenderer = huma.DocsRendererScalar
+	api := humago.New(mux, config)
+	s.registerOverlayEvents(api)
+	s.registerAdminRoutes(api)
+	return api
+}
+
 func (s *Server) Stop() {
 	if s.server != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
@@ -101,57 +148,62 @@ func (s *Server) Stop() {
 	}
 }
 
-func (s *Server) handleSSE(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Connection", "keep-alive")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("X-Accel-Buffering", "no")
+// ChatCommandData is the payload of a chat_command overlay event.
+type ChatCommandData struct {
+	Message string `json:"message"`
+}
 
-	flusher, ok := w.(http.Flusher)
-	if !ok {
-		http.Error(w, "streaming unsupported", http.StatusInternalServerError)
-		return
-	}
-
-	ch := make(chan OverlayEvent, eventChannelBuffer)
-	s.mu.Lock()
-	s.clients[ch] = struct{}{}
-	s.mu.Unlock()
-
-	defer func() {
+func (s *Server) registerOverlayEvents(api huma.API) {
+	sse.Register(api, huma.Operation{
+		OperationID: "overlay-events",
+		Method:      http.MethodGet,
+		Path:        "/events",
+		Summary:     "Stream overlay events",
+		Tags:        []string{"Overlay"},
+	}, map[string]any{
+		string(EventTypeChatCommand):        ChatCommandData{},
+		string(EventTypeCollectionDisplay):  blindbox.BlindBoxDisplayData{},
+		string(EventTypeBlindBoxRedemption): blindbox.BlindBoxRedemptionData{},
+	}, func(ctx context.Context, _ *struct{}, send sse.Sender) {
+		ch := make(chan OverlayEvent, eventChannelBuffer)
 		s.mu.Lock()
-		delete(s.clients, ch)
-		close(ch)
+		s.clients[ch] = struct{}{}
 		s.mu.Unlock()
-	}()
 
-	s.logger.Info("SSE client connected", "remote_addr", r.RemoteAddr)
+		defer func() {
+			s.mu.Lock()
+			delete(s.clients, ch)
+			close(ch)
+			s.mu.Unlock()
+		}()
 
-	fmt.Fprintf(w, ": ping\n\n")
-	flusher.Flush()
-
-	ping := time.NewTicker(pingInterval)
-	defer ping.Stop()
-
-	for {
-		select {
-		case <-r.Context().Done():
-			s.logger.Debug("SSE client disconnected")
+		s.logger.Info("SSE client connected")
+		if err := send.Comment("ping"); err != nil {
+			s.logger.Debug("SSE initial heartbeat failed", "err", err)
 			return
-		case <-ping.C:
-			fmt.Fprintf(w, ": ping\n\n")
-			flusher.Flush()
-		case event := <-ch:
-			data, err := json.Marshal(event.Data)
-			if err != nil {
-				s.logger.Error("failed to marshal event", "err", err)
-				continue
-			}
-			fmt.Fprintf(w, "event: %s\ndata: %s\n\n", event.Type, data)
-			flusher.Flush()
 		}
-	}
+
+		ping := time.NewTicker(pingInterval)
+		defer ping.Stop()
+
+		for {
+			select {
+			case <-ctx.Done():
+				s.logger.Debug("SSE client disconnected")
+				return
+			case <-ping.C:
+				if err := send.Comment("ping"); err != nil {
+					s.logger.Debug("SSE heartbeat failed", "err", err)
+					return
+				}
+			case event := <-ch:
+				if err := send.Data(event.Data); err != nil {
+					s.logger.Debug("SSE event send failed", "err", err, "type", event.Type)
+					return
+				}
+			}
+		}
+	})
 }
 
 func (s *Server) Broadcast(event OverlayEvent) {

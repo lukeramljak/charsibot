@@ -21,7 +21,7 @@ type SeriesConfig struct {
 	BoxSideFace     string    `json:"boxSideFace"`
 	DisplayColor    string    `json:"displayColor"`
 	TextColor       string    `json:"textColor"`
-	Plushies        []Plushie `json:"plushies"`
+	Plushies        []Plushie `json:"plushies"        nullable:"false"`
 }
 
 // Plushie is a catalog entry that can be awarded by a blind box.
@@ -176,6 +176,15 @@ func (s *Service) ResetCollection(ctx context.Context, userID, series string) er
 	return s.queries.ResetUserPlushies(ctx, db.ResetUserPlushiesParams{
 		UserID: userID,
 		Series: series,
+	})
+}
+
+// RemovePlushieFromCollection removes a single plushie from a user's collection.
+func (s *Service) RemovePlushieFromCollection(ctx context.Context, userID, series, key string) error {
+	return s.queries.DeleteUserPlushie(ctx, db.DeleteUserPlushieParams{
+		UserID: userID,
+		Series: series,
+		Key:    key,
 	})
 }
 
