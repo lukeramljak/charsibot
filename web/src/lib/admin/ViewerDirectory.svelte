@@ -52,7 +52,8 @@
       {#if onClose}
         <button class="button button-secondary" onclick={onClose}>Close</button>
       {/if}
-      <button class="button button-secondary" onclick={onRefresh} disabled={loading}>Refresh</button>
+      <button class="button button-secondary" onclick={onRefresh} disabled={loading}>Refresh</button
+      >
     </div>
   </div>
 
