@@ -11,6 +11,7 @@ export class ApplicationError extends Error {
 
   constructor(code: ApplicationErrorCode, message: string, options?: ErrorOptions) {
     super(message, options);
+
     this.name = 'ApplicationError';
     this.code = code;
   }

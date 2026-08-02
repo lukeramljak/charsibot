@@ -140,6 +140,19 @@ Avoid framework-style repository/service/interface layers that have only one cal
 - Convert existing function declarations when their file is otherwise being changed; do not create a standalone whole-repository style rewrite.
 - Constructors and language-level accessors are the only syntax exceptions because JavaScript does not provide arrow equivalents.
 
+### TypeScript import style
+
+- Use SvelteKit's conventional `$lib/...` alias for internal imports that would otherwise traverse parent directories.
+- Use the narrow `$catalog/...` alias for the shared root catalog during the Go rollback window.
+- Keep package, Node built-in, SvelteKit built-in, and generated virtual-module imports under their native specifiers.
+- Same-directory `./...` imports are allowed. Do not use `../...` import ladders.
+
+### Code layout
+
+- Use blank lines to separate guards, setup, transformation or mutation, and return phases within a function.
+- Prefer braced, multi-line guards when a function contains additional work; reserve one-line expressions for genuinely trivial callbacks.
+- Optimize for scanability rather than minimizing vertical space. Prettier owns mechanical formatting, but it does not replace intentional semantic spacing.
+
 ## Overlay transport decision
 
 The overlay listens to processed application events, not directly to Twitch:
@@ -275,42 +288,44 @@ Exclusive ownership: `web/src/lib/server/db/**`, `catalog/**`, `domain/stats/**`
 ### SQLite compatibility
 
 - [ ] Open one SQLite connection at `DB_PATH`.
-- [ ] Apply `foreign_keys=ON`, `journal_mode=WAL`, `page_size=4096`, `cache_size=-8000`, `synchronous=NORMAL`, `secure_delete=ON`, and `busy_timeout=30000`.
-- [ ] For an existing database, require Goose version exactly 7 and validate all required tables, columns, primary keys, and indexes without modifying schema/history.
-- [ ] Fail closed for Goose versions below/above 7, malformed history, and partial schemas.
-- [ ] For an empty database, create the consolidated final v7 schema in one transaction.
-- [ ] Reproduce the Goose metadata table and applied version rows 0 through 7 for fresh databases.
-- [ ] Do not replay historical migrations 1 through 7 and do not introduce v8.
-- [ ] Prove the final Go binary can reopen a Node-created fresh database.
-- [ ] Use transactions for multi-row stats initialization/reset and viewer deletion.
-- [ ] Checkpoint/close WAL cleanly during shutdown and backup preparation.
+- [x] Apply `foreign_keys=ON`, `journal_mode=WAL`, `page_size=4096`, `cache_size=-8000`, `synchronous=NORMAL`, `secure_delete=ON`, and `busy_timeout=30000`.
+- [x] For an existing database, require Goose version exactly 7 and validate all required tables, columns, primary keys, and indexes without modifying schema/history.
+- [x] Fail closed for Goose versions below/above 7, malformed history, and partial schemas.
+- [x] For an empty database, create the consolidated final v7 schema in one transaction.
+- [x] Reproduce the Goose metadata table and applied version rows 0 through 7 for fresh databases.
+- [x] Do not replay historical migrations 1 through 7 and do not introduce v8.
+- [x] Prove the final Go binary can reopen a Node-created fresh database.
+- [x] Use transactions for multi-row stats initialization/reset and viewer deletion.
+- [x] Checkpoint/close WAL cleanly during shutdown and backup preparation.
 
 ### Catalog
 
-- [ ] Port strict JSON decoding, including unknown-field and trailing-value rejection.
-- [ ] Port validation for required fields, positive weights, uniqueness, and non-empty catalogs.
-- [ ] Preserve stat/plushie `sortOrder` ordering and alphabetic series ordering.
-- [ ] Preserve absolute asset paths and relative `/assets/blind-box/<assetDir>/...` expansion.
-- [ ] Preserve the `olliepop` -> `olliepops` asset-directory distinction.
+- [x] Port strict JSON decoding, including unknown-field and trailing-value rejection.
+- [x] Port validation for required fields, positive weights, uniqueness, and non-empty catalogs.
+- [x] Preserve stat/plushie `sortOrder` ordering and alphabetic series ordering.
+- [x] Preserve absolute asset paths and relative `/assets/blind-box/<assetDir>/...` expansion.
+- [x] Preserve the `olliepop` -> `olliepops` asset-directory distinction.
 
 ### Repositories and services
 
-- [ ] Port viewer activity upsert, union listing, case-insensitive ordering, lookup, and transactional deletion.
-- [ ] Preserve UTC RFC3339-compatible activity timestamps.
-- [ ] Port stats create/read/set/adjust/reset, username synchronization, formatting, and leaderboard behavior.
-- [ ] Port blind-box grant/duplicate username sync/remove/reset/completion and weighted selection.
-- [ ] Inject clock and RNG; do not use global time/randomness in tests.
-- [ ] Treat collection keys as membership; do not accidentally depend on current unspecified SQL order.
-- [ ] Keep event broadcasting and chat sending outside domain services.
+- [x] Port viewer activity upsert, union listing, case-insensitive ordering, lookup, and transactional deletion.
+- [x] Preserve UTC RFC3339-compatible activity timestamps.
+- [x] Port stats create/read/set/adjust/reset, username synchronization, formatting, and leaderboard behavior.
+- [x] Port blind-box grant/duplicate username sync/remove/reset/completion and weighted selection.
+- [x] Inject clock and RNG; do not use global time/randomness in tests.
+- [x] Treat collection keys as membership; do not accidentally depend on current unspecified SQL order.
+- [x] Keep event broadcasting and chat sending outside domain services.
 
 ### Data/domain gate
 
 - [ ] Fresh DB and copied v7 DB tests pass.
-- [ ] Invalid schema/version rejection tests pass.
-- [ ] Every connection pragma is asserted.
+- [x] Invalid schema/version rejection tests pass.
+- [x] Every connection pragma is asserted.
 - [ ] Go-vs-TypeScript golden outputs match for viewers, stats, leaderboard, formatting, collections, duplicates, and completion.
-- [ ] Weighted-selection boundary tests are deterministic and exact.
-- [ ] JavaScript number safety for SQLite integer values is explicitly tested or bounded.
+- [x] Weighted-selection boundary tests are deterministic and exact.
+- [x] JavaScript number safety for SQLite integer values is explicitly tested or bounded.
+
+Checkpoint 2 implementation note: SvelteKit bundles the existing root `catalog/config` JSON files directly, so Go and Node share one canonical catalog throughout the rollback window. A sanitized production-v7 fixture and explicit cross-language golden-output suite remain Wave 2A gate items rather than being inferred from synthetic fixtures.
 
 ## Wave 2B: Twitch and bot runtime
 

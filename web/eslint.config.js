@@ -38,4 +38,20 @@ export default defineConfig(
       },
     },
   },
+  {
+    files: ['src/lib/contracts/**/*.ts', 'src/lib/server/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['$/*', '../*'],
+              message: 'Use $lib for imports that would traverse parent directories.',
+            },
+          ],
+        },
+      ],
+    },
+  },
 );

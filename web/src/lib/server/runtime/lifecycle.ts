@@ -1,4 +1,4 @@
-import type { ApplicationRuntime, RuntimeFactory } from './contracts';
+import type { ApplicationRuntime, RuntimeFactory } from '$lib/server/runtime/contracts';
 
 export type LifecycleState = 'idle' | 'starting' | 'running' | 'stopping' | 'stopped' | 'failed';
 
@@ -15,7 +15,10 @@ export class ApplicationLifecycle {
   }
 
   start = (): Promise<ApplicationRuntime> => {
-    if (this.#startPromise) return this.#startPromise;
+    if (this.#startPromise) {
+      return this.#startPromise;
+    }
+
     if (this.#state === 'stopping' || this.#state === 'stopped') {
       return Promise.reject(new Error('application runtime has already stopped'));
     }
@@ -24,7 +27,11 @@ export class ApplicationLifecycle {
     this.#startPromise = this.createRuntime().then(
       (runtime) => {
         this.#runtime = runtime;
-        if (this.#state === 'starting') this.#state = 'running';
+
+        if (this.#state === 'starting') {
+          this.#state = 'running';
+        }
+
         return runtime;
       },
       (error: unknown) => {
@@ -37,10 +44,13 @@ export class ApplicationLifecycle {
   };
 
   stop = (reason: string): Promise<void> => {
-    if (this.#stopPromise) return this.#stopPromise;
+    if (this.#stopPromise) {
+      return this.#stopPromise;
+    }
 
     this.#state = 'stopping';
     this.#stopPromise = this.stopOnce(reason);
+
     return this.#stopPromise;
   };
 
@@ -53,6 +63,7 @@ export class ApplicationLifecycle {
           return;
         }
       }
+
       await this.#runtime?.stop(reason);
     } finally {
       this.#state = 'stopped';

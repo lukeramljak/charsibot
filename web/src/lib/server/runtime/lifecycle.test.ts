@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { ApplicationLifecycle } from './lifecycle';
+import { ApplicationLifecycle } from '$lib/server/runtime/lifecycle';
 
 describe('ApplicationLifecycle', () => {
   it('starts once for concurrent callers', async () => {

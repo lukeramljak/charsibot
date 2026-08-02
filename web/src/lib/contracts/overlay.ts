@@ -1,4 +1,4 @@
-import type { BlindBoxSeries, Plushie } from './catalog';
+import type { BlindBoxSeries, Plushie } from '$lib/contracts/catalog';
 
 export const overlayEventTypes = [
   'chat_command',

@@ -1,4 +1,4 @@
-import type { ApplicationRuntime } from './contracts';
+import type { ApplicationRuntime } from '$lib/server/runtime/contracts';
 
 /**
  * The dependency container is filled in by the data and Twitch checkpoints.
