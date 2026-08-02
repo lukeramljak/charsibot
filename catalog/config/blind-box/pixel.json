@@ -1,0 +1,77 @@
+{
+  "series": "pixel",
+  "assetDir": "pixel",
+  "redemptionTitle": "Game Series Blind Box",
+  "name": "Pixel Pups",
+  "revealSound": "reveal.mp3",
+  "boxFrontFace": "box-front.png",
+  "boxSideFace": "box-side.png",
+  "displayColor": "#7793c9",
+  "textColor": "#ffffff",
+  "plushies": [
+    {
+      "key": "ollie-of-rivia",
+      "sortOrder": 1,
+      "weight": 23,
+      "name": "Ollie of Rivia",
+      "image": "ollie-of-rivia.png",
+      "emptyImage": "ollie-of-rivia-blank.png"
+    },
+    {
+      "key": "cooper-silverpaw",
+      "sortOrder": 2,
+      "weight": 23,
+      "name": "Cooper Silverpaw",
+      "image": "cooper-silverpaw.png",
+      "emptyImage": "cooper-silverpaw-blank.png"
+    },
+    {
+      "key": "lethal-coopany",
+      "sortOrder": 3,
+      "weight": 23,
+      "name": "Lethal Coopany",
+      "image": "lethal-coopany.png",
+      "emptyImage": "lethal-coopany-blank.png"
+    },
+    {
+      "key": "cult-of-ollie",
+      "sortOrder": 4,
+      "weight": 23,
+      "name": "Cult of Ollie",
+      "image": "cult-of-ollie.png",
+      "emptyImage": "cult-of-ollie-blank.png"
+    },
+    {
+      "key": "legend-of-cooper",
+      "sortOrder": 5,
+      "weight": 23,
+      "name": "Legend of Cooper",
+      "image": "legend-of-cooper.png",
+      "emptyImage": "legend-of-cooper-blank.png"
+    },
+    {
+      "key": "cuber",
+      "sortOrder": 6,
+      "weight": 23,
+      "name": "Cuber",
+      "image": "cuber.png",
+      "emptyImage": "cuber-blank.png"
+    },
+    {
+      "key": "repollie",
+      "sortOrder": 7,
+      "weight": 23,
+      "name": "R.E.P.O.L.L.I.E",
+      "image": "repollie.png",
+      "emptyImage": "repollie-blank.png"
+    },
+    {
+      "key": "secret",
+      "sortOrder": 8,
+      "weight": 7,
+      "name": "Secret",
+      "image": "secret.png",
+      "emptyImage": "secret-blank.png"
+    }
+  ]
+}
