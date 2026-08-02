@@ -47,11 +47,19 @@ type AdminGrantResult struct {
 type adminUsersResponse struct {
 	Users []stats.User `json:"users" nullable:"false"`
 }
-type adminUserOutput struct{ Body AdminUserResponse }
-type adminUsersOutput struct{ Body adminUsersResponse }
+
+type adminUserOutput struct {
+	Body AdminUserResponse
+}
+
+type adminUsersOutput struct {
+	Body adminUsersResponse
+}
+
 type adminUserInput struct {
 	UserID string `path:"userID" doc:"Twitch user ID"`
 }
+
 type adminStatInput struct {
 	UserID   string `path:"userID"`
 	StatName string `path:"statName"`
@@ -60,12 +68,14 @@ type adminStatInput struct {
 		Value int64  `json:"value"`
 	}
 }
+
 type adminChatInput struct {
 	UserID string `path:"userID"`
 	Body   struct {
 		DisplayInChat bool `json:"displayInChat"`
 	}
 }
+
 type adminPlushieInput struct {
 	UserID string `path:"userID"`
 	Series string `path:"series"`
@@ -74,11 +84,13 @@ type adminPlushieInput struct {
 		TriggerOverlay bool `json:"triggerOverlay"`
 	}
 }
+
 type adminPlushiePathInput struct {
 	UserID string `path:"userID"`
 	Series string `path:"series"`
 	Key    string `path:"key"`
 }
+
 type adminRandomPlushieInput struct {
 	UserID string `path:"userID"`
 	Series string `path:"series"`
@@ -86,6 +98,7 @@ type adminRandomPlushieInput struct {
 		TriggerOverlay bool `json:"triggerOverlay"`
 	}
 }
+
 type adminCollectionInput struct {
 	UserID string `path:"userID"`
 	Series string `path:"series"`
@@ -429,6 +442,7 @@ func (s *Server) ensureChat(display bool) error {
 	}
 	return nil
 }
+
 func (s *Server) displayStats(ctx context.Context, user stats.User, display bool) error {
 	if !display {
 		return nil
@@ -440,6 +454,7 @@ func (s *Server) displayStats(ctx context.Context, user stats.User, display bool
 	s.sendAdminChatMessage(stats.FormatStats(user.Username, values))
 	return nil
 }
+
 func (s *Server) requireLocalAdmin(remoteAddr string) error {
 	if s.stats == nil || s.blindbox == nil {
 		return huma.Error503ServiceUnavailable("admin is not configured")
@@ -450,12 +465,18 @@ func (s *Server) requireLocalAdmin(remoteAddr string) error {
 	}
 	return nil
 }
+
 func (s *Server) hasAdminChatMessage() bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.adminChatMessage != nil
 }
-func (s *Server) hasStat(name string) bool { _, found := s.statDefinition(name); return found }
+
+func (s *Server) hasStat(name string) bool {
+	_, found := s.statDefinition(name)
+	return found
+}
+
 func (s *Server) statDefinition(name string) (stats.Definition, bool) {
 	for _, stat := range s.stats.Definitions() {
 		if stat.Name == name {
@@ -464,6 +485,7 @@ func (s *Server) statDefinition(name string) (stats.Definition, bool) {
 	}
 	return stats.Definition{}, false
 }
+
 func (s *Server) hasSeries(series string) bool {
 	for _, cfg := range s.series {
 		if cfg.Series == series {
@@ -472,10 +494,12 @@ func (s *Server) hasSeries(series string) bool {
 	}
 	return false
 }
+
 func (s *Server) hasPlushie(series, key string) bool {
 	_, _, found := s.plushieInSeries(series, key)
 	return found
 }
+
 func (s *Server) plushieInSeries(series, key string) (blindbox.SeriesConfig, blindbox.Plushie, bool) {
 	for _, cfg := range s.series {
 		if cfg.Series == series {
@@ -488,6 +512,7 @@ func (s *Server) plushieInSeries(series, key string) (blindbox.SeriesConfig, bli
 	}
 	return blindbox.SeriesConfig{}, blindbox.Plushie{}, false
 }
+
 func (s *Server) adminError(action string, err error) error {
 	s.logger.Error("admin request failed", slog.String("action", action), slog.Any("err", err))
 	return huma.Error500InternalServerError("admin request failed")
@@ -497,7 +522,7 @@ func (s *Server) adminError(action string, err error) error {
 // registered through Huma. They are deliberately not registered as routes.
 type adminUserResponse = AdminUserResponse
 
-func (s *Server) writeLegacyAdmin(w http.ResponseWriter, r *http.Request, response *adminUserOutput, err error) {
+func (s *Server) writeLegacyAdmin(w http.ResponseWriter, _ *http.Request, response *adminUserOutput, err error) {
 	if err != nil {
 		status := http.StatusInternalServerError
 		if statusErr, ok := err.(huma.StatusError); ok {
@@ -518,32 +543,38 @@ func (s *Server) handleAdminUser(w http.ResponseWriter, r *http.Request) {
 	out, err := s.getAdminUser(r.Context(), &adminUserInput{UserID: r.PathValue("userID")})
 	s.writeLegacyAdmin(w, r, out, err)
 }
+
 func (s *Server) handleAdminRandomStat(w http.ResponseWriter, r *http.Request) {
 	input := &adminChatInput{UserID: r.PathValue("userID")}
 	_ = json.NewDecoder(r.Body).Decode(&input.Body)
 	out, err := s.grantAdminRandomStat(r.Context(), input)
 	s.writeLegacyAdmin(w, r, out, err)
 }
+
 func (s *Server) handleAdminResetStats(w http.ResponseWriter, r *http.Request) {
 	input := &adminChatInput{UserID: r.PathValue("userID")}
 	_ = json.NewDecoder(r.Body).Decode(&input.Body)
 	out, err := s.resetAdminStats(r.Context(), input)
 	s.writeLegacyAdmin(w, r, out, err)
 }
+
 func (s *Server) handleAdminExplode(w http.ResponseWriter, r *http.Request) {
 	out, err := s.explodeAdminUser(r.Context(), &adminUserInput{UserID: r.PathValue("userID")})
 	s.writeLegacyAdmin(w, r, out, err)
 }
+
 func (s *Server) handleAdminUndoExplode(w http.ResponseWriter, r *http.Request) {
 	out, err := s.undoAdminExplode(r.Context(), &adminUserInput{UserID: r.PathValue("userID")})
 	s.writeLegacyAdmin(w, r, out, err)
 }
+
 func (s *Server) handleAdminRandomPlushie(w http.ResponseWriter, r *http.Request) {
 	input := &adminRandomPlushieInput{UserID: r.PathValue("userID"), Series: r.PathValue("series")}
 	_ = json.NewDecoder(r.Body).Decode(&input.Body)
 	out, err := s.grantAdminRandomPlushie(r.Context(), input)
 	s.writeLegacyAdmin(w, r, out, err)
 }
+
 func (s *Server) handleAdminGrantPlushie(w http.ResponseWriter, r *http.Request) {
 	input := &adminPlushieInput{UserID: r.PathValue("userID"), Series: r.PathValue("series"), Key: r.PathValue("key")}
 	_ = json.NewDecoder(r.Body).Decode(&input.Body)
