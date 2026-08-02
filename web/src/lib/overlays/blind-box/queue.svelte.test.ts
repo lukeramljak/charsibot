@@ -15,7 +15,6 @@ function makeRedemption(overrides: Partial<BlindBoxRedemptionEvent> = {}): Blind
     type: 'blindbox_redemption',
     username: 'user',
     plushie: {
-      id: 1,
       series: 'test',
       key: 'plushie-01',
       sortOrder: 0,
