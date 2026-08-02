@@ -79,7 +79,7 @@
 
 <section class="flex flex-col gap-4" aria-labelledby="blind-boxes-heading">
   <h3 class="detail-section-title" id="blind-boxes-heading">Blind boxes</h3>
-  <div class="grid gap-6 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+  <div class="grid gap-6 lg:grid-cols-2 2xl:grid-cols-3">
     {#each collections as collection, index (collection.config.series)}
       {@const menuID = `collection-menu-${index}`}
       {@const menuAnchor = `--collection-menu-${index}`}
@@ -163,8 +163,8 @@
               aria-label={owned ? `Remove ${plushie.name}` : `Grant ${plushie.name}`}
               aria-pressed={owned}
             >
-              <img class="h-16 w-16 object-contain" src={plushie.image} alt="" />
-              <span class="block truncate text-center text-xs">{plushie.name}</span>
+              <img class="size-16 object-contain" src={plushie.image} alt="" />
+              <span class="block truncate text-center text-xs w-full">{plushie.name}</span>
             </button>
           {/each}
         </div>
