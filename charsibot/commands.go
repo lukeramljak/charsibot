@@ -26,7 +26,11 @@ func Commands(seriesConfigs []blindbox.SeriesConfig) map[string]Command {
 					b.logger.Error("failed to get completed collections", "err", err)
 					return
 				}
-				b.SendMessage(SendMessageParams{Message: "The following chatters have completed the below blind box collections:"})
+				b.SendMessage(
+					SendMessageParams{
+						Message: "The following chatters have completed the below blind box collections:",
+					},
+				)
 				for _, row := range collections {
 					b.SendMessage(SendMessageParams{Message: fmt.Sprintf("%s: %s", row.SeriesName, row.Usernames)})
 				}
@@ -57,7 +61,12 @@ func Commands(seriesConfigs []blindbox.SeriesConfig) map[string]Command {
 					b.logger.Error("failed to get stats", "err", err, "user", event.ChatterUserName)
 					return
 				}
-				b.SendMessage(SendMessageParams{Message: stats.FormatStats(event.ChatterUserName, userStats), ReplyParentMessageID: event.MessageId})
+				b.SendMessage(
+					SendMessageParams{
+						Message:              stats.FormatStats(event.ChatterUserName, userStats),
+						ReplyParentMessageID: event.MessageId,
+					},
+				)
 			},
 		},
 	}
@@ -71,11 +80,30 @@ func Commands(seriesConfigs []blindbox.SeriesConfig) map[string]Command {
 				slots, err := b.blindboxService.GetCollection(ctx, event.ChatterUserId, cfg.Series)
 				if err != nil {
 					b.logger.Error("failed to get collection", "err", err, "user", event.ChatterUserName)
-					b.SendMessage(SendMessageParams{Message: fmt.Sprintf("Failed to get %s's collection", event.ChatterUserName)})
+					b.SendMessage(
+						SendMessageParams{Message: fmt.Sprintf("Failed to get %s's collection", event.ChatterUserName)},
+					)
 					return
 				}
-				b.broadcast(server.OverlayEvent{Type: server.EventTypeCollectionDisplay, Data: blindbox.BlindBoxDisplayData{Username: event.ChatterUserName, Collection: slots, Config: cfg}})
-				b.logger.Info("displaying collection", "user", event.ChatterUserName, "series", cfg.Series, "size", len(slots))
+				b.broadcast(
+					server.OverlayEvent{
+						Type: server.EventTypeCollectionDisplay,
+						Data: blindbox.BlindBoxDisplayData{
+							Username:   event.ChatterUserName,
+							Collection: slots,
+							Config:     cfg,
+						},
+					},
+				)
+				b.logger.Info(
+					"displaying collection",
+					"user",
+					event.ChatterUserName,
+					"series",
+					cfg.Series,
+					"size",
+					len(slots),
+				)
 			},
 		}
 	}

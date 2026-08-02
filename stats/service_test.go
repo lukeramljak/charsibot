@@ -83,16 +83,16 @@ func TestListUsersIncludesStatsAndCollectionUsersInCaseInsensitiveOrder(t *testi
 		t.Fatal(err)
 	}
 	ctx := context.Background()
-	if _, err := svc.GetOrCreateStats(ctx, "stats-user", "Zulu"); err != nil {
-		t.Fatal(err)
+	if _, initErr := svc.GetOrCreateStats(ctx, "stats-user", "Zulu"); initErr != nil {
+		t.Fatal(initErr)
 	}
-	if err := queries.UpsertUserPlushie(ctx, db.UpsertUserPlushieParams{
+	if upsertErr := queries.UpsertUserPlushie(ctx, db.UpsertUserPlushieParams{
 		UserID:   "collection-user",
 		Username: "alpha",
 		Series:   "coobubu",
 		Key:      "cutey",
-	}); err != nil {
-		t.Fatal(err)
+	}); upsertErr != nil {
+		t.Fatal(upsertErr)
 	}
 
 	users, err := svc.ListUsers(ctx)

@@ -11,7 +11,8 @@ import (
 )
 
 func main() {
-	api := server.NewServer(server.ServerConfig{}, slog.New(slog.NewTextHandler(os.Stderr, nil))).NewAPI(http.NewServeMux())
+	api := server.NewServer(server.ServerConfig{}, slog.New(slog.NewTextHandler(os.Stderr, nil))).
+		NewAPI(http.NewServeMux())
 	document, err := api.OpenAPI().MarshalJSON()
 	if err != nil {
 		panic(fmt.Errorf("marshal OpenAPI document: %w", err))

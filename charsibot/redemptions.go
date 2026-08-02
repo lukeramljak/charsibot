@@ -97,14 +97,22 @@ func redeemBlindBox(ctx context.Context, b *Bot, userID, username string, cfg bl
 	plushie, err := blindbox.PickPlushie(cfg.Plushies)
 	if err != nil {
 		b.logger.Error("failed to pick plushie", "err", err, "series", cfg.Series)
-		b.SendMessage(SendMessageParams{Message: fmt.Sprintf("@%s sorry, the redemption failed. Please ping @modservo.", username)})
+		b.SendMessage(
+			SendMessageParams{
+				Message: fmt.Sprintf("@%s sorry, the redemption failed. Please ping @modservo.", username),
+			},
+		)
 		return
 	}
 
 	result, err := b.blindboxService.Redeem(ctx, userID, username, cfg.Series, plushie.Key)
 	if err != nil {
 		b.logger.Error("failed to redeem blind box", "err", err, "user", username)
-		b.SendMessage(SendMessageParams{Message: fmt.Sprintf("@%s sorry, the redemption failed. Please ping @modservo.", username)})
+		b.SendMessage(
+			SendMessageParams{
+				Message: fmt.Sprintf("@%s sorry, the redemption failed. Please ping @modservo.", username),
+			},
+		)
 		return
 	}
 
@@ -118,5 +126,15 @@ func redeemBlindBox(ctx context.Context, b *Bot, userID, username string, cfg bl
 			Config:     cfg,
 		},
 	})
-	b.logger.Info("blind box redeemed", "user", username, "series", cfg.Series, "plushie", plushie.Key, "is_new", result.IsNew)
+	b.logger.Info(
+		"blind box redeemed",
+		"user",
+		username,
+		"series",
+		cfg.Series,
+		"plushie",
+		plushie.Key,
+		"is_new",
+		result.IsNew,
+	)
 }

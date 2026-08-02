@@ -54,6 +54,17 @@ type Server struct {
 	adminChatMessage func(string)
 }
 
+func NewServer(cfg ServerConfig, logger *slog.Logger) *Server {
+	return &Server{
+		cfg:      cfg,
+		logger:   logger,
+		clients:  make(map[chan OverlayEvent]struct{}),
+		stats:    cfg.StatsService,
+		blindbox: cfg.BlindBoxService,
+		series:   append([]blindbox.SeriesConfig(nil), cfg.Series...),
+	}
+}
+
 // SetAdminChatMessage configures how the local admin API posts a message to chat.
 func (s *Server) SetAdminChatMessage(send func(string)) {
 	s.mu.Lock()
@@ -70,17 +81,6 @@ func (s *Server) sendAdminChatMessage(message string) bool {
 	}
 	send(message)
 	return true
-}
-
-func NewServer(cfg ServerConfig, logger *slog.Logger) *Server {
-	return &Server{
-		cfg:      cfg,
-		logger:   logger,
-		clients:  make(map[chan OverlayEvent]struct{}),
-		stats:    cfg.StatsService,
-		blindbox: cfg.BlindBoxService,
-		series:   append([]blindbox.SeriesConfig(nil), cfg.Series...),
-	}
 }
 
 func (s *Server) Start() error {
@@ -125,6 +125,8 @@ func (s *Server) Start() error {
 }
 
 // NewAPI registers the overlay and local admin API contracts on mux.
+//
+//nolint:ireturn // Huma exposes the adapter-agnostic API only as an interface.
 func (s *Server) NewAPI(mux *http.ServeMux) huma.API {
 	config := huma.DefaultConfig("Charsibot local admin API", "1.0.0")
 	config.DocsPath = "/api/admin/docs"

@@ -80,7 +80,13 @@ func TestAdminUserIncludesDefaultStatsForCollectionOnlyUser(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := blindboxService.AddPlushieToCollection(t.Context(), "viewer-1", "viewer", "coobubu", "cutey"); err != nil {
+	if _, _, err := blindboxService.AddPlushieToCollection(
+		t.Context(),
+		"viewer-1",
+		"viewer",
+		"coobubu",
+		"cutey",
+	); err != nil {
 		t.Fatal(err)
 	}
 
@@ -126,8 +132,8 @@ func TestAdminRandomStatIncrementsOneStat(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := statsService.GetOrCreateStats(t.Context(), "viewer-1", "viewer"); err != nil {
-		t.Fatal(err)
+	if _, initErr := statsService.GetOrCreateStats(t.Context(), "viewer-1", "viewer"); initErr != nil {
+		t.Fatal(initErr)
 	}
 
 	var chatMessage string
@@ -137,7 +143,11 @@ func TestAdminRandomStatIncrementsOneStat(t *testing.T) {
 		Series:          appCatalog.Series,
 	}, slog.New(slog.NewTextHandler(testWriter{t}, nil)))
 	srv.SetAdminChatMessage(func(message string) { chatMessage = message })
-	request := httptest.NewRequest(http.MethodPost, "/api/admin/users/viewer-1/stats/random", strings.NewReader(`{"displayInChat":true}`))
+	request := httptest.NewRequest(
+		http.MethodPost,
+		"/api/admin/users/viewer-1/stats/random",
+		strings.NewReader(`{"displayInChat":true}`),
+	)
 	request.RemoteAddr = "127.0.0.1:12345"
 	request.SetPathValue("userID", "viewer-1")
 	response := httptest.NewRecorder()
@@ -148,8 +158,8 @@ func TestAdminRandomStatIncrementsOneStat(t *testing.T) {
 		t.Fatalf("status = %d, body = %s", response.Code, response.Body.String())
 	}
 	var body adminUserResponse
-	if err := json.NewDecoder(response.Body).Decode(&body); err != nil {
-		t.Fatal(err)
+	if decodeErr := json.NewDecoder(response.Body).Decode(&body); decodeErr != nil {
+		t.Fatal(decodeErr)
 	}
 	var total int64
 	for _, stat := range body.Stats {
@@ -186,11 +196,16 @@ func TestAdminResetStatsRestoresDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := statsService.GetOrCreateStats(t.Context(), "viewer-1", "viewer"); err != nil {
-		t.Fatal(err)
+	if _, initErr := statsService.GetOrCreateStats(t.Context(), "viewer-1", "viewer"); initErr != nil {
+		t.Fatal(initErr)
 	}
-	if err := statsService.ModifyStatValue(t.Context(), "viewer-1", appCatalog.Stats[0].Name, 20); err != nil {
-		t.Fatal(err)
+	if modifyErr := statsService.ModifyStatValue(
+		t.Context(),
+		"viewer-1",
+		appCatalog.Stats[0].Name,
+		20,
+	); modifyErr != nil {
+		t.Fatal(modifyErr)
 	}
 
 	var chatMessage string
@@ -200,7 +215,11 @@ func TestAdminResetStatsRestoresDefaults(t *testing.T) {
 		Series:          appCatalog.Series,
 	}, slog.New(slog.NewTextHandler(testWriter{t}, nil)))
 	srv.SetAdminChatMessage(func(message string) { chatMessage = message })
-	request := httptest.NewRequest(http.MethodPost, "/api/admin/users/viewer-1/stats/reset", strings.NewReader(`{"displayInChat":true}`))
+	request := httptest.NewRequest(
+		http.MethodPost,
+		"/api/admin/users/viewer-1/stats/reset",
+		strings.NewReader(`{"displayInChat":true}`),
+	)
 	request.RemoteAddr = "127.0.0.1:12345"
 	request.SetPathValue("userID", "viewer-1")
 	response := httptest.NewRecorder()
@@ -244,8 +263,8 @@ func TestAdminExplodeReducesPenisAndDisplaysStats(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := statsService.GetOrCreateStats(t.Context(), "viewer-1", "viewer"); err != nil {
-		t.Fatal(err)
+	if _, initErr := statsService.GetOrCreateStats(t.Context(), "viewer-1", "viewer"); initErr != nil {
+		t.Fatal(initErr)
 	}
 
 	var chatMessage string
@@ -327,7 +346,11 @@ func TestAdminRandomPlushieGrantsFromSeries(t *testing.T) {
 		BlindBoxService: blindboxService,
 		Series:          appCatalog.Series,
 	}, slog.New(slog.NewTextHandler(testWriter{t}, nil)))
-	request := httptest.NewRequest(http.MethodPost, "/api/admin/users/viewer-1/collections/"+series.Series+"/random", strings.NewReader(`{"triggerOverlay":true}`))
+	request := httptest.NewRequest(
+		http.MethodPost,
+		"/api/admin/users/viewer-1/collections/"+series.Series+"/random",
+		strings.NewReader(`{"triggerOverlay":true}`),
+	)
 	request.RemoteAddr = "127.0.0.1:12345"
 	request.SetPathValue("userID", "viewer-1")
 	request.SetPathValue("series", series.Series)
@@ -390,7 +413,11 @@ func TestAdminGrantPlushieTriggersRedemptionEvent(t *testing.T) {
 		BlindBoxService: blindboxService,
 		Series:          appCatalog.Series,
 	}, slog.New(slog.NewTextHandler(testWriter{t}, nil)))
-	request := httptest.NewRequest(http.MethodPut, "/api/admin/users/viewer-1/collections/"+series.Series+"/"+plushie.Key, strings.NewReader(`{"triggerOverlay":true}`))
+	request := httptest.NewRequest(
+		http.MethodPut,
+		"/api/admin/users/viewer-1/collections/"+series.Series+"/"+plushie.Key,
+		strings.NewReader(`{"triggerOverlay":true}`),
+	)
 	request.RemoteAddr = "127.0.0.1:12345"
 	request.SetPathValue("userID", "viewer-1")
 	request.SetPathValue("series", series.Series)
@@ -434,7 +461,13 @@ func TestAdminRemovePlushieDoesNotRequireBody(t *testing.T) {
 	if _, err := statsService.GetOrCreateStats(t.Context(), "viewer-1", "viewer"); err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := blindboxService.AddPlushieToCollection(t.Context(), "viewer-1", "viewer", series.Series, plushie.Key); err != nil {
+	if _, _, err := blindboxService.AddPlushieToCollection(
+		t.Context(),
+		"viewer-1",
+		"viewer",
+		series.Series,
+		plushie.Key,
+	); err != nil {
 		t.Fatal(err)
 	}
 
@@ -447,7 +480,11 @@ func TestAdminRemovePlushieDoesNotRequireBody(t *testing.T) {
 	srv.NewAPI(mux)
 	events := make(chan OverlayEvent, 1)
 	srv.clients[events] = struct{}{}
-	request := httptest.NewRequest(http.MethodPost, "/api/admin/users/viewer-1/collections/"+series.Series+"/display", nil)
+	request := httptest.NewRequest(
+		http.MethodPost,
+		"/api/admin/users/viewer-1/collections/"+series.Series+"/display",
+		nil,
+	)
 	request.RemoteAddr = "127.0.0.1:12345"
 	response := httptest.NewRecorder()
 	mux.ServeHTTP(response, request)
@@ -462,7 +499,11 @@ func TestAdminRemovePlushieDoesNotRequireBody(t *testing.T) {
 	default:
 		t.Error("expected collection display event")
 	}
-	request = httptest.NewRequest(http.MethodDelete, "/api/admin/users/viewer-1/collections/"+series.Series+"/"+plushie.Key, nil)
+	request = httptest.NewRequest(
+		http.MethodDelete,
+		"/api/admin/users/viewer-1/collections/"+series.Series+"/"+plushie.Key,
+		nil,
+	)
 	request.RemoteAddr = "127.0.0.1:12345"
 	response = httptest.NewRecorder()
 	mux.ServeHTTP(response, request)
