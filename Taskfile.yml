@@ -5,13 +5,65 @@ version: '3'
 dotenv: ['.env']
 
 tasks:
+  # --- Node (SvelteKit) tasks ---
+
+  web:install:
+    desc: Install web dependencies
+    dir: web
+    cmds:
+      - pnpm install --frozen-lockfile
+
+  web:dev:
+    desc: Run SvelteKit dev server
+    dir: web
+    cmds:
+      - pnpm run dev
+
+  web:build:
+    desc: Build SvelteKit app and server entrypoint
+    dir: web
+    cmds:
+      - pnpm run build
+
+  web:start:
+    desc: Run the built Node server
+    dir: web
+    cmds:
+      - node build/server.js
+
+  web:check:
+    desc: Run svelte-check
+    dir: web
+    cmds:
+      - pnpm run check
+
+  web:lint:
+    desc: Run prettier and eslint
+    dir: web
+    cmds:
+      - pnpm run lint
+
+  web:test:
+    desc: Run vitest
+    dir: web
+    cmds:
+      - pnpm run test
+
+  web:format:
+    desc: Run prettier --write
+    dir: web
+    cmds:
+      - pnpm run format
+
+  # --- Go tasks (kept until Wave 6) ---
+
   vet:
     desc: Run go vet
     cmds:
       - go vet ./...
 
   build:web:
-    desc: Build the web frontend
+    desc: Build the web frontend (for Go binary)
     dir: web
     cmds:
       - pnpm install --frozen-lockfile
@@ -20,29 +72,29 @@ tasks:
       - cp -r build ../server/web
 
   build:
-    desc: Build the binary
+    desc: Build the Go binary
     deps: [vet, build:web]
     cmds:
       - go build -o bin/charsibot ./cmd/charsibot
 
   run:
-    desc: Build and run the binary
+    desc: Build and run the Go binary
     deps: [build]
     cmds:
       - ./bin/charsibot
 
   dev:
-    desc: Run with live reloading
+    desc: Run Go binary with live reloading
     cmds:
       - gow run ./cmd/charsibot
 
   test:
-    desc: Run tests
+    desc: Run Go tests
     cmds:
       - go test ./...
 
   test-watch:
-    desc: Run tests with live reloading
+    desc: Run Go tests with live reloading
     cmds:
       - gow test ./...
 

@@ -6,7 +6,7 @@ Twitch bot and overlay for viewer stats and blind-box collections. Single-replic
 
 ## Migration status
 
-Waves 0–2C are done (foundation, data/domain, Twitch/bot, admin remote functions). **Wave 3 is next:** event bus, SSE, OAuth, health routes, and runtime integration (wiring `setServices()` at startup). Read only the Wave 3 section of `MIGRATION.md` — earlier waves are complete.
+Waves 0–4 are done (foundation, data/domain, Twitch/bot, admin remote functions, overlay/SSE/OAuth/health, runtime integration, deployment/CI). **Wave 5 is next:** controlled cutover. Read only the Wave 5 section of `MIGRATION.md` — earlier waves are complete.
 
 ## Commands
 
@@ -15,7 +15,7 @@ All commands run from `web/`.
 ```
 pnpm check        # svelte-kit sync + svelte-check (type checking)
 pnpm lint         # prettier --check + eslint
-pnpm test         # vitest run (130 tests)
+pnpm test         # vitest run (165 tests)
 pnpm build        # vite build (adapter-node) + server entrypoint bundle
 pnpm format       # prettier --write
 ```
@@ -45,12 +45,17 @@ web/                     SvelteKit application (all new work goes here)
         runtime/
           container.ts   Module-level service registry (getServices/setServices)
           contracts.ts   Readiness, TwitchRuntime, ApplicationRuntime interfaces
-          create.ts      Runtime factory (currently a stub — Wave 3 wires this)
+          create.ts      Runtime factory (DB, catalog, services, bus, Twitch)
           lifecycle.ts   Idempotent start/stop lifecycle controller
         twitch/          Token, Helix, conduit, EventSub, WebSocket transport
+        events/          Typed overlay event bus and SSE formatting
     routes/
       admin/             Admin page (uses remote functions, ssr=false)
-      blind-box/         Overlay page (still uses openapi-fetch until Wave 3)
+      blind-box/         Overlay page
+      events/            SSE streaming route
+      health/            Liveness probe (200 OK)
+      ready/             Readiness probe (database, catalog, Twitch)
+      oauth/             Twitch OAuth start/callback pages
 ```
 
 ## Key interfaces

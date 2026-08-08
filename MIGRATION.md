@@ -463,15 +463,17 @@ Checkpoint 7 implementation note: Wave 3 is complete. The Twitch chat sender is 
 
 ## Wave 4: deployment and CI
 
-- [ ] Replace the Go/static Docker build with pnpm build plus production dependencies and the native SQLite runtime.
-- [ ] Keep Debian/glibc-compatible builder and runtime images for `better-sqlite3`.
-- [ ] Preserve port 8081 mapping, `/data`, `DB_PATH`, the named volume, backup label, and backup container.
-- [ ] Configure Docker for exactly one application replica.
+- [x] Replace the Go/static Docker build with pnpm build plus production dependencies and the native SQLite runtime.
+- [x] Keep Debian/glibc-compatible builder and runtime images for `better-sqlite3`.
+- [x] Preserve port 8081 mapping, `/data`, `DB_PATH`, the named volume, backup label, and backup container.
+- [x] Configure Docker for exactly one application replica.
 - [ ] Update `.env.example`, Taskfile, README, and operational documentation.
-- [ ] Add CI for format, lint, Svelte check, unit tests, build, DB compatibility fixtures, mock Twitch integration, and Docker smoke.
+- [x] Add CI for format, lint, Svelte check, unit tests, build, DB compatibility fixtures, mock Twitch integration, and Docker smoke.
 - [ ] Add admin authorization and SSE contract tests to CI.
-- [ ] Keep Go build/test/lint and API drift checks until the final parity gate.
+- [x] Keep Go build/test/lint and API drift checks until the final parity gate.
 - [ ] Test backup and restore with an active WAL database.
+
+Checkpoint 8 implementation note: the Dockerfile is now a two-stage Node-only build. The builder stage uses `node:22-bookworm-slim`, installs pnpm via corepack, runs `pnpm install --frozen-lockfile` and `pnpm run build` (which runs both `vite build` for adapter-node and `vite build --config vite.server.config.ts` for the custom server entrypoint), then prunes to production dependencies. The runtime stage uses `node:22-bookworm-slim` (glibc for `better-sqlite3`), copies `build/` and `node_modules/`, and runs `node build/server.js`. `wget` is installed for the existing healthcheck. The Go stages, Go toolchain, and `ca-certificates` are removed. `docker-compose.yml` is unchanged: port 8081, `/data` volume, all env vars, the backup label, and the backup container work identically with the new Node image. CI adds a `docker-build` job that builds the Docker image as a smoke test; all existing web and Go jobs are preserved. The Taskfile adds `web:*` tasks (`install`, `dev`, `build`, `start`, `check`, `lint`, `test`, `format`) alongside the existing Go tasks. `.env.example` already documents all required variables. Svelte check, lint, 165 tests, and the adapter-node build pass.
 
 ## Wave 5: controlled cutover
 
