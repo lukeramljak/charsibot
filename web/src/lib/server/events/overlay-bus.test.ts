@@ -166,4 +166,106 @@ describe('createOverlayBus', () => {
 
     expect(logger.entries.filter((e) => e.level === 'warn')).toHaveLength(2);
   });
+
+  it('preserves FIFO order under rapid publishing', async () => {
+    const bus = createOverlayBus(createLoggerFake());
+    const subscription = bus.subscribe();
+
+    for (let i = 0; i < 10; i++) {
+      bus.publish(chatEvent(`rapid-${i}`));
+    }
+
+    subscription.close();
+
+    const collected: OverlayEvent[] = [];
+    for await (const event of subscription) collected.push(event);
+
+    expect(collected).toHaveLength(10);
+    for (let i = 0; i < 10; i++) {
+      expect(collected[i]).toEqual(chatEvent(`rapid-${i}`));
+    }
+  });
+
+  it('maintains insertion order across interleaved event types', async () => {
+    const bus = createOverlayBus(createLoggerFake());
+    const subscription = bus.subscribe();
+
+    const display: OverlayEvent = {
+      type: 'blindbox_display',
+      username: 'alice',
+      collection: [],
+      config: {
+        series: 's',
+        redemptionTitle: 't',
+        name: 'n',
+        revealSound: '',
+        boxFrontFace: '',
+        boxSideFace: '',
+        displayColor: '',
+        textColor: '',
+        plushies: [],
+      },
+    };
+
+    bus.publish(chatEvent('first'));
+    bus.publish(display);
+    bus.publish(chatEvent('third'));
+    subscription.close();
+
+    const collected: OverlayEvent[] = [];
+    for await (const event of subscription) collected.push(event);
+
+    expect(collected[0].type).toBe('chat_command');
+    expect(collected[1].type).toBe('blindbox_display');
+    expect(collected[2].type).toBe('chat_command');
+  });
+
+  it('delivers events to a slow consumer without blocking a fast one', async () => {
+    const bus = createOverlayBus(createLoggerFake());
+    const slow = bus.subscribe();
+    const fast = bus.subscribe();
+
+    bus.publish(chatEvent('msg-1'));
+    bus.publish(chatEvent('msg-2'));
+
+    const fastCollected: OverlayEvent[] = [];
+    fast.close();
+    for await (const event of fast) fastCollected.push(event);
+    expect(fastCollected).toHaveLength(2);
+
+    bus.publish(chatEvent('msg-3'));
+    slow.close();
+
+    const slowCollected: OverlayEvent[] = [];
+    for await (const event of slow) slowCollected.push(event);
+    expect(slowCollected).toHaveLength(3);
+    expect(slowCollected).toEqual([chatEvent('msg-1'), chatEvent('msg-2'), chatEvent('msg-3')]);
+  });
+
+  it('delivers events published concurrently with async iteration', async () => {
+    const bus = createOverlayBus(createLoggerFake());
+    const subscription = bus.subscribe();
+
+    const collected: OverlayEvent[] = [];
+    const reader = (async () => {
+      for await (const event of subscription) {
+        collected.push(event);
+
+        if (collected.length === 3) {
+          subscription.close();
+        }
+      }
+    })();
+
+    await Promise.resolve();
+    bus.publish(chatEvent('a'));
+    await Promise.resolve();
+    bus.publish(chatEvent('b'));
+    await Promise.resolve();
+    bus.publish(chatEvent('c'));
+
+    await reader;
+
+    expect(collected).toEqual([chatEvent('a'), chatEvent('b'), chatEvent('c')]);
+  });
 });

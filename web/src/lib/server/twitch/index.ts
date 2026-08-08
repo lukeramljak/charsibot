@@ -1,4 +1,8 @@
 export { createBotNotificationHandler } from '$lib/server/twitch/bot-adapter';
+export {
+  createTwitchChatSender,
+  type TwitchChatSenderOptions,
+} from '$lib/server/twitch/chat-sender';
 export { createConduitSessionManager } from '$lib/server/twitch/conduits';
 export {
   EventSubProtocolError,
