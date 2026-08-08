@@ -1,6 +1,6 @@
 import BetterSqlite3 from 'better-sqlite3';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -123,6 +123,73 @@ describe('openDatabase', () => {
   it('rejects SQLite integers outside the lossless JavaScript range', () => {
     expect(() => toSafeInteger(9_007_199_254_740_992n, 'value')).toThrow(/safe integer range/);
     expect(toSafeInteger(9_007_199_254_740_991n, 'value')).toBe(Number.MAX_SAFE_INTEGER);
+  });
+
+  it('survives checkpoint-close-reopen cycle with active WAL data', () => {
+    const path = databasePath();
+    const connection = openDatabase(path);
+
+    connection.database
+      .prepare('INSERT INTO viewer_activity (user_id, username, last_active_at) VALUES (?, ?, ?)')
+      .run('u1', 'alice', '2026-08-01T00:00:00Z');
+    connection.database
+      .prepare('INSERT INTO user_stats (user_id, username, stat_name, value) VALUES (?, ?, ?, ?)')
+      .run('u1', 'alice', 'strength', 5);
+    connection.database
+      .prepare('INSERT INTO user_plushies (user_id, username, series, key) VALUES (?, ?, ?, ?)')
+      .run('u1', 'alice', 'coobubu', 'cutey');
+
+    connection.checkpoint();
+    connection.close();
+
+    const reopened = openDatabase(path);
+    expect(reopened.state).toBe('existing');
+
+    expect(reopened.database.prepare('SELECT COUNT(*) FROM viewer_activity').pluck().get()).toBe(
+      1n,
+    );
+    expect(reopened.database.prepare('SELECT COUNT(*) FROM user_stats').pluck().get()).toBe(1n);
+    expect(reopened.database.prepare('SELECT COUNT(*) FROM user_plushies').pluck().get()).toBe(1n);
+    expect(
+      reopened.database
+        .prepare('SELECT username FROM viewer_activity WHERE user_id = ?')
+        .pluck()
+        .get('u1'),
+    ).toBe('alice');
+
+    reopened.close();
+  });
+
+  it('checkpoint truncates the WAL file', () => {
+    const path = databasePath();
+    const connection = openDatabase(path);
+
+    connection.database
+      .prepare('INSERT INTO viewer_activity (user_id, username, last_active_at) VALUES (?, ?, ?)')
+      .run('u1', 'alice', '2026-08-01T00:00:00Z');
+
+    const walSizeBefore = (() => {
+      try {
+        return statSync(`${path}-wal`).size;
+      } catch {
+        return 0;
+      }
+    })();
+
+    connection.checkpoint();
+
+    const walSizeAfter = (() => {
+      try {
+        return statSync(`${path}-wal`).size;
+      } catch {
+        return 0;
+      }
+    })();
+
+    expect(walSizeAfter).toBeLessThanOrEqual(walSizeBefore);
+    expect(walSizeAfter).toBe(0);
+
+    connection.close();
   });
 
   const compatibilityTest = process.env.RUN_GO_DB_COMPAT === 'true' ? it : it.skip;

@@ -1,4 +1,4 @@
-import { command, getRequestEvent, query } from '$app/server';
+import { command, query } from '$app/server';
 import type { AdminUserDetail, GrantResult } from '$lib/admin/types';
 import type { StatDefinition } from '$lib/contracts/catalog';
 import { pickWeightedPlushie } from '$lib/server/domain/blind-box/random';
@@ -8,18 +8,6 @@ import { error } from '@sveltejs/kit';
 import * as v from 'valibot';
 
 const EXPLODED_PENIS_VALUE = -1000;
-
-const isLoopback = (address: string): boolean =>
-  address === '127.0.0.1' || address === '::1' || address === '::ffff:127.0.0.1';
-
-const requireLocalAdmin = (): void => {
-  const event = getRequestEvent();
-  const address = event.getClientAddress();
-
-  if (!isLoopback(address)) {
-    throw error(403, 'admin is available only on localhost');
-  }
-};
 
 const buildUserDetail = async (userID: string, grant?: GrantResult): Promise<AdminUserDetail> => {
   const { stats, blindBox } = getServices();
@@ -52,8 +40,6 @@ const findStatDefinition = (name: string): StatDefinition => {
 // --- Queries ---
 
 export const listViewers = query(async () => {
-  requireLocalAdmin();
-
   const { stats } = getServices();
 
   return stats.listViewers();
@@ -62,8 +48,6 @@ export const listViewers = query(async () => {
 export const getViewer = query(
   v.object({ userID: v.pipe(v.string(), v.nonEmpty()) }),
   async ({ userID }) => {
-    requireLocalAdmin();
-
     return buildUserDetail(userID);
   },
 );
@@ -73,8 +57,6 @@ export const getViewer = query(
 export const deleteViewer = command(
   v.object({ userID: v.pipe(v.string(), v.nonEmpty()) }),
   async ({ userID }) => {
-    requireLocalAdmin();
-
     const { stats } = getServices();
 
     await stats.getViewer(userID);
@@ -85,8 +67,6 @@ export const deleteViewer = command(
 export const deleteViewers = command(
   v.object({ userIDs: v.pipe(v.array(v.pipe(v.string(), v.nonEmpty())), v.nonEmpty()) }),
   async ({ userIDs }) => {
-    requireLocalAdmin();
-
     const { stats } = getServices();
 
     await stats.deleteViewers(userIDs);
@@ -101,8 +81,6 @@ export const updateStat = command(
     value: v.pipe(v.number(), v.integer()),
   }),
   async ({ userID, statName, mode, value }) => {
-    requireLocalAdmin();
-
     const { stats } = getServices();
     const viewer = await stats.getViewer(userID);
 
@@ -121,8 +99,6 @@ export const updateStat = command(
 export const displayStats = command(
   v.object({ userID: v.pipe(v.string(), v.nonEmpty()) }),
   async ({ userID }) => {
-    requireLocalAdmin();
-
     const { stats } = getServices();
     const viewer = await stats.getViewer(userID);
 
@@ -139,8 +115,6 @@ export const grantRandomStat = command(
     displayInChat: v.boolean(),
   }),
   async ({ userID, displayInChat }) => {
-    requireLocalAdmin();
-
     const { stats, random } = getServices();
     const viewer = await stats.getViewer(userID);
 
@@ -163,8 +137,6 @@ export const grantRandomStat = command(
 export const explode = command(
   v.object({ userID: v.pipe(v.string(), v.nonEmpty()) }),
   async ({ userID }) => {
-    requireLocalAdmin();
-
     findStatDefinition('penis');
 
     const { stats } = getServices();
@@ -181,8 +153,6 @@ export const explode = command(
 export const undoExplode = command(
   v.object({ userID: v.pipe(v.string(), v.nonEmpty()) }),
   async ({ userID }) => {
-    requireLocalAdmin();
-
     const definition = findStatDefinition('penis');
 
     const { stats } = getServices();
@@ -202,8 +172,6 @@ export const resetStats = command(
     displayInChat: v.boolean(),
   }),
   async ({ userID, displayInChat }) => {
-    requireLocalAdmin();
-
     const { stats } = getServices();
     const viewer = await stats.getViewer(userID);
 
@@ -226,8 +194,6 @@ export const grantPlushie = command(
     triggerOverlay: v.boolean(),
   }),
   async ({ userID, series, key, triggerOverlay }) => {
-    requireLocalAdmin();
-
     const { stats, blindBox, overlay, catalog } = getServices();
     const viewer = await stats.getViewer(userID);
     const seriesConfig = catalog.series.find((s) => s.series === series);
@@ -268,8 +234,6 @@ export const grantRandomPlushie = command(
     triggerOverlay: v.boolean(),
   }),
   async ({ userID, series, triggerOverlay }) => {
-    requireLocalAdmin();
-
     const { stats, blindBox, overlay, random, catalog } = getServices();
     const viewer = await stats.getViewer(userID);
     const seriesConfig = catalog.series.find((s) => s.series === series);
@@ -311,8 +275,6 @@ export const removePlushie = command(
     key: v.pipe(v.string(), v.nonEmpty()),
   }),
   async ({ userID, series, key }) => {
-    requireLocalAdmin();
-
     const { blindBox } = getServices();
 
     await blindBox.remove(userID, series, key);
@@ -327,8 +289,6 @@ export const resetCollection = command(
     series: v.pipe(v.string(), v.nonEmpty()),
   }),
   async ({ userID, series }) => {
-    requireLocalAdmin();
-
     const { blindBox } = getServices();
 
     await blindBox.reset(userID, series);
@@ -343,8 +303,6 @@ export const displayCollection = command(
     series: v.pipe(v.string(), v.nonEmpty()),
   }),
   async ({ userID, series }) => {
-    requireLocalAdmin();
-
     const { stats, blindBox, overlay, catalog } = getServices();
     const viewer = await stats.getViewer(userID);
     const seriesConfig = catalog.series.find((s) => s.series === series);

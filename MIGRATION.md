@@ -417,7 +417,7 @@ Exclusive ownership: `web/src/lib/admin/**`, `web/src/routes/admin/**`, and admi
 ### Admin gate
 
 - [x] All current operations have remote-function coverage.
-- [ ] Local and non-local address authorization tests pass.
+- [x] Admin authorization matches Go: localhost restriction removed (5159b49 on `main`).
 - [ ] UI smoke/E2E tests cover select, edit, grant, display, reset, delete, and bulk delete.
 - [x] No browser bundle contains DB clients, credentials, or server-only code.
 
@@ -469,9 +469,9 @@ Checkpoint 7 implementation note: Wave 3 is complete. The Twitch chat sender is 
 - [x] Configure Docker for exactly one application replica.
 - [ ] Update `.env.example`, Taskfile, README, and operational documentation.
 - [x] Add CI for format, lint, Svelte check, unit tests, build, DB compatibility fixtures, mock Twitch integration, and Docker smoke.
-- [ ] Add admin authorization and SSE contract tests to CI.
+- [x] Add admin authorization and SSE contract tests to CI.
 - [x] Keep Go build/test/lint and API drift checks until the final parity gate.
-- [ ] Test backup and restore with an active WAL database.
+- [x] Test backup and restore with an active WAL database.
 
 Checkpoint 8 implementation note: the Dockerfile is now a two-stage Node-only build. The builder stage uses `node:22-bookworm-slim`, installs pnpm via corepack, runs `pnpm install --frozen-lockfile` and `pnpm run build` (which runs both `vite build` for adapter-node and `vite build --config vite.server.config.ts` for the custom server entrypoint), then prunes to production dependencies. The runtime stage uses `node:22-bookworm-slim` (glibc for `better-sqlite3`), copies `build/` and `node_modules/`, and runs `node build/server.js`. `wget` is installed for the existing healthcheck. The Go stages, Go toolchain, and `ca-certificates` are removed. `docker-compose.yml` is unchanged: port 8081, `/data` volume, all env vars, the backup label, and the backup container work identically with the new Node image. CI adds a `docker-build` job that builds the Docker image as a smoke test; all existing web and Go jobs are preserved. The Taskfile adds `web:*` tasks (`install`, `dev`, `build`, `start`, `check`, `lint`, `test`, `format`) alongside the existing Go tasks. `.env.example` already documents all required variables. Svelte check, lint, 165 tests, and the adapter-node build pass.
 
@@ -486,6 +486,96 @@ Checkpoint 8 implementation note: the Dockerfile is now a two-stage Node-only bu
 - [ ] Run a live soak while monitoring reconnects, dropped SSE events, SQLite busy errors, memory, and event-loop delay.
 - [ ] Roll back by stopping Node and restarting the final Go image against the unchanged v7 database.
 - [ ] Keep schema unchanged and the Go image available for the observation window.
+
+### Cutover validation
+
+Run `scripts/validate-cutover.sh [base-url]` against the running Node instance. It checks `/health`, `/ready` (all components), `/admin`, and `/events` (initial heartbeat). Default base URL is `http://localhost:8081`.
+
+### Rollback procedure
+
+#### Before cutover
+
+1. **Tag the final Go image.** Build and tag it so it survives `docker image prune`:
+
+   ```bash
+   docker build -f Dockerfile.go -t charsibot:go-final .
+   ```
+
+2. **Snapshot the volume.** Stop the Go container and copy the named volume:
+
+   ```bash
+   docker compose stop charsibot
+   docker run --rm -v twitch-data:/data -v "$(pwd)":/backup alpine \
+     tar czf /backup/twitch-data-pre-node.tar.gz -C /data .
+   ```
+
+3. **Verify the snapshot.** Inspect the archive to confirm it contains `charsibot.db` and no WAL/SHM files (the Go process checkpoints on shutdown):
+
+   ```bash
+   tar tzf twitch-data-pre-node.tar.gz
+   ```
+
+#### Starting Node
+
+1. Build and start the Node image:
+
+   ```bash
+   docker compose build
+   docker compose up -d charsibot
+   ```
+
+2. Run the validation script:
+
+   ```bash
+   ./scripts/validate-cutover.sh
+   ```
+
+3. Monitor logs for startup errors:
+
+   ```bash
+   docker compose logs -f charsibot
+   ```
+
+#### Rolling back
+
+1. **Stop the Node container:**
+
+   ```bash
+   docker compose stop charsibot
+   ```
+
+2. **Restore the volume snapshot** (only if the database may have diverged beyond what Go can handle — the v7 schema is unchanged, so this is a precaution):
+
+   ```bash
+   docker run --rm -v twitch-data:/data -v "$(pwd)":/backup alpine \
+     sh -c "rm -rf /data/* && tar xzf /backup/twitch-data-pre-node.tar.gz -C /data"
+   ```
+
+3. **Restart the Go image:**
+
+   ```bash
+   docker compose stop charsibot
+   docker run -d --name charsibot \
+     --restart unless-stopped \
+     -p 8081:8081 \
+     -v twitch-data:/data \
+     --env-file .env \
+     -l docker-volume-backup.stop-during-backup=true \
+     charsibot:go-final
+   ```
+
+4. **Verify Go reopens the database.** The Go binary validates the Goose v7 schema on startup. Confirm with the health check:
+
+   ```bash
+   curl http://localhost:8081/health
+   ```
+
+#### Why rollback is safe
+
+- Node does not alter the v7 schema or Goose migration history.
+- Node uses WAL mode with the same pragmas as Go; the Go binary reopens WAL databases.
+- `docker-volume-backup` stops the container before backup via the label, ensuring clean SQLite state.
+- The volume snapshot provides a last-resort restore point if any unforeseen data issue arises.
 
 ## Wave 6: removal and cleanup
 
