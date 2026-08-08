@@ -7,6 +7,7 @@ import type {
   Random,
   StatsService,
 } from '$lib/server/application/ports';
+import type { Readiness } from '$lib/server/runtime/contracts';
 
 export interface ApplicationServices {
   stats: StatsService;
@@ -18,6 +19,7 @@ export interface ApplicationServices {
 }
 
 let services: ApplicationServices | undefined;
+let readiness: Readiness | undefined;
 
 export const setServices = (s: ApplicationServices): void => {
   services = s;
@@ -29,4 +31,16 @@ export const getServices = (): ApplicationServices => {
   }
 
   return services;
+};
+
+export const setReadiness = (r: Readiness): void => {
+  readiness = r;
+};
+
+export const getReadiness = (): Readiness => {
+  if (!readiness) {
+    throw new ApplicationError('not_ready', 'application is not ready');
+  }
+
+  return readiness;
 };

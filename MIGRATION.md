@@ -438,13 +438,13 @@ Checkpoint 4 implementation note: admin remote functions and UI conversion are c
 
 ### OAuth and health
 
-- [ ] Add a thin `/oauth` SvelteKit page explaining streamer and bot authorization, with one action/link for each account.
-- [ ] Add `/oauth/start` server handling with exact account validation, streamer/bot scopes, and Twitch redirect.
-- [ ] Implement `/oauth/callback` as a server-rendered page flow with current state validation, token exchange, error behavior, and intentionally unchanged non-persistence semantics.
-- [ ] Render clear success/denial/error states in the callback page instead of returning plain text.
-- [ ] Keep Twitch OAuth secrets and token exchange entirely server-side.
-- [ ] Preserve `/health` as process liveness.
-- [ ] Add `/ready` for database/catalog/Twitch readiness without changing the existing health contract.
+- [x] Add a thin `/oauth` SvelteKit page explaining streamer and bot authorization, with one action/link for each account.
+- [x] Add `/oauth/start` server handling with exact account validation, streamer/bot scopes, and Twitch redirect.
+- [x] Implement `/oauth/callback` as a server-rendered page flow with current state validation, token exchange, error behavior, and intentionally unchanged non-persistence semantics.
+- [x] Render clear success/denial/error states in the callback page instead of returning plain text.
+- [x] Keep Twitch OAuth secrets and token exchange entirely server-side.
+- [x] Preserve `/health` as process liveness.
+- [x] Add `/ready` for database/catalog/Twitch readiness without changing the existing health contract.
 
 ### Runtime integration
 
@@ -455,7 +455,9 @@ Checkpoint 4 implementation note: admin remote functions and UI conversion are c
 
 Gate: the full Node application passes automated parity tests while the Go reference remains in-tree.
 
-Checkpoint 5 implementation note: the overlay event bus (`web/src/lib/server/events/overlay-bus.ts`) implements `OverlayBus` with per-client capacity 10 and non-blocking drop on overflow, matching Go behavior. SSE formatting (`web/src/lib/server/events/sse.ts`) strips the `type` discriminator from JSON payloads and sends it as the SSE `event:` field, preserving the existing `EventSource` client contract. The `/events` route (`web/src/routes/events/+server.ts`) streams from the bus with an initial `: ping` heartbeat and 30-second interval heartbeats, cleaning up subscriptions and timers on disconnect. `createApplicationRuntime` (`web/src/lib/server/runtime/create.ts`) now reads `DB_PATH`, opens the database, loads the catalog, creates repositories and domain services, creates the overlay bus, and calls `setServices()` so admin remote functions and the SSE route receive real services. Startup failure closes partially created resources (bus, database). The chat sender is a logging stub until Twitch is wired. Svelte check, lint, 147 tests, and the adapter-node build pass. Remaining Wave 3 work: OAuth/health routes, Twitch runtime wiring into the chat sender, shutdown verification, and HMR single-runtime enforcement.
+Checkpoint 5 implementation note: the overlay event bus (`web/src/lib/server/events/overlay-bus.ts`) implements `OverlayBus` with per-client capacity 10 and non-blocking drop on overflow, matching Go behavior. SSE formatting (`web/src/lib/server/events/sse.ts`) strips the `type` discriminator from JSON payloads and sends it as the SSE `event:` field, preserving the existing `EventSource` client contract. The `/events` route (`web/src/routes/events/+server.ts`) streams from the bus with an initial `: ping` heartbeat and 30-second interval heartbeats, cleaning up subscriptions and timers on disconnect. `createApplicationRuntime` (`web/src/lib/server/runtime/create.ts`) now reads `DB_PATH`, opens the database, loads the catalog, creates repositories and domain services, creates the overlay bus, and calls `setServices()` so admin remote functions and the SSE route receive real services. Startup failure closes partially created resources (bus, database). The chat sender is a logging stub until Twitch is wired. Svelte check, lint, 147 tests, and the adapter-node build pass.
+
+Checkpoint 6 implementation note: OAuth and health/readiness routes are complete. `/health` returns 200 OK matching Go `handleHealth`. `/ready` returns JSON `{ready, components}` (200 or 503) using a `Readiness` implementation (`web/src/lib/server/runtime/readiness.ts`) that tracks catalog, database, and twitch component states; the runtime factory sets catalog and database ready during initialization. `/oauth` is a Svelte page listing streamer and bot scopes with action links. `/oauth/start` validates the account parameter, builds the Twitch authorize URL with exact scopes and `force_verify`, and redirects 302. `/oauth/callback` validates the state parameter, handles denial/error, exchanges the authorization code for a token via the Twitch token endpoint, and returns an HTML success page; non-persistence semantics match Go. All secrets remain server-side via `$env/dynamic/private`. The service container now exposes `setReadiness()`/`getReadiness()` alongside the existing service registry. Svelte check, lint, 151 tests (4 new readiness tests), and the adapter-node build pass. Remaining Wave 3 work: EventSource reconnection verification, Twitch chat sender wiring, shutdown verification with active SSE connections, and HMR single-runtime enforcement.
 
 ## Wave 4: deployment and CI
 

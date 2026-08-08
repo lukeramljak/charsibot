@@ -9,8 +9,9 @@ import { createViewersRepository } from '$lib/server/db/viewers.repository';
 import { createBlindBoxService } from '$lib/server/domain/blind-box/service';
 import { createStatsService } from '$lib/server/domain/stats/service';
 import { createOverlayBus } from '$lib/server/events/overlay-bus';
-import { setServices } from '$lib/server/runtime/container';
+import { setReadiness, setServices } from '$lib/server/runtime/container';
 import type { ApplicationRuntime } from '$lib/server/runtime/contracts';
+import { createReadiness } from '$lib/server/runtime/readiness';
 
 export interface RuntimeConfig {
   dbPath: string;
@@ -42,14 +43,19 @@ export const createApplicationRuntime = async (): Promise<ApplicationRuntime> =>
   let db: DatabaseConnection | undefined;
   let bus: OverlayBus | undefined;
 
+  const readiness = createReadiness();
+  setReadiness(readiness);
+
   try {
     const catalog = loadCatalog();
+    readiness.set('catalog', true);
     config.logger.info('catalog loaded', {
       stats: catalog.stats.length,
       series: catalog.series.length,
     });
 
     db = openDatabase(config.dbPath);
+    readiness.set('database', true);
     config.logger.info('database opened', { path: config.dbPath, state: db.state });
 
     const statsRepo = createStatsRepository(db.database);
