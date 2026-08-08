@@ -427,13 +427,13 @@ Checkpoint 4 implementation note: admin remote functions and UI conversion are c
 
 ### Event bus and SSE
 
-- [ ] Implement the process-local overlay event bus with per-client capacity 10.
-- [ ] Add `/events/+server.ts` as a streaming SSE response.
-- [ ] Preserve named events: `chat_command`, `blindbox_display`, and `blindbox_redemption`.
-- [ ] Preserve exact JSON payloads and add snapshot tests.
-- [ ] Send an initial heartbeat and 30-second comment heartbeats.
-- [ ] Clean up disconnected clients and timers.
-- [ ] Preserve the current overflow policy: drop for a full client without blocking the bot.
+- [x] Implement the process-local overlay event bus with per-client capacity 10.
+- [x] Add `/events/+server.ts` as a streaming SSE response.
+- [x] Preserve named events: `chat_command`, `blindbox_display`, and `blindbox_redemption`.
+- [x] Preserve exact JSON payloads and add snapshot tests.
+- [x] Send an initial heartbeat and 30-second comment heartbeats.
+- [x] Clean up disconnected clients and timers.
+- [x] Preserve the current overflow policy: drop for a full client without blocking the bot.
 - [ ] Preserve EventSource reconnection behavior and overlay FIFO/priority tests.
 
 ### OAuth and health
@@ -448,12 +448,14 @@ Checkpoint 4 implementation note: admin remote functions and UI conversion are c
 
 ### Runtime integration
 
-- [ ] Wire config, database, catalog, services, bus, Twitch, remote functions, and routes through one application container.
-- [ ] Verify startup fails atomically and partially created resources close.
+- [x] Wire config, database, catalog, services, bus, Twitch, remote functions, and routes through one application container.
+- [x] Verify startup fails atomically and partially created resources close.
 - [ ] Verify shutdown during a request, SSE connection, reconnect delay, redemption, and raid delay.
 - [ ] Verify only one runtime starts in production, tests, and development/HMR.
 
 Gate: the full Node application passes automated parity tests while the Go reference remains in-tree.
+
+Checkpoint 5 implementation note: the overlay event bus (`web/src/lib/server/events/overlay-bus.ts`) implements `OverlayBus` with per-client capacity 10 and non-blocking drop on overflow, matching Go behavior. SSE formatting (`web/src/lib/server/events/sse.ts`) strips the `type` discriminator from JSON payloads and sends it as the SSE `event:` field, preserving the existing `EventSource` client contract. The `/events` route (`web/src/routes/events/+server.ts`) streams from the bus with an initial `: ping` heartbeat and 30-second interval heartbeats, cleaning up subscriptions and timers on disconnect. `createApplicationRuntime` (`web/src/lib/server/runtime/create.ts`) now reads `DB_PATH`, opens the database, loads the catalog, creates repositories and domain services, creates the overlay bus, and calls `setServices()` so admin remote functions and the SSE route receive real services. Startup failure closes partially created resources (bus, database). The chat sender is a logging stub until Twitch is wired. Svelte check, lint, 147 tests, and the adapter-node build pass. Remaining Wave 3 work: OAuth/health routes, Twitch runtime wiring into the chat sender, shutdown verification, and HMR single-runtime enforcement.
 
 ## Wave 4: deployment and CI
 
