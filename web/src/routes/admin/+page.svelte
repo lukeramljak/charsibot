@@ -3,20 +3,29 @@
   import { afterNavigate, goto } from '$app/navigation';
   import { resolve } from '$app/paths';
   import { page } from '$app/state';
-  import { api } from '$lib/api';
-  import type { components } from '$lib/api.generated';
+  import type { AdminUserDetail, ActivityFilter, GrantResult } from '$lib/admin/types';
+  import type { ViewerCollection } from '$lib/contracts/collections';
+  import type { UserStat, Viewer } from '$lib/contracts/viewer';
   import UserCollections from '$lib/admin/UserCollections.svelte';
   import UserStats from '$lib/admin/UserStats.svelte';
   import ViewerDirectory from '$lib/admin/ViewerDirectory.svelte';
-
-  type User = components['schemas']['User'];
-  type UserStat = components['schemas']['AdminStat'];
-  type Collection = components['schemas']['AdminCollection'];
-  type UserDetail = components['schemas']['AdminUserResponse'];
-  type GrantResult = components['schemas']['AdminGrantResult'];
-  type UsersResponse = components['schemas']['AdminUsersResponse'];
-  type APIError = components['schemas']['ErrorModel'];
-  type ActivityFilter = 'all' | 'unknown' | 'inactive30' | 'inactive90' | 'recent';
+  import {
+    listViewers as listViewersRemote,
+    getViewer as getViewerRemote,
+    deleteViewer as deleteViewerRemote,
+    deleteViewers as deleteViewersRemote,
+    updateStat as updateStatRemote,
+    displayStats as displayStatsRemote,
+    grantRandomStat as grantRandomStatRemote,
+    explode as explodeRemote,
+    undoExplode as undoExplodeRemote,
+    resetStats as resetStatsRemote,
+    grantPlushie as grantPlushieRemote,
+    grantRandomPlushie as grantRandomPlushieRemote,
+    removePlushie as removePlushieRemote,
+    resetCollection as resetCollectionRemote,
+    displayCollection as displayCollectionRemote,
+  } from '$lib/admin/admin.remote';
 
   interface PendingPlushie {
     series: string;
@@ -24,14 +33,14 @@
     name: string;
   }
 
-  let users = $state.raw<User[]>([]);
+  let users = $state.raw<Viewer[]>([]);
   let usernameFilter = $state('');
   let activityFilter = $state<ActivityFilter>('all');
   let selectedUserIDs = $state.raw<string[]>([]);
   let filteredUsers = $derived.by(() => {
     const query = usernameFilter.trim().toLowerCase();
     const now = Date.now();
-    const matchesActivity = (user: User) => {
+    const matchesActivity = (user: Viewer) => {
       if (activityFilter === 'all') return true;
       if (activityFilter === 'unknown') return !user.lastActiveAt;
       if (activityFilter === 'recent')
@@ -47,14 +56,14 @@
           a.username.localeCompare(b.username),
       );
   });
-  let selected = $state.raw<UserDetail | null>(null);
+  let selected = $state.raw<AdminUserDetail | null>(null);
   let loading = $state(false);
   let mutatingPlushie = $state<string | null>(null);
-  let pendingRandomCollection = $state.raw<Collection | null>(null);
+  let pendingRandomCollection = $state.raw<ViewerCollection | null>(null);
   let randomPlushieDialog = $state<HTMLDialogElement | undefined>(undefined);
   let pendingPlushie = $state.raw<PendingPlushie | null>(null);
   let plushieDialog = $state<HTMLDialogElement | undefined>(undefined);
-  let pendingResetCollection = $state.raw<Collection | null>(null);
+  let pendingResetCollection = $state.raw<ViewerCollection | null>(null);
   let resetDialog = $state<HTMLDialogElement | undefined>(undefined);
   let explodeDialog = $state<HTMLDialogElement | undefined>(undefined);
   let undoExplodeDialog = $state<HTMLDialogElement | undefined>(undefined);
@@ -80,28 +89,13 @@
   let userSearchSelectionID: string | undefined;
   let selectedUserRequest = 0;
 
+  function errorMessage(err: unknown): string {
+    if (err instanceof Error) return err.message;
+    return String(err);
+  }
+
   function isCurrentUserRequest(requestID: number, userID: string) {
     return selectedUserRequest === requestID && page.url.searchParams.get('user') === userID;
-  }
-
-  async function readJSON<T>(
-    operation: Promise<{ data?: T; error?: APIError; response: Response }>,
-  ): Promise<T> {
-    const { data, error: apiError, response } = await operation;
-    if (apiError) {
-      throw new Error(apiError.detail || apiError.title || response.statusText || 'Request failed');
-    }
-    if (data === undefined) throw new Error(response.statusText || 'Request returned no data');
-    return data;
-  }
-
-  async function ensureSuccess(
-    operation: Promise<{ error?: APIError; response: Response }>,
-  ): Promise<void> {
-    const { error: apiError, response } = await operation;
-    if (apiError) {
-      throw new Error(apiError.detail || apiError.title || response.statusText || 'Request failed');
-    }
   }
 
   async function loadUsers() {
@@ -109,11 +103,10 @@
     error = '';
     statusMessage = 'Loading viewers…';
     try {
-      const response = await readJSON<UsersResponse>(api.GET('/api/admin/users'));
-      users = response.users;
+      users = await listViewersRemote();
       statusMessage = `Loaded ${users.length} viewers.`;
     } catch (err) {
-      error = err instanceof Error ? err.message : 'Could not search users';
+      error = errorMessage(err);
       statusMessage = '';
     } finally {
       loading = false;
@@ -145,7 +138,7 @@
     }
   }
 
-  async function selectUser(user: User, updateURL = true) {
+  async function selectUser(user: Viewer, updateURL = true) {
     if (updateURL) {
       const href = resolve(`/admin?user=${encodeURIComponent(user.id)}`);
       if (new URL(href, page.url).href !== page.url.href) {
@@ -164,9 +157,7 @@
     lastGrant = null;
     statusMessage = `Loading ${user.username}…`;
     try {
-      const response = await readJSON<UserDetail>(
-        api.GET('/api/admin/users/{userID}', { params: { path: { userID: user.id } } }),
-      );
+      const response = await getViewerRemote({ userID: user.id });
       if (!isCurrentUserRequest(requestID, user.id)) return;
       selected = response;
       lastGrant = null;
@@ -175,7 +166,7 @@
       if (!suppressSelectedUserFocus) selectedUserHeading?.focus();
     } catch (err) {
       if (isCurrentUserRequest(requestID, user.id)) {
-        error = err instanceof Error ? err.message : 'Could not load user';
+        error = errorMessage(err);
         statusMessage = '';
       }
     } finally {
@@ -196,13 +187,13 @@
     userSearchIndex = 0;
   }
 
-  async function selectUserSearchResult(user: User) {
+  async function selectUserSearchResult(user: Viewer) {
     userSearchSelectionID = user.id;
     closeUserSearch();
     await selectUser(user);
   }
 
-  async function selectUserFromManagement(user: User) {
+  async function selectUserFromManagement(user: Viewer) {
     viewerManagementDialog?.close();
     await selectUser(user);
   }
@@ -248,29 +239,18 @@
     mode: 'set' | 'adjust',
   ): Promise<boolean> {
     if (!selected || !Number.isFinite(value)) return false;
-    return mutate(
-      api.PATCH('/api/admin/users/{userID}/stats/{statName}', {
-        params: { path: { userID: selected.user.id, statName: stat.name } },
-        body: { mode, value },
-      }),
-    );
+    return mutate(updateStatRemote({ userID: selected.user.id, statName: stat.name, mode, value }));
   }
 
   async function displayStatsInChat() {
     if (!selected) return;
-    await mutate(
-      api.POST('/api/admin/users/{userID}/stats/display', {
-        params: { path: { userID: selected.user.id } },
-      }),
-    );
+    await mutate(displayStatsRemote({ userID: selected.user.id }));
   }
 
-  async function displayCollection(collection: Collection) {
+  async function displayCollection(collection: ViewerCollection) {
     if (!selected) return;
     await mutate(
-      api.POST('/api/admin/users/{userID}/collections/{series}/display', {
-        params: { path: { userID: selected.user.id, series: collection.config.series } },
-      }),
+      displayCollectionRemote({ userID: selected.user.id, series: collection.config.series }),
     );
   }
 
@@ -285,15 +265,13 @@
     loading = true;
     error = '';
     try {
-      await ensureSuccess(
-        api.DELETE('/api/admin/users/{userID}', { params: { path: { userID: user.id } } }),
-      );
+      await deleteViewerRemote({ userID: user.id });
       users = users.filter((candidate) => candidate.id !== user.id);
       selected = null;
       statusMessage = `Deleted ${user.username}.`;
       await goto(resolve('/admin'), { keepFocus: true, noScroll: true });
     } catch (err) {
-      error = err instanceof Error ? err.message : 'Could not delete viewer';
+      error = errorMessage(err);
       statusMessage = '';
     } finally {
       loading = false;
@@ -325,34 +303,19 @@
     closeBulkDeleteDialog();
     loading = true;
     error = '';
-    const deletedUserIDs: string[] = [];
     try {
-      for (const userID of userIDs) {
-        await ensureSuccess(
-          api.DELETE('/api/admin/users/{userID}', { params: { path: { userID } } }),
-        );
-        deletedUserIDs.push(userID);
-      }
+      await deleteViewersRemote({ userIDs });
 
-      users = users.filter((user) => !deletedUserIDs.includes(user.id));
+      users = users.filter((user) => !userIDs.includes(user.id));
       selectedUserIDs = [];
-      if (selected && deletedUserIDs.includes(selected.user.id)) {
+      if (selected && userIDs.includes(selected.user.id)) {
         selected = null;
         await goto(resolve('/admin'), { keepFocus: true, noScroll: true });
       }
-      statusMessage = `Deleted ${deletedUserIDs.length} viewers.`;
+      statusMessage = `Deleted ${userIDs.length} viewers.`;
     } catch (err) {
-      users = users.filter((user) => !deletedUserIDs.includes(user.id));
-      selectedUserIDs = selectedUserIDs.filter((userID) => !deletedUserIDs.includes(userID));
-      if (selected && deletedUserIDs.includes(selected.user.id)) {
-        selected = null;
-        await goto(resolve('/admin'), { keepFocus: true, noScroll: true });
-      }
-      error = err instanceof Error ? err.message : 'Could not delete viewers';
-      statusMessage =
-        deletedUserIDs.length > 0
-          ? `Deleted ${deletedUserIDs.length} viewers before stopping.`
-          : '';
+      error = errorMessage(err);
+      statusMessage = '';
     } finally {
       loading = false;
     }
@@ -377,40 +340,27 @@
     if (!selected) return;
     closeRandomStatDialog();
     lastGrant = null;
-    await mutate(
-      api.POST('/api/admin/users/{userID}/stats/random', {
-        params: { path: { userID: selected.user.id } },
-        body: { displayInChat },
-      }),
-    );
+    await mutate(grantRandomStatRemote({ userID: selected.user.id, displayInChat }));
   }
 
   function closeExplodeDialog() {
     explodeDialog?.close();
   }
 
-  async function explode() {
+  async function handleExplode() {
     if (!selected) return;
     closeExplodeDialog();
-    await mutate(
-      api.POST('/api/admin/users/{userID}/stats/explode', {
-        params: { path: { userID: selected.user.id } },
-      }),
-    );
+    await mutate(explodeRemote({ userID: selected.user.id }));
   }
 
   function closeUndoExplodeDialog() {
     undoExplodeDialog?.close();
   }
 
-  async function undoExplode() {
+  async function handleUndoExplode() {
     if (!selected) return;
     closeUndoExplodeDialog();
-    await mutate(
-      api.POST('/api/admin/users/{userID}/stats/explode/undo', {
-        params: { path: { userID: selected.user.id } },
-      }),
-    );
+    await mutate(undoExplodeRemote({ userID: selected.user.id }));
   }
 
   function closeResetStatsDialog() {
@@ -420,12 +370,7 @@
   async function resetStats(displayInChat: boolean) {
     if (!selected) return;
     closeResetStatsDialog();
-    await mutate(
-      api.POST('/api/admin/users/{userID}/stats/reset', {
-        params: { path: { userID: selected.user.id } },
-        body: { displayInChat },
-      }),
-    );
+    await mutate(resetStatsRemote({ userID: selected.user.id, displayInChat }));
   }
 
   async function setPlushie(series: string, key: string, name: string, owned: boolean) {
@@ -438,11 +383,7 @@
     const plushieID = `${series}:${key}`;
     mutatingPlushie = plushieID;
     try {
-      await mutate(
-        api.DELETE('/api/admin/users/{userID}/collections/{series}/{key}', {
-          params: { path: { userID: selected.user.id, series, key } },
-        }),
-      );
+      await mutate(removePlushieRemote({ userID: selected.user.id, series, key }));
     } finally {
       mutatingPlushie = null;
     }
@@ -462,11 +403,11 @@
     mutatingPlushie = plushieID;
     try {
       await mutate(
-        api.PUT('/api/admin/users/{userID}/collections/{series}/{key}', {
-          params: {
-            path: { userID: selected.user.id, series: plushie.series, key: plushie.key },
-          },
-          body: { triggerOverlay },
+        grantPlushieRemote({
+          userID: selected.user.id,
+          series: plushie.series,
+          key: plushie.key,
+          triggerOverlay,
         }),
       );
     } finally {
@@ -474,7 +415,7 @@
     }
   }
 
-  function openRandomPlushieDialog(collection: Collection) {
+  function openRandomPlushieDialog(collection: ViewerCollection) {
     pendingRandomCollection = collection;
     randomPlushieDialog?.showModal();
   }
@@ -491,14 +432,15 @@
     if (!collection) return;
     lastGrant = null;
     await mutate(
-      api.POST('/api/admin/users/{userID}/collections/{series}/random', {
-        params: { path: { userID: selected.user.id, series: collection.config.series } },
-        body: { triggerOverlay },
+      grantRandomPlushieRemote({
+        userID: selected.user.id,
+        series: collection.config.series,
+        triggerOverlay,
       }),
     );
   }
 
-  function openResetDialog(collection: Collection) {
+  function openResetDialog(collection: ViewerCollection) {
     pendingResetCollection = collection;
     resetDialog?.showModal();
   }
@@ -514,15 +456,11 @@
     closeResetDialog();
     if (!collection) return;
     await mutate(
-      api.DELETE('/api/admin/users/{userID}/collections/{series}', {
-        params: { path: { userID: selected.user.id, series: collection.config.series } },
-      }),
+      resetCollectionRemote({ userID: selected.user.id, series: collection.config.series }),
     );
   }
 
-  async function mutate(
-    operation: Promise<{ data?: UserDetail; error?: APIError; response: Response }>,
-  ): Promise<boolean> {
+  async function mutate(operation: Promise<AdminUserDetail>): Promise<boolean> {
     const userID = selected?.user.id;
     if (!userID) return false;
     const requestID = ++selectedUserRequest;
@@ -530,7 +468,7 @@
     error = '';
     statusMessage = 'Saving changes…';
     try {
-      const response = await readJSON(operation);
+      const response = await operation;
       if (!isCurrentUserRequest(requestID, userID)) return false;
       selected = response;
       lastGrant = response.grant ?? null;
@@ -538,7 +476,7 @@
       return true;
     } catch (err) {
       if (isCurrentUserRequest(requestID, userID)) {
-        error = err instanceof Error ? err.message : 'Could not save change';
+        error = errorMessage(err);
         statusMessage = '';
       }
       return false;
@@ -730,7 +668,7 @@
           <span class="user-search-user-id">{user.id}</span>
         </button>
       {:else}
-        <p class="user-search-empty">No viewers match “{userSearchQuery}”.</p>
+        <p class="user-search-empty">No viewers match "{userSearchQuery}".</p>
       {/each}
     </div>
   </dialog>
@@ -903,7 +841,7 @@
     </p>
     <div class="dialog-actions pt-4">
       <button class="button button-secondary" onclick={closeExplodeDialog}>Cancel</button>
-      <button class="button button-danger" onclick={explode}>Explode</button>
+      <button class="button button-danger" onclick={handleExplode}>Explode</button>
     </div>
   </dialog>
 
@@ -922,7 +860,7 @@
     </p>
     <div class="dialog-actions pt-4">
       <button class="button button-secondary" onclick={closeUndoExplodeDialog}>Cancel</button>
-      <button class="button button-primary" onclick={undoExplode}>Undo explode</button>
+      <button class="button button-primary" onclick={handleUndoExplode}>Undo explode</button>
     </div>
   </dialog>
 

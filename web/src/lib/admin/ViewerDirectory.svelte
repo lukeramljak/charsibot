@@ -1,8 +1,6 @@
 <script lang="ts">
-  import type { components } from '$lib/api.generated';
-
-  type User = components['schemas']['User'];
-  type ActivityFilter = 'all' | 'unknown' | 'inactive30' | 'inactive90' | 'recent';
+  import type { ActivityFilter } from '$lib/admin/types';
+  import type { Viewer } from '$lib/contracts/viewer';
 
   let {
     users,
@@ -22,8 +20,8 @@
     onToggleUserSelection,
     onSelectUser,
   }: {
-    users: User[];
-    filteredUsers: User[];
+    users: Viewer[];
+    filteredUsers: Viewer[];
     usernameFilter: string;
     activityFilter: ActivityFilter;
     selectedUserIDs: string[];
@@ -37,7 +35,7 @@
     onClearSelection: () => void;
     onOpenBulkDelete: () => void;
     onToggleUserSelection: (userID: string, checked: boolean) => void;
-    onSelectUser: (user: User) => void;
+    onSelectUser: (user: Viewer) => void;
   } = $props();
 </script>
 

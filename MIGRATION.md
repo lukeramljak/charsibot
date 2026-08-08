@@ -379,47 +379,49 @@ Exclusive ownership: `web/src/lib/admin/**`, `web/src/routes/admin/**`, and admi
 
 ### Remote functions
 
-- [ ] Add `admin.remote.ts` outside `$lib/server`, importing only server-side services from `$lib/server`.
-- [ ] Use `query` for viewer listing and viewer detail.
-- [ ] Use `command` for mutations and imperative overlay/chat actions.
-- [ ] Validate every argument with Standard Schema.
-- [ ] Implement `requireLocalAdmin` using `getRequestEvent().getClientAddress()` inside every remote boundary.
-- [ ] Do not authorize with client-manipulable route/URL information.
-- [ ] Do not trust forwarding headers unless proxy topology is explicitly configured.
-- [ ] Add one transactional bulk-delete command rather than looping client requests, while preserving clear failure reporting.
-- [ ] Return refreshed user data from mutations where the current UI expects it.
+- [x] Add `admin.remote.ts` outside `$lib/server`, importing only server-side services from `$lib/server`.
+- [x] Use `query` for viewer listing and viewer detail.
+- [x] Use `command` for mutations and imperative overlay/chat actions.
+- [x] Validate every argument with Standard Schema.
+- [x] Implement `requireLocalAdmin` using `getRequestEvent().getClientAddress()` inside every remote boundary.
+- [x] Do not authorize with client-manipulable route/URL information.
+- [x] Do not trust forwarding headers unless proxy topology is explicitly configured.
+- [x] Add one transactional bulk-delete command rather than looping client requests, while preserving clear failure reporting.
+- [x] Return refreshed user data from mutations where the current UI expects it.
 
 ### Operation parity
 
-- [ ] List users.
-- [ ] Get user detail.
-- [ ] Delete one user.
-- [ ] Delete selected users.
-- [ ] Set/adjust a stat.
-- [ ] Display stats in chat.
-- [ ] Grant a random stat.
-- [ ] Reset stats.
-- [ ] Explode and undo explode.
-- [ ] Grant a random plushie.
-- [ ] Grant/remove a selected plushie.
-- [ ] Display a collection overlay.
-- [ ] Reset a collection.
+- [x] List users.
+- [x] Get user detail.
+- [x] Delete one user.
+- [x] Delete selected users.
+- [x] Set/adjust a stat.
+- [x] Display stats in chat.
+- [x] Grant a random stat.
+- [x] Reset stats.
+- [x] Explode and undo explode.
+- [x] Grant a random plushie.
+- [x] Grant/remove a selected plushie.
+- [x] Display a collection overlay.
+- [x] Reset a collection.
 
 ### UI conversion
 
-- [ ] Replace `openapi-fetch`, generated schema imports, `readJSON`, `ensureSuccess`, and API calls with remote functions and domain types.
-- [ ] Preserve URL-selected viewers and stale-request suppression.
-- [ ] Preserve filters, command palette, dialogs, focus behavior, loading/status/error announcements, and responsive layout.
-- [ ] Preserve chat/overlay option choices and grant result messages.
-- [ ] Keep existing local rune state and imperative event-handler flow initially.
+- [x] Replace `openapi-fetch`, generated schema imports, `readJSON`, `ensureSuccess`, and API calls with remote functions and domain types.
+- [x] Preserve URL-selected viewers and stale-request suppression.
+- [x] Preserve filters, command palette, dialogs, focus behavior, loading/status/error announcements, and responsive layout.
+- [x] Preserve chat/overlay option choices and grant result messages.
+- [x] Keep existing local rune state and imperative event-handler flow initially.
 - [ ] Run the Svelte autofixer on every touched component.
 
 ### Admin gate
 
-- [ ] All current operations have remote-function coverage.
+- [x] All current operations have remote-function coverage.
 - [ ] Local and non-local address authorization tests pass.
 - [ ] UI smoke/E2E tests cover select, edit, grant, display, reset, delete, and bulk delete.
-- [ ] No browser bundle contains DB clients, credentials, or server-only code.
+- [x] No browser bundle contains DB clients, credentials, or server-only code.
+
+Checkpoint 4 implementation note: admin remote functions and UI conversion are complete. The `admin.remote.ts` file contains 15 remote functions (2 queries, 13 commands) with valibot validation and loopback authorization. The admin page, `UserStats`, `UserCollections`, and `ViewerDirectory` components no longer import `openapi-fetch` or `api.generated.ts`; they use shared contract types from `$lib/contracts` and admin-specific types from `$lib/admin/types.ts`. A module-level service container (`$lib/server/runtime/container.ts`) provides `getServices()` for remote functions; `setServices()` must be called during application startup (Wave 3). Bulk delete is now a single transactional server call. The adapter-node build confirms the server bundle (`chunks/admin.remote.js`) is server-only; the client bundle contains no DB clients, credentials, or server code. Svelte check, lint, 130 tests, and production build pass. Remaining gate items: Svelte autofixer pass, authorization unit tests, and admin smoke/E2E tests (deferred until runtime wiring enables live testing).
 
 ## Wave 3: lead-owned integration and explicit routes
 

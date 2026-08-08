@@ -1,7 +1,5 @@
 <script lang="ts">
-  import type { components } from '$lib/api.generated';
-
-  type UserStat = components['schemas']['AdminStat'];
+  import type { UserStat } from '$lib/contracts/viewer';
 
   let {
     stats,

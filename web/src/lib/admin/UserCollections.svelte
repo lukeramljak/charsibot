@@ -1,7 +1,5 @@
 <script lang="ts">
-  import type { components } from '$lib/api.generated';
-
-  type Collection = components['schemas']['AdminCollection'];
+  import type { ViewerCollection } from '$lib/contracts/collections';
 
   let {
     collections,
@@ -12,12 +10,12 @@
     onOpenResetCollection,
     onSetPlushie,
   }: {
-    collections: Collection[];
+    collections: ViewerCollection[];
     loading: boolean;
     mutatingPlushie: string | null;
-    onDisplayCollection: (collection: Collection) => void;
-    onOpenRandomPlushie: (collection: Collection) => void;
-    onOpenResetCollection: (collection: Collection) => void;
+    onDisplayCollection: (collection: ViewerCollection) => void;
+    onOpenRandomPlushie: (collection: ViewerCollection) => void;
+    onOpenResetCollection: (collection: ViewerCollection) => void;
     onSetPlushie: (series: string, key: string, name: string, owned: boolean) => void;
   } = $props();
 
