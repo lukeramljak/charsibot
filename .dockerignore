@@ -1,6 +1,10 @@
-web/node_modules
-web/build
-web/.svelte-kit
-web/.env
-web/.env.*
-web/.DS_Store
+node_modules
+build
+.svelte-kit
+.env
+.env.*
+.DS_Store
+.git
+.github
+charsibot.db*
+tmp/

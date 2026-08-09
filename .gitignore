@@ -1,11 +1,10 @@
 .env
 .env.*
 !.env.example
+.svelte-kit
+build
+node_modules
 tmp/
 charsibot.db*
-bin/
-server/web/
 .DS_Store
-.gocache
-.gomodcache
 .pnpm-store

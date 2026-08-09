@@ -1,55 +1,68 @@
 # charsibot
 
-[![Go Version](https://img.shields.io/github/go-mod/go-version/lukeramljak/charsibot?filename=go.mod)](https://github.com/lukeramljak/charsibot/blob/main/go.mod)
-[![Go Report Card](https://goreportcard.com/badge/github.com/lukeramljak/charsibot)](https://goreportcard.com/report/github.com/lukeramljak/charsibot)
 [![Twitch Bot](https://github.com/lukeramljak/charsibot/actions/workflows/ci.yml/badge.svg)](https://github.com/lukeramljak/charsibot/actions/workflows/ci.yml)
 
-Twitch bot and overlay for [Charsibel](https://twitch.tv/charsibel)
+Twitch bot and overlay for [Charsibel](https://twitch.tv/charsibel). It is a single-replica SvelteKit/Node application backed by SQLite.
 
 ## Prerequisites
 
-- Go 1.25+
-- pnpm
-- Docker
-- Task
+- Node.js 22+
+- pnpm 10+
+- Docker and Docker Compose (optional, for container deployment)
 
-## Development Setup
+## Run locally
 
-1. Clone the repository:
-
-   ```bash
-   git clone https://github.com/lukeramljak/charsibot.git
-   cd charsibot
-   ```
-
-2. **Twitch Bot**:
+1. Install dependencies and create your local configuration:
 
    ```bash
-   go mod download
-   task dev
-   ```
-
-   This will start the Go backend and API server on port 8081.
-
-3. **Twitch Web Frontend**:
-
-   ```bash
-   cd web
-   pnpm install
-   pnpm dev
-   ```
-
-   Access the frontend at `http://localhost:5173`. The Vite dev server proxies `/events` and `/api` to the Go server at `localhost:8081`.
-
-## Environment Variables
-
-   ```bash
+   pnpm install --frozen-lockfile
    cp .env.example .env
    ```
 
+2. For local offline work, leave `TWITCH_MOCK_MODE=true`. To connect Twitch chat, set `TWITCH_MOCK_MODE=false` and all four `TWITCH_*` credentials. Set `TWITCH_OAUTH_REDIRECT_URI` only when using the OAuth pages.
+
+3. Build and run the application:
+
+   ```bash
+   pnpm build
+   set -a && source .env && set +a
+   pnpm start
+   ```
+
+   The service listens on `http://localhost:8081` by default. `GET /health` is its liveness probe and `GET /ready` reports catalog, database, and Twitch readiness.
+
+`pnpm dev` starts the Vite development server and the application runtime, including the database and Twitch bot when credentials are configured.
+
+## Docker deployment
+
+Create `.env` as above, then run:
+
+```bash
+docker compose up --build -d
+```
+
+The Compose configuration maps port `8081`, stores SQLite data in the `twitch-data` volume, and includes a daily backup sidecar. Before a production deployment, set `TWITCH_MOCK_MODE=false` and provide all four Twitch credentials; the application refuses to start otherwise. Run `docker compose down` to stop the stack; omit `-v` to preserve database data.
+
+## Environment Variables
+
+```bash
+cp .env.example .env
+```
+
+`DB_PATH` is required. `TWITCH_MOCK_MODE=true` is an explicit offline mode for local development and CI. When it is `false` or omitted, all four Twitch credentials are required and startup fails if any are missing. `PORT`, `HOST`, and `SHUTDOWN_TIMEOUT` are optional. The included `.env` example and Docker Compose deployment set `PORT=8081`; adapter-node otherwise defaults to port `3000`, host `0.0.0.0`, and a 30-second shutdown timeout.
+
+## Quality checks
+
+```bash
+pnpm check
+pnpm lint
+pnpm test
+pnpm build
+```
+
 ## Database
 
-The Twitch bot uses a SQLite database (`charsibot.db`) which will be created automatically in the project root.
+Charsibot uses a SQLite database at `DB_PATH`. It is created and migrated automatically when absent or behind the current application version. Versioned SQL migrations live in `drizzle/`. Use `pnpm db:generate` after changing the Drizzle schema, review the generated SQL, and commit it with the schema change.
 
 ## Catalog config
 
@@ -57,5 +70,5 @@ Stat definitions and blind-box series are versioned JSON files under `catalog/co
 SQLite stores only viewer state (stat values and collected plushies).
 Catalog JSON is the runtime source of truth.
 
-Blind-box images and sounds live under `web/static/assets/blind-box/<series>/`.
+Blind-box images and sounds live under `static/assets/blind-box/<series>/`.
 JSON files use filenames such as `cutey.png` and the app expands them to public paths like `/assets/blind-box/coobubu/cutey.png`.
