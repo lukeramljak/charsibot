@@ -8,7 +8,7 @@ Twitch bot and overlay for viewer stats and blind-box collections. Single-replic
 pnpm check        # svelte-kit sync + svelte-check (type checking)
 pnpm lint         # prettier --check + eslint
 pnpm test         # vitest run
-pnpm build        # vite build (adapter-node) + server entrypoint bundle
+pnpm build        # vite build (adapter-node)
 pnpm format       # prettier --write
 ```
 
@@ -16,7 +16,6 @@ pnpm format       # prettier --write
 
 ```
 catalog/config/          JSON stat + blind-box definitions
-server/                  Custom Node entrypoint (imports adapter-node handler)
 src/
   lib/
     contracts/           Shared TS types: catalog.ts, viewer.ts, collections.ts, overlay.ts
@@ -66,7 +65,7 @@ src/
 
 ## Architecture decisions
 
-- `@sveltejs/adapter-node` with a custom entrypoint (`server/index.ts`).
+- `@sveltejs/adapter-node`. `hooks.server.ts` owns runtime startup and shutdown.
 - `ssr = false` globally.
 - Remote functions (`query`/`command` from `$app/server`) for admin panel; explicit HTTP routes for SSE, OAuth, health.
 - `better-sqlite3` with WAL mode.

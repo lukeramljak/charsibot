@@ -3,36 +3,24 @@ import * as v from 'valibot';
 
 export const variables = defineEnvVars({
   TWITCH_CLIENT_ID: {
-    schema: v.string(),
+    schema: v.optional(v.string()),
   },
   TWITCH_CLIENT_SECRET: {
-    schema: v.string(),
+    schema: v.optional(v.string()),
   },
   TWITCH_BOT_USER_ID: {
-    schema: v.pipe(
-      v.string(),
-      v.transform(parseInt),
-      v.number(),
-    ),
+    schema: v.optional(v.string()),
   },
   TWITCH_CHANNEL_USER_ID: {
-    schema: v.pipe(
-      v.string(),
-      v.transform(parseInt),
-      v.number(),
-    ),
+    schema: v.optional(v.string()),
   },
   TWITCH_OAUTH_REDIRECT_URI: {
-    schema: v.pipe(v.string(), v.url()),
+    schema: v.optional(v.string()),
   },
-  SERVER_PORT: {
-    schema: v.pipe(
-      v.string(),
-      v.transform(parseInt),
-      v.number(),
-    ),
+  PORT: {
+    schema: v.pipe(v.string(), v.transform(parseInt), v.number()),
   },
   DB_PATH: {
-    schema: v.string()
+    schema: v.string(),
   },
 });

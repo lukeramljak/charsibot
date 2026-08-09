@@ -15,4 +15,4 @@ WORKDIR /app
 COPY --from=build /app/build ./build
 COPY --from=build /app/node_modules ./node_modules
 EXPOSE 8081
-CMD ["node", "build/server.js"]
+CMD ["node", "build"]

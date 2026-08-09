@@ -31,7 +31,7 @@ Twitch bot and overlay for [Charsibel](https://twitch.tv/charsibel). It is a sin
 
    The service listens on `http://localhost:8081` by default. `GET /health` is its liveness probe and `GET /ready` reports catalog, database, and Twitch readiness.
 
-`pnpm dev` starts the Vite development server for UI work. It does not start the production Node lifecycle, so use the build/start commands above when testing database- or bot-backed behavior.
+`pnpm dev` starts the Vite development server and the application runtime, including the database and Twitch bot when credentials are configured.
 
 ## Docker deployment
 
@@ -49,7 +49,7 @@ The Compose configuration maps port `8081`, stores SQLite data in the `twitch-da
 cp .env.example .env
 ```
 
-`DB_PATH` is required. `PORT`, `HOST`, and `SHUTDOWN_TIMEOUT` are optional and default to `8081`, `0.0.0.0`, and `30` seconds. `SERVER_PORT` remains accepted as a compatibility alias for `PORT`.
+`DB_PATH` is required. `PORT`, `HOST`, and `SHUTDOWN_TIMEOUT` are optional. The included `.env` example and Docker Compose deployment set `PORT=8081`; adapter-node otherwise defaults to port `3000`, host `0.0.0.0`, and a 30-second shutdown timeout.
 
 ## Quality checks
 

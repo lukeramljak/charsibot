@@ -9,9 +9,9 @@
   },
   "scripts": {
     "dev": "vite dev",
-    "build": "vite build && vite build --config vite.server.config.ts",
-    "start": "node build/server.js",
-    "preview": "node build/server.js",
+    "build": "vite build",
+    "start": "node build",
+    "preview": "node build",
     "prepare": "svelte-kit sync || echo ''",
     "check": "svelte-kit sync && svelte-check",
     "check:watch": "svelte-kit sync && svelte-check --watch",
