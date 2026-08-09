@@ -1,6 +1,14 @@
 import { randomInt } from 'node:crypto';
 
-import type { ChatSender, Logger, OverlayBus, Random } from '$lib/server/application/ports';
+import type {
+  ChatSender,
+  Clock,
+  Logger,
+  OverlayBus,
+  Random,
+} from '$lib/server/application/ports';
+import { createBot } from '$lib/server/bot/bot';
+import type { Bot } from '$lib/server/bot/types';
 import { loadCatalog } from '$lib/server/catalog/load';
 import { openDatabase, type DatabaseConnection } from '$lib/server/db/client';
 import { createCollectionsRepository } from '$lib/server/db/collections.repository';
@@ -12,9 +20,14 @@ import { createOverlayBus } from '$lib/server/events/overlay-bus';
 import { setReadiness, setServices } from '$lib/server/runtime/container';
 import type { ApplicationRuntime } from '$lib/server/runtime/contracts';
 import { createReadiness } from '$lib/server/runtime/readiness';
+import { createBotNotificationHandler } from '$lib/server/twitch/bot-adapter';
 import { createTwitchChatSender } from '$lib/server/twitch/chat-sender';
+import { createConduitSessionManager } from '$lib/server/twitch/conduits';
+import { createEventSubTransport } from '$lib/server/twitch/eventsub';
 import { createHelixClient, createTwitchChatClient } from '$lib/server/twitch/helix';
 import { createAppTokenProvider } from '$lib/server/twitch/token';
+import type { EventSubTransport } from '$lib/server/twitch/types';
+import { createNodeEventSubConnector } from '$lib/server/twitch/websocket';
 
 export interface TwitchConfig {
   clientId: string;
@@ -36,6 +49,27 @@ const createLogger = (): Logger => ({
   error: (message, attributes) => console.error(message, attributes ?? ''),
 });
 
+const createClock = (): Clock => ({
+  now: () => new Date(),
+  sleep: (milliseconds, signal) =>
+    new Promise((resolve, reject) => {
+      if (signal?.aborted) {
+        reject(signal.reason);
+        return;
+      }
+
+      const timeout = setTimeout(resolve, milliseconds);
+      signal?.addEventListener(
+        'abort',
+        () => {
+          clearTimeout(timeout);
+          reject(signal.reason);
+        },
+        { once: true },
+      );
+    }),
+});
+
 const createRandom = (): Random => ({
   integer: (maxExclusive) => randomInt(maxExclusive),
 });
@@ -53,26 +87,6 @@ const readTwitchConfig = (environment: NodeJS.ProcessEnv): TwitchConfig | undefi
   return { clientId, clientSecret, botUserId, channelUserId };
 };
 
-const createChatSender = (twitch: TwitchConfig, logger: Logger): ChatSender => {
-  const tokenProvider = createAppTokenProvider({
-    clientId: twitch.clientId,
-    clientSecret: twitch.clientSecret,
-  });
-
-  const helix = createHelixClient({
-    clientId: twitch.clientId,
-    tokenProvider,
-  });
-
-  const client = createTwitchChatClient({ helix, logger });
-
-  return createTwitchChatSender({
-    client,
-    broadcasterId: twitch.channelUserId,
-    senderId: twitch.botUserId,
-  });
-};
-
 const createLoggingChatStub = (logger: Logger): ChatSender => ({
   send: async (message) => {
     logger.warn('chat not connected, message dropped', { message: message.message });
@@ -88,12 +102,89 @@ export const readRuntimeConfig = (environment: NodeJS.ProcessEnv): RuntimeConfig
   return { dbPath, logger: createLogger(), twitch: readTwitchConfig(environment) };
 };
 
+interface TwitchStack {
+  chat: ChatSender;
+  transport: EventSubTransport;
+  bot: Bot;
+  maintainToken: (signal: AbortSignal) => Promise<void>;
+}
+
+const createTwitchStack = (
+  twitch: TwitchConfig,
+  deps: {
+    stats: ReturnType<typeof createStatsService>;
+    blindBox: ReturnType<typeof createBlindBoxService>;
+    overlay: OverlayBus;
+    random: Random;
+    clock: Clock;
+    logger: Logger;
+    catalog: ReturnType<typeof loadCatalog>;
+    readiness: ReturnType<typeof createReadiness>;
+  },
+): TwitchStack => {
+  const tokenProvider = createAppTokenProvider({
+    clientId: twitch.clientId,
+    clientSecret: twitch.clientSecret,
+  });
+
+  const helix = createHelixClient({
+    clientId: twitch.clientId,
+    tokenProvider,
+  });
+
+  const chatClient = createTwitchChatClient({ helix, logger: deps.logger });
+
+  const chat = createTwitchChatSender({
+    client: chatClient,
+    broadcasterId: twitch.channelUserId,
+    senderId: twitch.botUserId,
+  });
+
+  const bot = createBot({
+    botUserID: twitch.botUserId,
+    series: deps.catalog.series,
+    stats: deps.stats,
+    blindBox: deps.blindBox,
+    overlay: deps.overlay,
+    chat,
+    clock: deps.clock,
+    random: deps.random,
+    logger: deps.logger,
+  });
+
+  const onNotification = createBotNotificationHandler(bot);
+
+  const sessionManager = createConduitSessionManager({
+    helix,
+    clientId: twitch.clientId,
+    botUserId: twitch.botUserId,
+    channelUserId: twitch.channelUserId,
+    logger: deps.logger,
+  });
+
+  const connector = createNodeEventSubConnector();
+
+  const transport = createEventSubTransport({
+    connector,
+    sessionManager,
+    onNotification,
+    onReadinessChange: (state) => {
+      deps.readiness.set('twitch', state.ready);
+    },
+    logger: deps.logger,
+  });
+
+  return { chat, transport, bot, maintainToken: (signal) => tokenProvider.maintain(signal) };
+};
+
 export const createApplicationRuntime = async (
   environment: NodeJS.ProcessEnv = process.env,
 ): Promise<ApplicationRuntime> => {
   const config = readRuntimeConfig(environment);
   let db: DatabaseConnection | undefined;
   let bus: OverlayBus | undefined;
+  let twitchStack: TwitchStack | undefined;
+  const twitchController = new AbortController();
 
   const readiness = createReadiness();
   setReadiness(readiness);
@@ -126,24 +217,55 @@ export const createApplicationRuntime = async (
     });
 
     bus = createOverlayBus(config.logger);
+    const random = createRandom();
+    const clock = createClock();
 
-    const chat = config.twitch
-      ? createChatSender(config.twitch, config.logger)
-      : createLoggingChatStub(config.logger);
+    let chat: ChatSender;
+
+    if (config.twitch) {
+      twitchStack = createTwitchStack(config.twitch, {
+        stats,
+        blindBox,
+        overlay: bus,
+        random,
+        clock,
+        logger: config.logger,
+        catalog,
+        readiness,
+      });
+      chat = twitchStack.chat;
+    } else {
+      chat = createLoggingChatStub(config.logger);
+    }
 
     setServices({
       stats,
       blindBox,
       chat,
       overlay: bus,
-      random: createRandom(),
+      random,
       catalog,
     });
 
     config.logger.info('application services initialized', {
       chat: config.twitch ? 'twitch' : 'stub',
     });
+
+    if (twitchStack) {
+      await twitchStack.transport.start(twitchController.signal);
+      twitchStack.maintainToken(twitchController.signal).catch((error: unknown) => {
+        if (!twitchController.signal.aborted) {
+          config.logger.error('token maintenance failed', { error });
+        }
+      });
+      config.logger.info('twitch bot connected');
+    }
   } catch (error) {
+    twitchController.abort('startup failure');
+    if (twitchStack) {
+      await twitchStack.bot.stop('startup failure').catch(() => undefined);
+      await twitchStack.transport.stop('startup failure').catch(() => undefined);
+    }
     bus?.close();
     db?.close();
     throw error;
@@ -151,10 +273,16 @@ export const createApplicationRuntime = async (
 
   const capturedDb = db;
   const capturedBus = bus;
+  const capturedTwitch = twitchStack;
 
   return {
     stop: async (reason) => {
       config.logger.info('application stopping', { reason });
+      twitchController.abort(reason);
+      if (capturedTwitch) {
+        await capturedTwitch.bot.stop(reason);
+        await capturedTwitch.transport.stop(reason);
+      }
       capturedBus.close();
       capturedDb.checkpoint();
       capturedDb.close();

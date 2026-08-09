@@ -40,6 +40,7 @@ interface SubscriptionSpec {
   type: string;
   version: '1';
   condition: Record<string, string>;
+  required: boolean;
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
@@ -74,21 +75,25 @@ const subscriptions = (
         broadcaster_user_id: options.channelUserId,
         user_id: options.botUserId,
       },
+      required: true,
     },
     {
       type: 'channel.channel_points_custom_reward_redemption.add',
       version: '1',
       condition: { broadcaster_user_id: options.channelUserId },
+      required: false,
     },
     {
       type: 'channel.raid',
       version: '1',
       condition: { to_broadcaster_user_id: options.channelUserId },
+      required: false,
     },
     {
       type: 'conduit.shard.disabled',
       version: '1',
       condition: { client_id: options.clientId, conduit_id: conduitId },
+      required: true,
     },
   ];
 };
@@ -229,31 +234,52 @@ export const createConduitSessionManager = (
     return undefined;
   };
 
+  const ensureSubscription = async (
+    id: string,
+    subscription: SubscriptionSpec,
+    signal?: AbortSignal,
+  ): Promise<void> => {
+    if (await findMatchingSubscription(id, subscription, signal)) {
+      return;
+    }
+
+    await options.helix.request<unknown>(
+      '/eventsub/subscriptions',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          type: subscription.type,
+          version: subscription.version,
+          condition: subscription.condition,
+          transport: { method: 'conduit', conduit_id: id },
+        }),
+      },
+      { signal, acceptedStatuses: [409] },
+    );
+
+    const reconciled = await findMatchingSubscription(id, subscription, signal);
+    if (!reconciled) {
+      throw new Error(
+        `Twitch EventSub subscription ${subscription.type} was not present after creation`,
+      );
+    }
+  };
+
   const ensureSubscriptions = async (id: string, signal?: AbortSignal): Promise<void> => {
     for (const subscription of subscriptions(options, id)) {
       logger.info('Ensuring Twitch EventSub subscription', { type: subscription.type });
 
-      if (await findMatchingSubscription(id, subscription, signal)) {
-        continue;
-      }
+      try {
+        await ensureSubscription(id, subscription, signal);
+      } catch (error) {
+        if (subscription.required) {
+          throw error;
+        }
 
-      await options.helix.request<unknown>(
-        '/eventsub/subscriptions',
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            ...subscription,
-            transport: { method: 'conduit', conduit_id: id },
-          }),
-        },
-        { signal, acceptedStatuses: [409] },
-      );
-
-      const reconciled = await findMatchingSubscription(id, subscription, signal);
-      if (!reconciled) {
-        throw new Error(
-          `Twitch EventSub subscription ${subscription.type} was not present after creation`,
-        );
+        logger.warn('Optional Twitch EventSub subscription failed', {
+          type: subscription.type,
+          error: error instanceof Error ? error.message : String(error),
+        });
       }
     }
   };
