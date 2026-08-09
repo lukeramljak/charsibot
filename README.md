@@ -49,7 +49,17 @@ The Compose configuration maps port `8081`, stores SQLite data in the `twitch-da
 cp .env.example .env
 ```
 
-`DB_PATH` is required. `TWITCH_MOCK_MODE=true` is an explicit offline mode for local development and CI. When it is `false` or omitted, all four Twitch credentials are required and startup fails if any are missing. `PORT`, `HOST`, and `SHUTDOWN_TIMEOUT` are optional. The included `.env` example and Docker Compose deployment set `PORT=8081`; adapter-node otherwise defaults to port `3000`, host `0.0.0.0`, and a 30-second shutdown timeout.
+`DB_PATH` is required. `TWITCH_MOCK_MODE=true` is an explicit offline mode for local development and CI. When it is `false` or omitted, all four Twitch credentials are required and startup fails if any are missing. `PORT`, `HOST`, and `SHUTDOWN_TIMEOUT` are optional. The included `.env` example and Docker Compose deployment set `PORT=8081`; adapter-node otherwise defaults to port `3000`, host `0.0.0.0`, and a 30-second shutdown timeout. `ORIGIN` defaults to `http://localhost:8081` in Docker; set it when accessing the app from another device or through a reverse proxy.
+
+### Accessing the admin from another device
+
+Set `ORIGIN` to the exact URL used to open the app in the browser. For a direct LAN deployment, for example:
+
+```bash
+ORIGIN=http://192.168.1.50:8081
+```
+
+Then restart the container with `docker compose up -d`. Use that same scheme, host, and port in the browser. This lets SvelteKit validate admin updates as same-origin requests without disabling CSRF protection. If the app is behind a TLS reverse proxy, set `ORIGIN` to its public `https://` URL instead.
 
 ## Quality checks
 
