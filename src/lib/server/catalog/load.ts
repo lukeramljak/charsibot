@@ -4,7 +4,7 @@ import * as v from 'valibot';
 
 import statsJSON from '$catalog/config/stats.json?raw';
 
-const seriesJSON = import.meta.glob<string>('$catalog/config/blind-box/*.json', {
+const seriesJSON = import.meta.glob<string>('../../../../catalog/config/blind-box/*.json', {
   eager: true,
   import: 'default',
   query: '?raw',
