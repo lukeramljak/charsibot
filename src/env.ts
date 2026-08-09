@@ -1,5 +1,5 @@
+import { building } from '$app/env';
 import { defineEnvVars } from '@sveltejs/kit/env';
-import { building } from '$app/env'
 import * as v from 'valibot';
 
 export const variables = defineEnvVars({
@@ -22,7 +22,9 @@ export const variables = defineEnvVars({
     schema: v.optional(v.string()),
   },
   PORT: {
-    schema: building ? v.optional(v.string()) : v.pipe(v.string(), v.transform(parseInt), v.number()),
+    schema: building
+      ? v.optional(v.string())
+      : v.pipe(v.string(), v.transform(parseInt), v.number()),
   },
   DB_PATH: {
     schema: building ? v.optional(v.string()) : v.string(),

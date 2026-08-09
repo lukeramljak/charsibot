@@ -46,12 +46,14 @@ describe('readRuntimeConfig', () => {
   it('treats empty strings as missing and fails closed', () => {
     expect(() =>
       readRuntimeConfig({
-      DB_PATH: '/data/charsibot.db',
-      TWITCH_CLIENT_ID: '',
-      TWITCH_CLIENT_SECRET: 'secret',
-      TWITCH_BOT_USER_ID: 'bot',
-      TWITCH_CHANNEL_USER_ID: 'channel',
+        DB_PATH: '/data/charsibot.db',
+        TWITCH_CLIENT_ID: '',
+        TWITCH_CLIENT_SECRET: 'secret',
+        TWITCH_BOT_USER_ID: 'bot',
+        TWITCH_CHANNEL_USER_ID: 'channel',
       }),
-    ).toThrow('TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_BOT_USER_ID, and TWITCH_CHANNEL_USER_ID are required');
+    ).toThrow(
+      'TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_BOT_USER_ID, and TWITCH_CHANNEL_USER_ID are required',
+    );
   });
 });
