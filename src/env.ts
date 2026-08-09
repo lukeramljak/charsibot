@@ -5,6 +5,9 @@ export const variables = defineEnvVars({
   TWITCH_CLIENT_ID: {
     schema: v.optional(v.string()),
   },
+  TWITCH_MOCK_MODE: {
+    schema: v.optional(v.picklist(['true', 'false'])),
+  },
   TWITCH_CLIENT_SECRET: {
     schema: v.optional(v.string()),
   },

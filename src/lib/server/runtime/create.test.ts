@@ -8,25 +8,22 @@ describe('readRuntimeConfig', () => {
   });
 
   it('reads DB_PATH', () => {
-    const config = readRuntimeConfig({ DB_PATH: '/data/charsibot.db' });
+    const config = readRuntimeConfig({ DB_PATH: '/data/charsibot.db', TWITCH_MOCK_MODE: 'true' });
 
     expect(config.dbPath).toBe('/data/charsibot.db');
+    expect(config.mockTwitch).toBe(true);
   });
 
-  it('returns undefined twitch config when env vars are missing', () => {
-    const config = readRuntimeConfig({ DB_PATH: '/data/charsibot.db' });
+  it('permits missing Twitch configuration only in explicit mock mode', () => {
+    const config = readRuntimeConfig({ DB_PATH: '/data/charsibot.db', TWITCH_MOCK_MODE: 'true' });
 
     expect(config.twitch).toBeUndefined();
   });
 
-  it('returns undefined twitch config when only some vars are set', () => {
-    const config = readRuntimeConfig({
-      DB_PATH: '/data/charsibot.db',
-      TWITCH_CLIENT_ID: 'id',
-      TWITCH_CLIENT_SECRET: 'secret',
-    });
-
-    expect(config.twitch).toBeUndefined();
+  it('fails when Twitch configuration is missing', () => {
+    expect(() => readRuntimeConfig({ DB_PATH: '/data/charsibot.db' })).toThrow(
+      'TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_BOT_USER_ID, and TWITCH_CHANNEL_USER_ID are required',
+    );
   });
 
   it('reads twitch config when all vars are set', () => {
@@ -46,15 +43,15 @@ describe('readRuntimeConfig', () => {
     });
   });
 
-  it('treats empty strings as missing', () => {
-    const config = readRuntimeConfig({
+  it('treats empty strings as missing and fails closed', () => {
+    expect(() =>
+      readRuntimeConfig({
       DB_PATH: '/data/charsibot.db',
       TWITCH_CLIENT_ID: '',
       TWITCH_CLIENT_SECRET: 'secret',
       TWITCH_BOT_USER_ID: 'bot',
       TWITCH_CHANNEL_USER_ID: 'channel',
-    });
-
-    expect(config.twitch).toBeUndefined();
+      }),
+    ).toThrow('TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_BOT_USER_ID, and TWITCH_CHANNEL_USER_ID are required');
   });
 });

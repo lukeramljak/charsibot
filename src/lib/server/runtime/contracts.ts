@@ -21,6 +21,7 @@ export interface ApplicationRuntime {
 
 export interface Environment {
   DB_PATH?: string | number;
+  TWITCH_MOCK_MODE?: string | number;
   TWITCH_CLIENT_ID?: string | number;
   TWITCH_CLIENT_SECRET?: string | number;
   TWITCH_BOT_USER_ID?: string | number;

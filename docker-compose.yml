@@ -11,6 +11,7 @@ services:
     environment:
       - PORT=${PORT:-8081}
       - DB_PATH=${DB_PATH:-/data/charsibot.db}
+      - TWITCH_MOCK_MODE=${TWITCH_MOCK_MODE:-false}
       - TWITCH_CLIENT_ID=${TWITCH_CLIENT_ID}
       - TWITCH_CLIENT_SECRET=${TWITCH_CLIENT_SECRET}
       - TWITCH_BOT_USER_ID=${TWITCH_BOT_USER_ID}

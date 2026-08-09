@@ -19,7 +19,7 @@ Twitch bot and overlay for [Charsibel](https://twitch.tv/charsibel). It is a sin
    cp .env.example .env
    ```
 
-2. Set `DB_PATH` in `.env` and, when connecting Twitch chat, set all four `TWITCH_*` credentials. Set `TWITCH_OAUTH_REDIRECT_URI` only when using the OAuth pages.
+2. For local offline work, leave `TWITCH_MOCK_MODE=true`. To connect Twitch chat, set `TWITCH_MOCK_MODE=false` and all four `TWITCH_*` credentials. Set `TWITCH_OAUTH_REDIRECT_URI` only when using the OAuth pages.
 
 3. Build and run the application:
 
@@ -41,7 +41,7 @@ Create `.env` as above, then run:
 docker compose up --build -d
 ```
 
-The Compose configuration maps port `8081`, stores SQLite data in the `twitch-data` volume, and includes a daily backup sidecar. Run `docker compose down` to stop the stack; omit `-v` to preserve database data.
+The Compose configuration maps port `8081`, stores SQLite data in the `twitch-data` volume, and includes a daily backup sidecar. Before a production deployment, set `TWITCH_MOCK_MODE=false` and provide all four Twitch credentials; the application refuses to start otherwise. Run `docker compose down` to stop the stack; omit `-v` to preserve database data.
 
 ## Environment Variables
 
@@ -49,7 +49,7 @@ The Compose configuration maps port `8081`, stores SQLite data in the `twitch-da
 cp .env.example .env
 ```
 
-`DB_PATH` is required. `PORT`, `HOST`, and `SHUTDOWN_TIMEOUT` are optional. The included `.env` example and Docker Compose deployment set `PORT=8081`; adapter-node otherwise defaults to port `3000`, host `0.0.0.0`, and a 30-second shutdown timeout.
+`DB_PATH` is required. `TWITCH_MOCK_MODE=true` is an explicit offline mode for local development and CI. When it is `false` or omitted, all four Twitch credentials are required and startup fails if any are missing. `PORT`, `HOST`, and `SHUTDOWN_TIMEOUT` are optional. The included `.env` example and Docker Compose deployment set `PORT=8081`; adapter-node otherwise defaults to port `3000`, host `0.0.0.0`, and a 30-second shutdown timeout.
 
 ## Quality checks
 

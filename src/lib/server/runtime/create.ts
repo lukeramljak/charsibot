@@ -30,6 +30,7 @@ export interface TwitchConfig {
 export interface RuntimeConfig {
   dbPath: string;
   logger: Logger;
+  mockTwitch: boolean;
   twitch?: TwitchConfig;
 }
 
@@ -65,14 +66,16 @@ const createRandom = (): Random => ({
   integer: (maxExclusive) => randomInt(maxExclusive),
 });
 
-const readTwitchConfig = (environment: Environment): TwitchConfig | undefined => {
+const readTwitchConfig = (environment: Environment): TwitchConfig => {
   const clientId = environment.TWITCH_CLIENT_ID;
   const clientSecret = environment.TWITCH_CLIENT_SECRET;
   const botUserId = environment.TWITCH_BOT_USER_ID;
   const channelUserId = environment.TWITCH_CHANNEL_USER_ID;
 
   if (!clientId || !clientSecret || !botUserId || !channelUserId) {
-    return undefined;
+    throw new Error(
+      'TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_BOT_USER_ID, and TWITCH_CHANNEL_USER_ID are required unless TWITCH_MOCK_MODE=true',
+    );
   }
 
   return {
@@ -95,7 +98,17 @@ export const readRuntimeConfig = (environment: Environment): RuntimeConfig => {
     throw new Error('DB_PATH environment variable is required');
   }
 
-  return { dbPath: String(dbPath), logger: createLogger(), twitch: readTwitchConfig(environment) };
+  const mockTwitch = environment.TWITCH_MOCK_MODE === 'true';
+  if (mockTwitch) {
+    return { dbPath: String(dbPath), logger: createLogger(), mockTwitch };
+  }
+
+  return {
+    dbPath: String(dbPath),
+    logger: createLogger(),
+    mockTwitch,
+    twitch: readTwitchConfig(environment),
+  };
 };
 
 interface TwitchStack {
@@ -227,6 +240,7 @@ export const createApplicationRuntime = async (
       chat = twitchStack.chat;
     } else {
       chat = createLoggingChatStub(config.logger);
+      readiness.set('twitch', true);
     }
 
     setServices({
@@ -239,7 +253,7 @@ export const createApplicationRuntime = async (
     });
 
     config.logger.info('application services initialized', {
-      chat: config.twitch ? 'twitch' : 'stub',
+      chat: config.twitch ? 'twitch' : 'mock',
     });
 
     if (twitchStack) {
