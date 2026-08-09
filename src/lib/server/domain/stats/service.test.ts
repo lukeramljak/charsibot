@@ -161,7 +161,7 @@ describe('stats service', () => {
 });
 
 describe('formatStats', () => {
-  it('matches the Go chat formatting for populated and empty stats', () => {
+  it('preserves chat formatting for populated and empty stats', () => {
     expect(
       formatStats('testuser', [
         { name: 'strength', shortName: 'STR', longName: 'Strength', value: 5 },

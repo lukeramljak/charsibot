@@ -468,7 +468,7 @@ Checkpoint 7 implementation note: Wave 3 is complete. The Twitch chat sender is 
 - [x] Keep Debian/glibc-compatible builder and runtime images for `better-sqlite3`.
 - [x] Preserve port 8081 mapping, `/data`, `DB_PATH`, the named volume, backup label, and backup container.
 - [x] Configure Docker for exactly one application replica.
-- [ ] Update `.env.example`, Taskfile, README, and operational documentation.
+- [x] Remove the obsolete Taskfile and update `.env.example`, README, and operational documentation.
 - [x] Add CI for format, lint, Svelte check, unit tests, build, DB compatibility fixtures, mock Twitch integration, and Docker smoke.
 - [x] Add admin authorization and SSE contract tests to CI.
 - [x] Keep Go build/test/lint and API drift checks until the final parity gate.

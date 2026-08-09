@@ -30,7 +30,7 @@ describe('come trigger matching', () => {
     }
   });
 
-  it('splits on every non-ASCII-letter or digit like the Go tokenizer', () => {
+  it('splits on every non-ASCII-letter or digit', () => {
     expect(tokenizeTriggerWords('abc-coming_cum42/camé')).toEqual([
       'abc',
       'coming',

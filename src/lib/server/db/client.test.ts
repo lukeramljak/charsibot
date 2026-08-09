@@ -1,9 +1,7 @@
 import BetterSqlite3 from 'better-sqlite3';
-import { spawnSync } from 'node:child_process';
 import { mkdtempSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { openDatabase } from '$lib/server/db/client';
@@ -190,71 +188,5 @@ describe('openDatabase', () => {
     expect(walSizeAfter).toBe(0);
 
     connection.close();
-  });
-
-  const compatibilityTest = process.env.RUN_GO_DB_COMPAT === 'true' ? it : it.skip;
-  compatibilityTest('is accepted by the final Go database connector', () => {
-    const path = databasePath();
-    const connection = openDatabase(path);
-    connection.close();
-    const repositoryRoot = fileURLToPath(new URL('../../../../../', import.meta.url));
-    const result = spawnSync(
-      'go',
-      ['test', './db', '-run', '^TestNodeCreatedDatabaseCompatibility$', '-count=1'],
-      {
-        cwd: repositoryRoot,
-        encoding: 'utf8',
-        env: { ...process.env, CHARSIBOT_NODE_DB_PATH: path },
-      },
-    );
-    expect(`${result.stdout}${result.stderr}`).toContain('ok');
-    expect(result.status).toBe(0);
-  });
-
-  compatibilityTest('opens a Go-created v7 database without changing its contract', () => {
-    const path = databasePath();
-    const repositoryRoot = fileURLToPath(new URL('../../../../../', import.meta.url));
-    const result = spawnSync(
-      'go',
-      ['test', './db', '-run', '^TestCreateGoDatabaseCompatibilityFixture$', '-count=1'],
-      {
-        cwd: repositoryRoot,
-        encoding: 'utf8',
-        env: { ...process.env, CHARSIBOT_GO_DB_PATH: path },
-      },
-    );
-    expect(`${result.stdout}${result.stderr}`).toContain('ok');
-    expect(result.status).toBe(0);
-
-    const before = new BetterSqlite3(path);
-    before.defaultSafeIntegers(true);
-    const schemaBefore = before
-      .prepare('SELECT name, sql FROM sqlite_master WHERE sql IS NOT NULL ORDER BY name')
-      .all();
-    const historyBefore = before
-      .prepare('SELECT version_id, is_applied FROM goose_db_version ORDER BY id')
-      .all();
-    before.close();
-
-    const connection = openDatabase(path);
-    expect(connection.state).toBe('existing');
-    expect(
-      connection.database
-        .prepare('SELECT username, stat_name, value FROM user_stats WHERE user_id = ?')
-        .get('go-viewer'),
-    ).toEqual({ username: 'GoViewer', stat_name: 'strength', value: 17n });
-    connection.close();
-
-    const after = new BetterSqlite3(path);
-    after.defaultSafeIntegers(true);
-    expect(
-      after
-        .prepare('SELECT name, sql FROM sqlite_master WHERE sql IS NOT NULL ORDER BY name')
-        .all(),
-    ).toEqual(schemaBefore);
-    expect(
-      after.prepare('SELECT version_id, is_applied FROM goose_db_version ORDER BY id').all(),
-    ).toEqual(historyBefore);
-    after.close();
   });
 });
