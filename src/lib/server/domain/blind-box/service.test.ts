@@ -45,7 +45,7 @@ describe('blind-box service', () => {
     const { connection, service } = setup();
     await service.grant('viewer', 'viewer', 'coobubu', 'cutey');
     const collections = await service.getViewerCollections('viewer');
-    expect(collections).toHaveLength(5);
+    expect(collections).toHaveLength(6);
     expect(collections.find((entry) => entry.config.series === 'coobubu')?.collected).toEqual([
       'cutey',
     ]);

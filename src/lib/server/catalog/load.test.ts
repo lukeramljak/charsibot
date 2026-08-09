@@ -61,14 +61,21 @@ describe('catalog loading', () => {
     expect(catalog.series.find((config) => config.series === 'olliepop')?.revealSound).toBe(
       '/assets/blind-box/olliepops/reveal.mp3',
     );
-    expect(catalog.series.find((config) => config.series === 'pixel')).toMatchObject({
+    const pixel = catalog.series.find((config) => config.series === 'pixel');
+    expect(pixel).toMatchObject({
       name: 'Pixel Pups',
       revealSound: '/assets/blind-box/pixel/reveal.mp3',
-      plushies: [
-        { key: 'ollie-of-rivia', image: '/assets/blind-box/pixel/ollie-of-rivia.png' },
-        { key: 'secret', image: '/assets/blind-box/pixel/secret.png' },
-      ],
     });
+    expect(pixel?.plushies.map(({ key, image }) => ({ key, image }))).toEqual([
+      { key: 'ollie-of-rivia', image: '/assets/blind-box/pixel/ollie-of-rivia.png' },
+      { key: 'cooper-silverpaw', image: '/assets/blind-box/pixel/cooper-silverpaw.png' },
+      { key: 'lethal-coopany', image: '/assets/blind-box/pixel/lethal-coopany.png' },
+      { key: 'cult-of-ollie', image: '/assets/blind-box/pixel/cult-of-ollie.png' },
+      { key: 'legend-of-cooper', image: '/assets/blind-box/pixel/legend-of-cooper.png' },
+      { key: 'cuber', image: '/assets/blind-box/pixel/cuber.png' },
+      { key: 'repollie', image: '/assets/blind-box/pixel/repollie.png' },
+      { key: 'secret', image: '/assets/blind-box/pixel/secret.png' },
+    ]);
   });
 
   it('preserves absolute asset paths and defaults assetDir to series', () => {
