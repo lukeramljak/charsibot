@@ -27,6 +27,4 @@ export interface Environment {
   TWITCH_CHANNEL_USER_ID?: string | number;
 }
 
-export type RuntimeFactory = (
-  environment?: Environment,
-) => Promise<ApplicationRuntime>;
+export type RuntimeFactory = (environment?: Environment) => Promise<ApplicationRuntime>;

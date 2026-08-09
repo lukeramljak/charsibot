@@ -1,4 +1,8 @@
-import { TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_OAUTH_REDIRECT_URI } from '$app/env/private';
+import {
+  TWITCH_CLIENT_ID,
+  TWITCH_CLIENT_SECRET,
+  TWITCH_OAUTH_REDIRECT_URI,
+} from '$app/env/private';
 import { error } from '@sveltejs/kit';
 
 import type { RequestHandler } from './$types';

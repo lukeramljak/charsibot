@@ -22,10 +22,16 @@ const store = (() => {
   if (import.meta.env.DEV) {
     const g = globalThis as Record<string, unknown>;
     g.__charsibot_container ??= { services: undefined, readiness: undefined };
-    return g.__charsibot_container as { services: ApplicationServices | undefined; readiness: Readiness | undefined };
+    return g.__charsibot_container as {
+      services: ApplicationServices | undefined;
+      readiness: Readiness | undefined;
+    };
   }
 
-  return { services: undefined as ApplicationServices | undefined, readiness: undefined as Readiness | undefined };
+  return {
+    services: undefined as ApplicationServices | undefined,
+    readiness: undefined as Readiness | undefined,
+  };
 })();
 
 export const setServices = (s: ApplicationServices): void => {

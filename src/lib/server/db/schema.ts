@@ -175,9 +175,7 @@ const validateSchema = (database: BetterSqlite3.Database): void => {
   validateActivityIndex(database);
 };
 
-export const initializeOrValidate = (
-  database: BetterSqlite3.Database,
-): 'created' | 'existing' => {
+export const initializeOrValidate = (database: BetterSqlite3.Database): 'created' | 'existing' => {
   dropLegacyGooseTable(database);
 
   if (isEmptyDatabase(database)) {

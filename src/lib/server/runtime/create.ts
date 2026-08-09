@@ -1,12 +1,6 @@
 import { randomInt } from 'node:crypto';
 
-import type {
-  ChatSender,
-  Clock,
-  Logger,
-  OverlayBus,
-  Random,
-} from '$lib/server/application/ports';
+import type { ChatSender, Clock, Logger, OverlayBus, Random } from '$lib/server/application/ports';
 import { createBot } from '$lib/server/bot/bot';
 import type { Bot } from '$lib/server/bot/types';
 import { loadCatalog } from '$lib/server/catalog/load';
