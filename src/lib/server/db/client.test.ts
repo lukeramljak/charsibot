@@ -39,7 +39,13 @@ describe('openDatabase', () => {
       )
       .pluck()
       .all();
-    expect(tables).toEqual(['user_plushies', 'user_stats', 'viewer_activity']);
+    expect(tables).toEqual([
+      '__drizzle_migrations',
+      'user_plushies',
+      'user_stats',
+      'viewer_activity',
+    ]);
+    expect(database.prepare('SELECT COUNT(*) FROM __drizzle_migrations').pluck().get()).toBe(1n);
     connection.close();
   });
 
@@ -70,7 +76,7 @@ describe('openDatabase', () => {
     reopened.close();
   });
 
-  it('drops the legacy goose_db_version table on open', () => {
+  it('keeps a legacy goose_db_version table while baselining its data', () => {
     const path = databasePath();
     const database = new BetterSqlite3(path);
     database.exec(`
@@ -102,6 +108,9 @@ describe('openDatabase', () => {
       CREATE INDEX viewer_activity_last_active_at_idx
         ON viewer_activity(last_active_at);
     `);
+    database
+      .prepare('INSERT INTO user_stats (user_id, username, stat_name, value) VALUES (?, ?, ?, ?)')
+      .run('viewer', 'name', 'strength', 9);
     database.close();
 
     const connection = openDatabase(path);
@@ -112,7 +121,16 @@ describe('openDatabase', () => {
       )
       .pluck()
       .all();
-    expect(tables).not.toContain('goose_db_version');
+    expect(tables).toContain('goose_db_version');
+    expect(
+      connection.database
+        .prepare('SELECT value FROM user_stats WHERE user_id = ? AND stat_name = ?')
+        .pluck()
+        .get('viewer', 'strength'),
+    ).toBe(9n);
+    expect(
+      connection.database.prepare('SELECT COUNT(*) FROM __drizzle_migrations').pluck().get(),
+    ).toBe(1n);
     connection.close();
   });
 
@@ -120,22 +138,42 @@ describe('openDatabase', () => {
     ['missing index', 'DROP INDEX viewer_activity_last_active_at_idx'],
     ['wrong schema', 'ALTER TABLE user_stats ADD COLUMN unexpected TEXT'],
     ['unexpected application objects', 'CREATE TABLE unexpected (id INTEGER PRIMARY KEY)'],
-  ])('rejects %s databases', (_name, mutation) => {
+  ])('opens %s databases without replaying applied migrations', (_name, mutation) => {
     const path = databasePath();
     const connection = openDatabase(path);
     connection.close();
     const database = new BetterSqlite3(path);
     database.exec(mutation);
     database.close();
-    expect(() => openDatabase(path)).toThrow();
+    const reopened = openDatabase(path);
+    expect(reopened.state).toBe('existing');
+    expect(
+      reopened.database.prepare('SELECT COUNT(*) FROM __drizzle_migrations').pluck().get(),
+    ).toBe(1n);
+    reopened.close();
   });
 
-  it('rejects a partial non-empty database without creating tables', () => {
+  it('baselines a partial non-empty database', () => {
     const path = databasePath();
     const database = new BetterSqlite3(path);
     database.exec('CREATE TABLE unrelated (id INTEGER PRIMARY KEY)');
     database.close();
-    expect(() => openDatabase(path)).toThrow();
+
+    const connection = openDatabase(path);
+    expect(connection.state).toBe('existing');
+    expect(
+      connection.database
+        .prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name")
+        .pluck()
+        .all(),
+    ).toEqual([
+      '__drizzle_migrations',
+      'unrelated',
+      'user_plushies',
+      'user_stats',
+      'viewer_activity',
+    ]);
+    connection.close();
   });
 
   it('rejects SQLite integers outside the lossless JavaScript range', () => {

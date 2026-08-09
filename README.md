@@ -62,7 +62,7 @@ pnpm build
 
 ## Database
 
-Charsibot uses a SQLite database at `DB_PATH`; it is created automatically when absent. The application requires the existing Goose v7 schema and does not alter migration history.
+Charsibot uses a SQLite database at `DB_PATH`. It is created and migrated automatically when absent or behind the current application version. Versioned SQL migrations live in `drizzle/`. Use `pnpm db:generate` after changing the Drizzle schema, review the generated SQL, and commit it with the schema change.
 
 ## Catalog config
 

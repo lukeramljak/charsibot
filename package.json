@@ -17,6 +17,8 @@
     "check:watch": "svelte-kit sync && svelte-check --watch",
     "test": "vitest run",
     "test:watch": "vitest",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
     "format": "prettier --write .",
     "lint": "prettier --check . && eslint ."
   },
@@ -30,6 +32,7 @@
     "@types/better-sqlite3": "9.6.0",
     "@types/node": "^22.19.17",
     "@types/ws": "8.18.1",
+    "drizzle-kit": "^0.31.10",
     "eslint": "^9.39.4",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-svelte": "^3.17.1",
@@ -47,6 +50,7 @@
   },
   "dependencies": {
     "better-sqlite3": "13.0.2",
+    "drizzle-orm": "^0.45.2",
     "valibot": "1.4.2",
     "ws": "8.21.1"
   }
