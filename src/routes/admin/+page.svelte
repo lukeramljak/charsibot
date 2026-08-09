@@ -89,16 +89,16 @@
   let userSearchSelectionID: string | undefined;
   let selectedUserRequest = 0;
 
-  function errorMessage(err: unknown): string {
+  const errorMessage = (err: unknown): string => {
     if (err instanceof Error) return err.message;
     return String(err);
-  }
+  };
 
-  function isCurrentUserRequest(requestID: number, userID: string) {
+  const isCurrentUserRequest = (requestID: number, userID: string) => {
     return selectedUserRequest === requestID && page.url.searchParams.get('user') === userID;
-  }
+  };
 
-  async function loadUsers() {
+  const loadUsers = async () => {
     loading = true;
     error = '';
     statusMessage = 'Loading viewers…';
@@ -111,7 +111,7 @@
     } finally {
       loading = false;
     }
-  }
+  };
 
   onMount(() => {
     void initialise();
@@ -121,12 +121,12 @@
     if (users.length > 0) void syncSelectedUserFromURL();
   });
 
-  async function initialise() {
+  const initialise = async () => {
     await loadUsers();
     await syncSelectedUserFromURL();
-  }
+  };
 
-  async function syncSelectedUserFromURL() {
+  const syncSelectedUserFromURL = async () => {
     const userID = page.url.searchParams.get('user');
     const user = users.find((candidate) => candidate.id === userID);
     if (user && selected?.user.id !== user.id) {
@@ -136,9 +136,9 @@
       selected = null;
       lastGrant = null;
     }
-  }
+  };
 
-  async function selectUser(user: Viewer, updateURL = true) {
+  const selectUser = async (user: Viewer, updateURL = true) => {
     if (updateURL) {
       const href = resolve(`/admin?user=${encodeURIComponent(user.id)}`);
       if (new URL(href, page.url).href !== page.url.href) {
@@ -172,45 +172,45 @@
     } finally {
       if (isCurrentUserRequest(requestID, user.id)) loading = false;
     }
-  }
+  };
 
-  async function openUserSearch() {
+  const openUserSearch = async () => {
     if (!userSearchDialog?.open) userSearchDialog?.showModal();
     await tick();
     userSearchInput?.focus();
     userSearchInput?.select();
-  }
+  };
 
-  function closeUserSearch() {
+  const closeUserSearch = () => {
     userSearchDialog?.close();
     userSearchQuery = '';
     userSearchIndex = 0;
-  }
+  };
 
-  async function selectUserSearchResult(user: Viewer) {
+  const selectUserSearchResult = async (user: Viewer) => {
     userSearchSelectionID = user.id;
     closeUserSearch();
     await selectUser(user);
-  }
+  };
 
-  async function selectUserFromManagement(user: Viewer) {
+  const selectUserFromManagement = async (user: Viewer) => {
     viewerManagementDialog?.close();
     await selectUser(user);
-  }
+  };
 
-  function handleUserSearchInput(value: string) {
+  const handleUserSearchInput = (value: string) => {
     userSearchQuery = value;
     userSearchIndex = 0;
-  }
+  };
 
-  async function moveUserSearchSelection(offset: number) {
+  const moveUserSearchSelection = async (offset: number) => {
     userSearchIndex =
       (userSearchIndex + offset + userSearchResults.length) % userSearchResults.length;
     await tick();
     userSearchResultElements[userSearchIndex]?.scrollIntoView({ block: 'nearest' });
-  }
+  };
 
-  function handleUserSearchKeydown(event: KeyboardEvent) {
+  const handleUserSearchKeydown = (event: KeyboardEvent) => {
     if (event.key === 'ArrowDown' && userSearchResults.length > 0) {
       event.preventDefault();
       void moveUserSearchSelection(1);
@@ -224,41 +224,41 @@
         void selectUserSearchResult(user);
       }
     }
-  }
+  };
 
-  function handleGlobalKeydown(event: KeyboardEvent) {
+  const handleGlobalKeydown = (event: KeyboardEvent) => {
     if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
       event.preventDefault();
       void openUserSearch();
     }
-  }
+  };
 
-  async function updateStat(
+  const updateStat = async (
     stat: UserStat,
     value: number,
     mode: 'set' | 'adjust',
-  ): Promise<boolean> {
+  ): Promise<boolean> => {
     if (!selected || !Number.isFinite(value)) return false;
     return mutate(updateStatRemote({ userID: selected.user.id, statName: stat.name, mode, value }));
-  }
+  };
 
-  async function displayStatsInChat() {
+  const displayStatsInChat = async () => {
     if (!selected) return;
     await mutate(displayStatsRemote({ userID: selected.user.id }));
-  }
+  };
 
-  async function displayCollection(collection: ViewerCollection) {
+  const displayCollection = async (collection: ViewerCollection) => {
     if (!selected) return;
     await mutate(
       displayCollectionRemote({ userID: selected.user.id, series: collection.config.series }),
     );
-  }
+  };
 
-  function closeDeleteUserDialog() {
+  const closeDeleteUserDialog = () => {
     deleteUserDialog?.close();
-  }
+  };
 
-  async function deleteUser() {
+  const deleteUser = async () => {
     const user = selected?.user;
     if (!user) return;
     closeDeleteUserDialog();
@@ -276,27 +276,27 @@
     } finally {
       loading = false;
     }
-  }
+  };
 
-  function toggleUserSelection(userID: string, checked: boolean) {
+  const toggleUserSelection = (userID: string, checked: boolean) => {
     selectedUserIDs = checked
       ? [...new Set([...selectedUserIDs, userID])]
       : selectedUserIDs.filter((candidate) => candidate !== userID);
-  }
+  };
 
-  function selectFilteredUsers() {
+  const selectFilteredUsers = () => {
     selectedUserIDs = filteredUsers.map((user) => user.id);
-  }
+  };
 
-  function clearUserSelection() {
+  const clearUserSelection = () => {
     selectedUserIDs = [];
-  }
+  };
 
-  function closeBulkDeleteDialog() {
+  const closeBulkDeleteDialog = () => {
     bulkDeleteDialog?.close();
-  }
+  };
 
-  async function deleteSelectedUsers() {
+  const deleteSelectedUsers = async () => {
     const userIDs = [...selectedUserIDs];
     if (userIDs.length === 0) return;
 
@@ -319,61 +319,61 @@
     } finally {
       loading = false;
     }
-  }
+  };
 
-  function formatLastActive(value: string | undefined) {
+  const formatLastActive = (value: string | undefined) => {
     if (!value) return 'Unknown';
     return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(
       new Date(value),
     );
-  }
+  };
 
-  function openRandomStatDialog() {
+  const openRandomStatDialog = () => {
     randomStatDialog?.showModal();
-  }
+  };
 
-  function closeRandomStatDialog() {
+  const closeRandomStatDialog = () => {
     randomStatDialog?.close();
-  }
+  };
 
-  async function grantRandomStat(displayInChat: boolean) {
+  const grantRandomStat = async (displayInChat: boolean) => {
     if (!selected) return;
     closeRandomStatDialog();
     lastGrant = null;
     await mutate(grantRandomStatRemote({ userID: selected.user.id, displayInChat }));
-  }
+  };
 
-  function closeExplodeDialog() {
+  const closeExplodeDialog = () => {
     explodeDialog?.close();
-  }
+  };
 
-  async function handleExplode() {
+  const handleExplode = async () => {
     if (!selected) return;
     closeExplodeDialog();
     await mutate(explodeRemote({ userID: selected.user.id }));
-  }
+  };
 
-  function closeUndoExplodeDialog() {
+  const closeUndoExplodeDialog = () => {
     undoExplodeDialog?.close();
-  }
+  };
 
-  async function handleUndoExplode() {
+  const handleUndoExplode = async () => {
     if (!selected) return;
     closeUndoExplodeDialog();
     await mutate(undoExplodeRemote({ userID: selected.user.id }));
-  }
+  };
 
-  function closeResetStatsDialog() {
+  const closeResetStatsDialog = () => {
     resetStatsDialog?.close();
-  }
+  };
 
-  async function resetStats(displayInChat: boolean) {
+  const resetStats = async (displayInChat: boolean) => {
     if (!selected) return;
     closeResetStatsDialog();
     await mutate(resetStatsRemote({ userID: selected.user.id, displayInChat }));
-  }
+  };
 
-  async function setPlushie(series: string, key: string, name: string, owned: boolean) {
+  const setPlushie = async (series: string, key: string, name: string, owned: boolean) => {
     if (!selected || mutatingPlushie) return;
     if (!owned) {
       pendingPlushie = { series, key, name };
@@ -387,14 +387,14 @@
     } finally {
       mutatingPlushie = null;
     }
-  }
+  };
 
-  function closePlushieDialog() {
+  const closePlushieDialog = () => {
     plushieDialog?.close();
     pendingPlushie = null;
-  }
+  };
 
-  async function grantPlushie(triggerOverlay: boolean) {
+  const grantPlushie = async (triggerOverlay: boolean) => {
     if (!selected) return;
     const plushie = pendingPlushie;
     closePlushieDialog();
@@ -413,19 +413,19 @@
     } finally {
       mutatingPlushie = null;
     }
-  }
+  };
 
-  function openRandomPlushieDialog(collection: ViewerCollection) {
+  const openRandomPlushieDialog = (collection: ViewerCollection) => {
     pendingRandomCollection = collection;
     randomPlushieDialog?.showModal();
-  }
+  };
 
-  function closeRandomPlushieDialog() {
+  const closeRandomPlushieDialog = () => {
     randomPlushieDialog?.close();
     pendingRandomCollection = null;
-  }
+  };
 
-  async function grantRandomPlushie(triggerOverlay: boolean) {
+  const grantRandomPlushie = async (triggerOverlay: boolean) => {
     if (!selected) return;
     const collection = pendingRandomCollection;
     closeRandomPlushieDialog();
@@ -438,19 +438,19 @@
         triggerOverlay,
       }),
     );
-  }
+  };
 
-  function openResetDialog(collection: ViewerCollection) {
+  const openResetDialog = (collection: ViewerCollection) => {
     pendingResetCollection = collection;
     resetDialog?.showModal();
-  }
+  };
 
-  function closeResetDialog() {
+  const closeResetDialog = () => {
     resetDialog?.close();
     pendingResetCollection = null;
-  }
+  };
 
-  async function resetSeries() {
+  const resetSeries = async () => {
     if (!selected) return;
     const collection = pendingResetCollection;
     closeResetDialog();
@@ -458,9 +458,9 @@
     await mutate(
       resetCollectionRemote({ userID: selected.user.id, series: collection.config.series }),
     );
-  }
+  };
 
-  async function mutate(operation: Promise<AdminUserDetail>): Promise<boolean> {
+  const mutate = async (operation: Promise<AdminUserDetail>): Promise<boolean> => {
     const userID = selected?.user.id;
     if (!userID) return false;
     const requestID = ++selectedUserRequest;
@@ -483,7 +483,7 @@
     } finally {
       if (isCurrentUserRequest(requestID, userID)) loading = false;
     }
-  }
+  };
 </script>
 
 <svelte:window onkeydown={handleGlobalKeydown} />

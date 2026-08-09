@@ -19,35 +19,35 @@
     onSetPlushie: (series: string, key: string, name: string, owned: boolean) => void;
   } = $props();
 
-  function closeMenu(event: MouseEvent) {
+  const closeMenu = (event: MouseEvent) => {
     const menu = (event.currentTarget as HTMLElement).closest('[popover]');
     if (menu instanceof HTMLElement && menu.matches(':popover-open')) menu.hidePopover();
-  }
+  };
 
-  function menuItems(menu: HTMLElement) {
+  const menuItems = (menu: HTMLElement) => {
     return [...menu.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')];
-  }
+  };
 
-  function focusMenuItem(item: HTMLButtonElement | undefined) {
+  const focusMenuItem = (item: HTMLButtonElement | undefined) => {
     item?.focus({ focusVisible: true });
-  }
+  };
 
-  function focusFirstMenuItem(menuID: string) {
+  const focusFirstMenuItem = (menuID: string) => {
     const menu = document.getElementById(menuID);
     if (!(menu instanceof HTMLElement)) return;
 
     menu.showPopover();
     requestAnimationFrame(() => focusMenuItem(menuItems(menu)[0]));
-  }
+  };
 
-  function handleTriggerKeydown(event: KeyboardEvent, menuID: string) {
+  const handleTriggerKeydown = (event: KeyboardEvent, menuID: string) => {
     if (event.key !== 'ArrowDown') return;
 
     event.preventDefault();
     focusFirstMenuItem(menuID);
-  }
+  };
 
-  function handleMenuKeydown(event: KeyboardEvent) {
+  const handleMenuKeydown = (event: KeyboardEvent) => {
     const menu = event.currentTarget as HTMLElement;
     const items = menuItems(menu);
     const currentIndex = items.indexOf(document.activeElement as HTMLButtonElement);
@@ -72,7 +72,7 @@
     if (nextIndex === null) return;
     event.preventDefault();
     focusMenuItem(items[nextIndex]);
-  }
+  };
 </script>
 
 <section class="flex flex-col gap-4" aria-labelledby="blind-boxes-heading">

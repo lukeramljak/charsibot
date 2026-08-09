@@ -4,13 +4,15 @@ import { BlindBoxQueue, type QueueItem } from './queue.svelte';
 
 const flushPromises = () => new Promise<void>((r) => setTimeout(r));
 
-function deferred() {
+const deferred = () => {
   let resolve!: () => void;
   const promise = new Promise<void>((r) => (resolve = r));
   return { promise, resolve };
-}
+};
 
-function makeRedemption(overrides: Partial<BlindBoxRedemptionEvent> = {}): BlindBoxRedemptionEvent {
+const makeRedemption = (
+  overrides: Partial<BlindBoxRedemptionEvent> = {},
+): BlindBoxRedemptionEvent => {
   return {
     type: 'blindbox_redemption',
     username: 'user',
@@ -38,9 +40,9 @@ function makeRedemption(overrides: Partial<BlindBoxRedemptionEvent> = {}): Blind
     },
     ...overrides,
   };
-}
+};
 
-function makeDisplay(overrides: Partial<CollectionDisplayEvent> = {}): CollectionDisplayEvent {
+const makeDisplay = (overrides: Partial<CollectionDisplayEvent> = {}): CollectionDisplayEvent => {
   return {
     type: 'blindbox_display',
     username: 'user',
@@ -58,7 +60,7 @@ function makeDisplay(overrides: Partial<CollectionDisplayEvent> = {}): Collectio
     },
     ...overrides,
   };
-}
+};
 
 describe('BlindBoxQueue', () => {
   let onRedemption: (item: BlindBoxRedemptionEvent) => Promise<void>;

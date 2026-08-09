@@ -23,7 +23,7 @@
   let currentItem = $state<CurrentItem | null>(null);
   let audioElement: HTMLAudioElement | undefined = $state();
 
-  async function playAudio(sound: string) {
+  const playAudio = async (sound: string) => {
     if (!audioElement) return;
 
     try {
@@ -36,9 +36,9 @@
     } catch (error) {
       console.warn('Audio playback failed:', error);
     }
-  }
+  };
 
-  async function playAnimation(animationMode: AnimationMode): Promise<void> {
+  const playAnimation = async (animationMode: AnimationMode): Promise<void> => {
     return new Promise((resolve) => {
       animationKey++;
       mode = animationMode;
@@ -49,7 +49,7 @@
         resolve();
       }, 6500);
     });
-  }
+  };
 
   const queue = new BlindBoxQueue({
     onRedemption: async (item) => {
