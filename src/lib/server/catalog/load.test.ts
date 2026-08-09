@@ -54,12 +54,21 @@ describe('catalog loading', () => {
       'coobubu',
       'easter',
       'olliepop',
+      'pixel',
       'valentines',
       'xmas',
     ]);
     expect(catalog.series.find((config) => config.series === 'olliepop')?.revealSound).toBe(
       '/assets/blind-box/olliepops/reveal.mp3',
     );
+    expect(catalog.series.find((config) => config.series === 'pixel')).toMatchObject({
+      name: 'Pixel Pups',
+      revealSound: '/assets/blind-box/pixel/reveal.mp3',
+      plushies: [
+        { key: 'ollie-of-rivia', image: '/assets/blind-box/pixel/ollie-of-rivia.png' },
+        { key: 'secret', image: '/assets/blind-box/pixel/secret.png' },
+      ],
+    });
   });
 
   it('preserves absolute asset paths and defaults assetDir to series', () => {
