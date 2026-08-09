@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { loadCatalog } from '$lib/server/catalog/load';
 import { openDatabase } from '$lib/server/db/client';
-import { createCollectionsRepository } from '$lib/server/db/collections.repository';
+import { userPlushies } from '$lib/server/db/schema';
 
 import { pickWeightedPlushie } from '$lib/server/domain/blind-box/random';
 import { createBlindBoxService } from '$lib/server/domain/blind-box/service';
@@ -11,9 +11,8 @@ import { createBlindBoxService } from '$lib/server/domain/blind-box/service';
 const setup = () => {
   const connection = openDatabase(':memory:');
   const catalog = loadCatalog();
-  const repository = createCollectionsRepository(connection.database);
-  const service = createBlindBoxService({ repository, series: catalog.series });
-  return { connection, catalog, repository, service };
+  const service = createBlindBoxService({ db: connection.db, series: catalog.series });
+  return { connection, catalog, service };
 };
 
 describe('blind-box service', () => {
@@ -59,7 +58,7 @@ describe('blind-box service', () => {
   });
 
   it('groups completed collections by stable user ID and sorts output', async () => {
-    const { connection, catalog, repository, service } = setup();
+    const { connection, catalog, service } = setup();
     const config = catalog.series.find((candidate) => candidate.series === 'coobubu');
 
     if (!config) {
@@ -71,12 +70,15 @@ describe('blind-box service', () => {
       ['viewer-a', 'carol'],
     ]) {
       config.plushies.forEach((plushie, index) => {
-        repository.grant(
-          userID,
-          index < 4 ? `old-${username}` : username,
-          config.series,
-          plushie.key,
-        );
+        connection.db
+          .insert(userPlushies)
+          .values({
+            userID,
+            username: index < 4 ? `old-${username}` : username,
+            series: config.series,
+            key: plushie.key,
+          })
+          .run();
       });
     }
     expect(await service.completed()).toEqual([
@@ -86,7 +88,7 @@ describe('blind-box service', () => {
   });
 
   it('does not count partial or over-complete unknown-key collections', async () => {
-    const { connection, catalog, repository, service } = setup();
+    const { connection, catalog, service } = setup();
     const config = catalog.series.find((candidate) => candidate.series === 'coobubu');
 
     if (!config) {
@@ -94,9 +96,15 @@ describe('blind-box service', () => {
     }
 
     config.plushies.forEach((plushie) =>
-      repository.grant('viewer', 'viewer', config.series, plushie.key),
+      connection.db
+        .insert(userPlushies)
+        .values({ userID: 'viewer', username: 'viewer', series: config.series, key: plushie.key })
+        .run(),
     );
-    repository.grant('viewer', 'viewer', config.series, 'unknown');
+    connection.db
+      .insert(userPlushies)
+      .values({ userID: 'viewer', username: 'viewer', series: config.series, key: 'unknown' })
+      .run();
     expect(await service.completed()).toEqual([]);
     connection.close();
   });

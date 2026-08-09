@@ -6,10 +6,13 @@ import type {
   CompletedCollection,
   GrantPlushieResult,
 } from '$lib/server/application/ports';
-import type { CollectionsRepository } from '$lib/server/db/collections.repository';
+import type { DatabaseConnection } from '$lib/server/db/client';
+import { toSafeInteger } from '$lib/server/db/integer';
+import { userPlushies } from '$lib/server/db/schema';
+import { and, eq, sql } from 'drizzle-orm';
 
 export interface BlindBoxServiceDependencies {
-  repository: CollectionsRepository;
+  db: DatabaseConnection['db'];
   series: readonly BlindBoxSeries[];
 }
 
@@ -26,7 +29,7 @@ const compareStrings = (left: string, right: string): number => {
 };
 
 export const createBlindBoxService = ({
-  repository,
+  db,
   series: inputSeries,
 }: BlindBoxServiceDependencies): BlindBoxService => {
   if (inputSeries.length === 0) {
@@ -48,7 +51,14 @@ export const createBlindBoxService = ({
 
   const sortedCollection = (userID: string, identifier: string): string[] => {
     const config = getConfig(identifier);
-    const collected = new Set(repository.get(userID, identifier));
+    const collected = new Set(
+      db
+        .select({ key: userPlushies.key })
+        .from(userPlushies)
+        .where(and(eq(userPlushies.userID, userID), eq(userPlushies.series, identifier)))
+        .all()
+        .map((row) => row.key),
+    );
 
     return config.plushies
       .filter((plushie) => collected.has(plushie.key))
@@ -66,11 +76,42 @@ export const createBlindBoxService = ({
         throw new ApplicationError('invalid_input', 'unknown series or plushie');
       }
 
-      const result = repository.grant(userID, username, identifier, key);
+      const result = db.transaction((tx) => {
+        const insert = tx
+          .insert(userPlushies)
+          .values({ userID, username, series: identifier, key })
+          .onConflictDoNothing()
+          .run();
+        const isNew = toSafeInteger(insert.changes, 'plushie insert change count') > 0;
+
+        if (!isNew) {
+          tx.update(userPlushies)
+            .set({ username })
+            .where(
+              and(
+                eq(userPlushies.userID, userID),
+                eq(userPlushies.series, identifier),
+                eq(userPlushies.key, key),
+              ),
+            )
+            .run();
+        }
+
+        const collection = tx
+          .select({ key: userPlushies.key })
+          .from(userPlushies)
+          .where(and(eq(userPlushies.userID, userID), eq(userPlushies.series, identifier)))
+          .all()
+          .map((row) => row.key);
+
+        return { isNew, collection };
+      });
 
       return {
         isNew: result.isNew,
-        collection: sortedCollection(userID, identifier),
+        collection: config.plushies
+          .filter((plushie) => result.collection.includes(plushie.key))
+          .map((plushie) => plushie.key),
       };
     },
     remove: async (userID, identifier, key) => {
@@ -80,20 +121,44 @@ export const createBlindBoxService = ({
         throw new ApplicationError('invalid_input', 'unknown series or plushie');
       }
 
-      repository.remove(userID, identifier, key);
+      db.delete(userPlushies)
+        .where(
+          and(
+            eq(userPlushies.userID, userID),
+            eq(userPlushies.series, identifier),
+            eq(userPlushies.key, key),
+          ),
+        )
+        .run();
     },
     reset: async (userID, identifier) => {
       getConfig(identifier);
 
-      repository.reset(userID, identifier);
+      db.delete(userPlushies)
+        .where(and(eq(userPlushies.userID, userID), eq(userPlushies.series, identifier)))
+        .run();
     },
     completed: async (): Promise<CompletedCollection[]> => {
       const completed = new Map<string, string[]>();
 
-      for (const count of repository.counts()) {
+      const counts = db.all<{
+        user_id: string;
+        username: string;
+        series: string;
+        count: bigint;
+      }>(sql`
+        SELECT user_id, CAST(MAX(username) AS TEXT) AS username, series, COUNT(*) AS count
+        FROM user_plushies
+        GROUP BY series, user_id
+        ORDER BY series, username COLLATE NOCASE, username, user_id`);
+
+      for (const count of counts) {
         const config = byIdentifier.get(count.series);
 
-        if (!config || count.count !== config.plushies.length) {
+        if (
+          !config ||
+          toSafeInteger(count.count, `${count.series} collection count`) !== config.plushies.length
+        ) {
           continue;
         }
 

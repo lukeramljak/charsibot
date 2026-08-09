@@ -5,9 +5,6 @@ import { createBot } from '$lib/server/bot/bot';
 import type { Bot } from '$lib/server/bot/types';
 import { loadCatalog } from '$lib/server/catalog/load';
 import { openDatabase, type DatabaseConnection } from '$lib/server/db/client';
-import { createCollectionsRepository } from '$lib/server/db/collections.repository';
-import { createStatsRepository } from '$lib/server/db/stats.repository';
-import { createViewersRepository } from '$lib/server/db/viewers.repository';
 import { createBlindBoxService } from '$lib/server/domain/blind-box/service';
 import { createStatsService } from '$lib/server/domain/stats/service';
 import { createOverlayBus } from '$lib/server/events/overlay-bus';
@@ -200,18 +197,13 @@ export const createApplicationRuntime = async (
     readiness.set('database', true);
     config.logger.info('database opened', { path: config.dbPath, state: db.state });
 
-    const statsRepo = createStatsRepository(db.database);
-    const viewersRepo = createViewersRepository(db.database);
-    const collectionsRepo = createCollectionsRepository(db.database);
-
     const stats = createStatsService({
-      repository: statsRepo,
-      viewers: viewersRepo,
+      db: db.db,
       definitions: catalog.stats,
     });
 
     const blindBox = createBlindBoxService({
-      repository: collectionsRepo,
+      db: db.db,
       series: catalog.series,
     });
 

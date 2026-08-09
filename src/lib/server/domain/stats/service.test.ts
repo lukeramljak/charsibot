@@ -2,19 +2,15 @@ import { describe, expect, it } from 'vitest';
 
 import { loadCatalog } from '$lib/server/catalog/load';
 import { openDatabase } from '$lib/server/db/client';
-import { createStatsRepository } from '$lib/server/db/stats.repository';
-import { createViewersRepository } from '$lib/server/db/viewers.repository';
 
 import { formatStats } from '$lib/server/domain/stats/format';
 import { createStatsService } from '$lib/server/domain/stats/service';
 
 const setup = () => {
   const connection = openDatabase(':memory:');
-  const repository = createStatsRepository(connection.database);
-  const viewers = createViewersRepository(connection.database);
   const catalog = loadCatalog();
-  const service = createStatsService({ repository, viewers, definitions: catalog.stats });
-  return { connection, repository, viewers, catalog, service };
+  const service = createStatsService({ db: connection.db, definitions: catalog.stats });
+  return { connection, catalog, service };
 };
 
 describe('stats service', () => {
@@ -50,14 +46,16 @@ describe('stats service', () => {
     connection.close();
   });
 
-  it('rolls back multi-row initialization and reset failures', async () => {
-    const { connection, catalog, repository, service } = setup();
-    expect(() =>
-      repository.initialize('broken', 'broken', [
+  it('validates stat definitions before initialization or reset can mutate data', async () => {
+    const { connection, catalog, service } = setup();
+    const invalidService = createStatsService({
+      db: connection.db,
+      definitions: [
         catalog.stats[0],
         { ...catalog.stats[1], defaultValue: Number.MAX_SAFE_INTEGER + 1 },
-      ]),
-    ).toThrow(/safe integer/);
+      ],
+    });
+    await expect(invalidService.getOrCreate('broken', 'broken')).rejects.toThrow(/safe integer/);
     expect(
       connection.database
         .prepare("SELECT COUNT(*) FROM user_stats WHERE user_id = 'broken'")
@@ -67,12 +65,7 @@ describe('stats service', () => {
 
     await service.getOrCreate('viewer', 'viewer');
     await service.set('viewer', 'strength', 8);
-    expect(() =>
-      repository.reset('viewer', [
-        catalog.stats[0],
-        { ...catalog.stats[1], defaultValue: Number.MAX_SAFE_INTEGER + 1 },
-      ]),
-    ).toThrow(/safe integer/);
+    await expect(invalidService.reset('viewer')).rejects.toThrow(/safe integer/);
     expect((await service.get('viewer')).find((stat) => stat.name === 'strength')?.value).toBe(8);
     connection.close();
   });
