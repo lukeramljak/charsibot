@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type { Bot } from '$lib/server/bot';
+import type { Bot } from '$lib/server/bot/types';
 import { createBotNotificationHandler } from '$lib/server/twitch/bot-adapter';
 import type { EventSubNotificationMessage } from '$lib/server/twitch/types';
 

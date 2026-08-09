@@ -1,4 +1,6 @@
-import { createBot, passesTriggerChance, tokenizeTriggerWords } from '$lib/server/bot';
+import { createBot } from '$lib/server/bot/bot';
+import { tokenizeTriggerWords } from '$lib/server/bot/text';
+import { passesTriggerChance } from '$lib/server/bot/triggers';
 import { createBotHarness, createRandomFake } from '$lib/server/bot/testing/fakes';
 import { chatMessageEvent } from '$lib/server/bot/testing/fixtures';
 import { describe, expect, it } from 'vitest';

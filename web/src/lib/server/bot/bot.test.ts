@@ -1,5 +1,5 @@
 import type { ChatSender } from '$lib/server/application/ports';
-import { createBot } from '$lib/server/bot';
+import { createBot } from '$lib/server/bot/bot';
 import { describe, expect, it } from 'vitest';
 
 import { createBotHarness, createStatsFake } from './testing/fakes';

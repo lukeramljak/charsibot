@@ -1,4 +1,4 @@
-import type { Bot } from '$lib/server/bot';
+import type { Bot } from '$lib/server/bot/types';
 import { EventSubProtocolError } from '$lib/server/twitch/errors';
 import type { EventSubNotificationMessage } from '$lib/server/twitch/types';
 

@@ -69,6 +69,7 @@ web/                     SvelteKit application (all new work goes here)
 
 - Arrow functions for all new TS/JS (constructors and accessors excepted).
 - `$lib/...` alias for internal imports; `$catalog/...` for root catalog. No `../` ladders.
+- No barrel files (`index.ts` that only re-export). Import directly from the defining module.
 - Blank lines to separate guards, setup, transformation, and return phases.
 - No comments unless the WHY is non-obvious.
 - Prettier owns formatting. Run `pnpm format` before committing.

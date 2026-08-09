@@ -1,4 +1,6 @@
-import { commandName, createBot, splitFields } from '$lib/server/bot';
+import { createBot } from '$lib/server/bot/bot';
+import { commandName } from '$lib/server/bot/commands';
+import { splitFields } from '$lib/server/bot/text';
 import {
   createBlindBoxFake,
   createBotHarness,

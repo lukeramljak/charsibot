@@ -1,5 +1,5 @@
 import type { UserStat } from '$lib/contracts/viewer';
-import { createBot } from '$lib/server/bot';
+import { createBot } from '$lib/server/bot/bot';
 import {
   createBlindBoxFake,
   createBotHarness,

@@ -10,7 +10,7 @@ import type {
   Random,
   StatsService,
 } from '$lib/server/application/ports';
-import type { BotDependencies } from '$lib/server/bot';
+import type { BotDependencies } from '$lib/server/bot/types';
 
 const definitions: readonly StatDefinition[] = [
   {

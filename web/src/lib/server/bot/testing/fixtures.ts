@@ -1,4 +1,4 @@
-import type { ChannelPointRedemptionEvent, ChatMessageEvent, RaidEvent } from '$lib/server/bot';
+import type { ChannelPointRedemptionEvent, ChatMessageEvent, RaidEvent } from '$lib/server/bot/types';
 
 export const chatMessageEvent = (overrides: Partial<ChatMessageEvent> = {}): ChatMessageEvent => ({
   chatterUserID: 'viewer-1',

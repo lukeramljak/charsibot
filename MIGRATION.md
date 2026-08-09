@@ -146,6 +146,7 @@ Avoid framework-style repository/service/interface layers that have only one cal
 - Use the narrow `$catalog/...` alias for the shared root catalog during the Go rollback window.
 - Keep package, Node built-in, SvelteKit built-in, and generated virtual-module imports under their native specifiers.
 - Same-directory `./...` imports are allowed. Do not use `../...` import ladders.
+- No barrel files (`index.ts` that only re-export). Import directly from the defining module.
 
 ### Code layout
 
