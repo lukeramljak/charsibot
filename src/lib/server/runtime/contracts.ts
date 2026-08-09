@@ -19,4 +19,14 @@ export interface ApplicationRuntime {
   stop: (reason: string) => Promise<void>;
 }
 
-export type RuntimeFactory = (environment?: NodeJS.ProcessEnv) => Promise<ApplicationRuntime>;
+export interface Environment {
+  DB_PATH?: string | number;
+  TWITCH_CLIENT_ID?: string | number;
+  TWITCH_CLIENT_SECRET?: string | number;
+  TWITCH_BOT_USER_ID?: string | number;
+  TWITCH_CHANNEL_USER_ID?: string | number;
+}
+
+export type RuntimeFactory = (
+  environment?: Environment,
+) => Promise<ApplicationRuntime>;

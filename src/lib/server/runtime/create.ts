@@ -18,7 +18,7 @@ import { createBlindBoxService } from '$lib/server/domain/blind-box/service';
 import { createStatsService } from '$lib/server/domain/stats/service';
 import { createOverlayBus } from '$lib/server/events/overlay-bus';
 import { setReadiness, setServices } from '$lib/server/runtime/container';
-import type { ApplicationRuntime } from '$lib/server/runtime/contracts';
+import type { ApplicationRuntime, Environment } from '$lib/server/runtime/contracts';
 import { createReadiness } from '$lib/server/runtime/readiness';
 import { createBotNotificationHandler } from '$lib/server/twitch/bot-adapter';
 import { createTwitchChatSender } from '$lib/server/twitch/chat-sender';
@@ -74,7 +74,7 @@ const createRandom = (): Random => ({
   integer: (maxExclusive) => randomInt(maxExclusive),
 });
 
-const readTwitchConfig = (environment: NodeJS.ProcessEnv): TwitchConfig | undefined => {
+const readTwitchConfig = (environment: Environment): TwitchConfig | undefined => {
   const clientId = environment.TWITCH_CLIENT_ID;
   const clientSecret = environment.TWITCH_CLIENT_SECRET;
   const botUserId = environment.TWITCH_BOT_USER_ID;
@@ -84,7 +84,12 @@ const readTwitchConfig = (environment: NodeJS.ProcessEnv): TwitchConfig | undefi
     return undefined;
   }
 
-  return { clientId, clientSecret, botUserId, channelUserId };
+  return {
+    clientId: String(clientId),
+    clientSecret: String(clientSecret),
+    botUserId: String(botUserId),
+    channelUserId: String(channelUserId),
+  };
 };
 
 const createLoggingChatStub = (logger: Logger): ChatSender => ({
@@ -93,13 +98,13 @@ const createLoggingChatStub = (logger: Logger): ChatSender => ({
   },
 });
 
-export const readRuntimeConfig = (environment: NodeJS.ProcessEnv): RuntimeConfig => {
+export const readRuntimeConfig = (environment: Environment): RuntimeConfig => {
   const dbPath = environment.DB_PATH;
   if (!dbPath) {
     throw new Error('DB_PATH environment variable is required');
   }
 
-  return { dbPath, logger: createLogger(), twitch: readTwitchConfig(environment) };
+  return { dbPath: String(dbPath), logger: createLogger(), twitch: readTwitchConfig(environment) };
 };
 
 interface TwitchStack {
@@ -178,7 +183,7 @@ const createTwitchStack = (
 };
 
 export const createApplicationRuntime = async (
-  environment: NodeJS.ProcessEnv = process.env,
+  environment: Environment = process.env,
 ): Promise<ApplicationRuntime> => {
   const config = readRuntimeConfig(environment);
   let db: DatabaseConnection | undefined;
