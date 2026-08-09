@@ -12,7 +12,7 @@ const config = {
   kit: {
     adapter: adapter(),
     alias: {
-      '$catalog/*': '../catalog/*',
+      '$catalog/*': './catalog/*',
     },
     experimental: {
       remoteFunctions: true,

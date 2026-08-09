@@ -1,5 +1,5 @@
 {
-  "name": "twitch-overlay",
+  "name": "charsibot",
   "private": true,
   "version": "0.0.1",
   "type": "module",
@@ -17,8 +17,6 @@
     "check:watch": "svelte-kit sync && svelte-check --watch",
     "test": "vitest run",
     "test:watch": "vitest",
-    "generate:api": "go run ../cmd/openapi > openapi.json && openapi-typescript openapi.json -o src/lib/api.generated.ts && prettier --write openapi.json src/lib/api.generated.ts",
-    "check:api": "pnpm generate:api && git diff --exit-code -- openapi.json src/lib/api.generated.ts",
     "format": "prettier --write .",
     "lint": "prettier --check . && eslint ."
   },
@@ -36,7 +34,6 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-svelte": "^3.17.1",
     "globals": "^16.5.0",
-    "openapi-typescript": "^7.13.0",
     "prettier": "^3.8.3",
     "prettier-plugin-organize-imports": "^4.3.0",
     "prettier-plugin-svelte": "^3.5.1",
@@ -50,7 +47,6 @@
   },
   "dependencies": {
     "better-sqlite3": "13.0.2",
-    "openapi-fetch": "^0.17.0",
     "valibot": "1.4.2",
     "ws": "8.21.1"
   }

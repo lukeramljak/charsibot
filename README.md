@@ -43,9 +43,9 @@ Twitch bot and overlay for [Charsibel](https://twitch.tv/charsibel)
 
 ## Environment Variables
 
-   ```bash
-   cp .env.example .env
-   ```
+```bash
+cp .env.example .env
+```
 
 ## Database
 

@@ -10,18 +10,6 @@ export default defineConfig({
         conditions: ['browser'],
       }
     : undefined,
-  server: {
-    proxy: {
-      '/events': {
-        target: 'http://localhost:8081',
-        changeOrigin: true,
-      },
-      '/api': {
-        target: 'http://localhost:8081',
-        changeOrigin: true,
-      },
-    },
-  },
   test: {
     silent: 'passed-only',
   },

@@ -1,12 +1,12 @@
 import { createBot } from '$lib/server/bot/bot';
 import { commandName } from '$lib/server/bot/commands';
-import { splitFields } from '$lib/server/bot/text';
 import {
   createBlindBoxFake,
   createBotHarness,
   createStatsFake,
 } from '$lib/server/bot/testing/fakes';
 import { chatMessageEvent } from '$lib/server/bot/testing/fixtures';
+import { splitFields } from '$lib/server/bot/text';
 import { describe, expect, it } from 'vitest';
 
 describe('command parsing', () => {

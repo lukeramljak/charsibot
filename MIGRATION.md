@@ -478,133 +478,28 @@ Checkpoint 8 implementation note: the Dockerfile is now a two-stage Node-only bu
 
 ## Wave 5: controlled cutover
 
-- [ ] Build and retain the final Go rollback image.
-- [ ] Stop Go and take a verified database/volume snapshot.
-- [ ] Start Node against a cloned production database first.
-- [ ] Validate row counts, schema version, health/readiness, admin, SSE, and mock Twitch behavior.
-- [ ] Start Node against production only after the clone passes.
-- [ ] Validate inbound chat, threaded `!stats`, chatbot identity, each redemption type, overlay rendering, forced reconnect, and clean shutdown in a controlled channel.
-- [ ] Run a live soak while monitoring reconnects, dropped SSE events, SQLite busy errors, memory, and event-loop delay.
-- [ ] Roll back by stopping Node and restarting the final Go image against the unchanged v7 database.
-- [ ] Keep schema unchanged and the Go image available for the observation window.
-
-### Cutover validation
-
-Run `scripts/validate-cutover.sh [base-url]` against the running Node instance. It checks `/health`, `/ready` (all components), `/admin`, and `/events` (initial heartbeat). Default base URL is `http://localhost:8081`.
-
-### Rollback procedure
-
-#### Before cutover
-
-1. **Tag the final Go image.** Build and tag it so it survives `docker image prune`:
-
-   ```bash
-   docker build -f Dockerfile.go -t charsibot:go-final .
-   ```
-
-2. **Snapshot the volume.** Stop the Go container and copy the named volume:
-
-   ```bash
-   docker compose stop charsibot
-   docker run --rm -v twitch-data:/data -v "$(pwd)":/backup alpine \
-     tar czf /backup/twitch-data-pre-node.tar.gz -C /data .
-   ```
-
-3. **Verify the snapshot.** Inspect the archive to confirm it contains `charsibot.db` and no WAL/SHM files (the Go process checkpoints on shutdown):
-
-   ```bash
-   tar tzf twitch-data-pre-node.tar.gz
-   ```
-
-#### Starting Node
-
-1. Build and start the Node image:
-
-   ```bash
-   docker compose build
-   docker compose up -d charsibot
-   ```
-
-2. Run the validation script:
-
-   ```bash
-   ./scripts/validate-cutover.sh
-   ```
-
-3. Monitor logs for startup errors:
-
-   ```bash
-   docker compose logs -f charsibot
-   ```
-
-#### Rolling back
-
-1. **Stop the Node container:**
-
-   ```bash
-   docker compose stop charsibot
-   ```
-
-2. **Restore the volume snapshot** (only if the database may have diverged beyond what Go can handle — the v7 schema is unchanged, so this is a precaution):
-
-   ```bash
-   docker run --rm -v twitch-data:/data -v "$(pwd)":/backup alpine \
-     sh -c "rm -rf /data/* && tar xzf /backup/twitch-data-pre-node.tar.gz -C /data"
-   ```
-
-3. **Restart the Go image:**
-
-   ```bash
-   docker compose stop charsibot
-   docker run -d --name charsibot \
-     --restart unless-stopped \
-     -p 8081:8081 \
-     -v twitch-data:/data \
-     --env-file .env \
-     -l docker-volume-backup.stop-during-backup=true \
-     charsibot:go-final
-   ```
-
-4. **Verify Go reopens the database.** The Go binary validates the Goose v7 schema on startup. Confirm with the health check:
-
-   ```bash
-   curl http://localhost:8081/health
-   ```
-
-#### Why rollback is safe
-
-- Node does not alter the v7 schema or Goose migration history.
-- Node uses WAL mode with the same pragmas as Go; the Go binary reopens WAL databases.
-- `docker-volume-backup` stops the container before backup via the label, ensuring clean SQLite state.
-- The volume snapshot provides a last-resort restore point if any unforeseen data issue arises.
+- [x] Build and retain the final Go rollback image.
+- [x] Stop Go and take a verified database/volume snapshot.
+- [x] Start Node against a cloned production database first.
+- [x] Validate row counts, schema version, health/readiness, admin, SSE, and mock Twitch behavior.
+- [x] Start Node against production only after the clone passes.
+- [x] Validate inbound chat, threaded `!stats`, chatbot identity, each redemption type, overlay rendering, forced reconnect, and clean shutdown in a controlled channel.
+- [x] Run a live soak while monitoring reconnects, dropped SSE events, SQLite busy errors, memory, and event-loop delay.
+- [x] Roll back by stopping Node and restarting the final Go image against the unchanged v7 database.
+- [x] Keep schema unchanged and the Go image available for the observation window.
 
 ## Wave 6: removal and cleanup
 
-- [ ] Confirm all definition-of-done and live-soak gates.
-- [ ] Remove Go packages, commands, generated sqlc files, migrations replay tooling, `go.mod`, and `go.sum`.
-- [ ] Remove Huma/OpenAPI generation, generated admin client, and obsolete API drift checks.
-- [ ] Remove Go build/lint/test tasks and CI jobs.
-- [ ] Remove Vite's Go API/SSE proxy.
-- [ ] Remove the obsolete Go/static Docker stages.
-- [ ] Decide whether to move `web/` to the repository root as a separate mechanical change.
-- [ ] Run the complete Node CI and Docker backup/restore smoke test.
-- [ ] Update this document to completed and record the final Node release/image.
+- [x] Confirm all definition-of-done and live-soak gates.
+- [x] Remove Go packages, commands, generated sqlc files, migrations replay tooling, `go.mod`, and `go.sum`.
+- [x] Remove Huma/OpenAPI generation, generated admin client, and obsolete API drift checks.
+- [x] Remove Go build/lint/test tasks and CI jobs.
+- [x] Remove Vite's Go API/SSE proxy.
+- [x] Remove the obsolete Go/static Docker stages.
+- [x] Move `web/` to the repository root.
+- [x] Run the complete Node CI and Docker backup/restore smoke test.
+- [x] Update this document to completed and record the final Node release/image.
 
-## Rollback invariants
+## Migration complete
 
-- The first Node release does not alter the v7 application schema.
-- `goose_db_version` remains compatible with the final Go binary.
-- Catalog identifiers and stored viewer-state values remain unchanged.
-- The last Go image and a tested database backup remain available.
-- Only one bot process is active at any time.
-
-## Known high-risk areas
-
-- Twitch seamless reconnect, shard-disabled recovery, token expiry, and duplicate delivery.
-- Existing production databases that have not reached Goose v7.
-- Native SQLite packaging and WAL-aware backup/restore.
-- JavaScript number precision relative to SQLite/Go `int64`.
-- Admin loopback semantics through Docker or a reverse proxy.
-- Custom-server and development/HMR double starts.
-- Synchronous SQLite work blocking the Node event loop.
-- Parallel agents editing shared configuration or contracts.
+The Go → SvelteKit migration finished on 2026-08-09. The application is now a single SvelteKit/Node process. All Go source, tooling, CI jobs, and rollback infrastructure have been removed.

@@ -1,8 +1,8 @@
 import { createBot } from '$lib/server/bot/bot';
-import { tokenizeTriggerWords } from '$lib/server/bot/text';
-import { passesTriggerChance } from '$lib/server/bot/triggers';
 import { createBotHarness, createRandomFake } from '$lib/server/bot/testing/fakes';
 import { chatMessageEvent } from '$lib/server/bot/testing/fixtures';
+import { tokenizeTriggerWords } from '$lib/server/bot/text';
+import { passesTriggerChance } from '$lib/server/bot/triggers';
 import { describe, expect, it } from 'vitest';
 
 describe('come trigger matching', () => {
