@@ -1,4 +1,4 @@
-import { env } from '$env/dynamic/private';
+import { TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_OAUTH_REDIRECT_URI } from '$app/env/private';
 import { error } from '@sveltejs/kit';
 
 import type { RequestHandler } from './$types';
@@ -26,9 +26,9 @@ export const GET: RequestHandler = async ({ url }) => {
     return html('Authorization Denied', `Authorization denied: ${description}`);
   }
 
-  const clientId = env.TWITCH_CLIENT_ID;
-  const clientSecret = env.TWITCH_CLIENT_SECRET;
-  const redirectUri = env.TWITCH_OAUTH_REDIRECT_URI;
+  const clientId = TWITCH_CLIENT_ID;
+  const clientSecret = TWITCH_CLIENT_SECRET;
+  const redirectUri = TWITCH_OAUTH_REDIRECT_URI;
 
   if (!clientId || !clientSecret || !redirectUri) {
     error(500, 'OAuth is not configured');

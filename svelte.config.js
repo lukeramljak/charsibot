@@ -15,6 +15,7 @@ const config = {
       '$catalog/*': './catalog/*',
     },
     experimental: {
+      explicitEnvironmentVariables: true,
       remoteFunctions: true,
     },
   },

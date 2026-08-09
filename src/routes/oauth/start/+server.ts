@@ -1,4 +1,4 @@
-import { env } from '$env/dynamic/private';
+import { TWITCH_CLIENT_ID, TWITCH_OAUTH_REDIRECT_URI } from '$app/env/private';
 import { error, redirect } from '@sveltejs/kit';
 
 import type { RequestHandler } from './$types';
@@ -15,8 +15,8 @@ export const GET: RequestHandler = ({ url }) => {
     error(400, 'account must be "streamer" or "bot"');
   }
 
-  const clientId = env.TWITCH_CLIENT_ID;
-  const redirectUri = env.TWITCH_OAUTH_REDIRECT_URI;
+  const clientId = TWITCH_CLIENT_ID;
+  const redirectUri = TWITCH_OAUTH_REDIRECT_URI;
 
   if (!clientId || !redirectUri) {
     error(500, 'OAuth is not configured');
