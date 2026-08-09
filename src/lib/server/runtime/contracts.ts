@@ -19,4 +19,4 @@ export interface ApplicationRuntime {
   stop: (reason: string) => Promise<void>;
 }
 
-export type RuntimeFactory = () => Promise<ApplicationRuntime>;
+export type RuntimeFactory = (environment?: NodeJS.ProcessEnv) => Promise<ApplicationRuntime>;

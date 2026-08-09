@@ -88,8 +88,10 @@ export const readRuntimeConfig = (environment: NodeJS.ProcessEnv): RuntimeConfig
   return { dbPath, logger: createLogger(), twitch: readTwitchConfig(environment) };
 };
 
-export const createApplicationRuntime = async (): Promise<ApplicationRuntime> => {
-  const config = readRuntimeConfig(process.env);
+export const createApplicationRuntime = async (
+  environment: NodeJS.ProcessEnv = process.env,
+): Promise<ApplicationRuntime> => {
+  const config = readRuntimeConfig(environment);
   let db: DatabaseConnection | undefined;
   let bus: OverlayBus | undefined;
 

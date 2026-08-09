@@ -22,7 +22,7 @@ afterEach(() => {
 });
 
 describe('openDatabase', () => {
-  it('creates the consolidated Goose v7 schema and exact connection pragmas', () => {
+  it('creates the schema and applies exact connection pragmas', () => {
     const connection = openDatabase(databasePath());
     expect(connection.state).toBe('created');
     const { database } = connection;
@@ -33,22 +33,17 @@ describe('openDatabase', () => {
     expect(database.pragma('synchronous', { simple: true })).toBe(1n);
     expect(database.pragma('secure_delete', { simple: true })).toBe(1n);
     expect(database.pragma('busy_timeout', { simple: true })).toBe(30000n);
-    const versions = database
-      .prepare('SELECT version_id FROM goose_db_version ORDER BY id')
-      .pluck()
-      .all();
-    expect(versions).toEqual([0n, 1n, 2n, 3n, 4n, 5n, 6n, 7n]);
     const tables = database
       .prepare(
         "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name",
       )
       .pluck()
       .all();
-    expect(tables).toEqual(['goose_db_version', 'user_plushies', 'user_stats', 'viewer_activity']);
+    expect(tables).toEqual(['user_plushies', 'user_stats', 'viewer_activity']);
     connection.close();
   });
 
-  it('validates and reopens v7 without changing schema or migration history', () => {
+  it('validates and reopens without changing schema', () => {
     const path = databasePath();
     const created = openDatabase(path);
     created.database
@@ -56,9 +51,6 @@ describe('openDatabase', () => {
       .run('viewer', 'name', 'strength', 9);
     const schemaBefore = created.database
       .prepare('SELECT name, sql FROM sqlite_master WHERE sql IS NOT NULL ORDER BY name')
-      .all();
-    const historyBefore = created.database
-      .prepare('SELECT version_id, is_applied FROM goose_db_version ORDER BY id')
       .all();
     created.close();
 
@@ -71,11 +63,6 @@ describe('openDatabase', () => {
     ).toEqual(schemaBefore);
     expect(
       reopened.database
-        .prepare('SELECT version_id, is_applied FROM goose_db_version ORDER BY id')
-        .all(),
-    ).toEqual(historyBefore);
-    expect(
-      reopened.database
         .prepare('SELECT value FROM user_stats WHERE user_id = ?')
         .pluck()
         .get('viewer'),
@@ -83,10 +70,53 @@ describe('openDatabase', () => {
     reopened.close();
   });
 
+  it('drops the legacy goose_db_version table on open', () => {
+    const path = databasePath();
+    const database = new BetterSqlite3(path);
+    database.exec(`
+      CREATE TABLE goose_db_version (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        version_id INTEGER NOT NULL,
+        is_applied INTEGER NOT NULL,
+        tstamp TIMESTAMP DEFAULT (datetime('now'))
+      );
+      CREATE TABLE user_stats (
+        user_id TEXT NOT NULL,
+        username TEXT NOT NULL,
+        stat_name TEXT NOT NULL,
+        value INTEGER NOT NULL DEFAULT 3,
+        PRIMARY KEY (user_id, stat_name)
+      );
+      CREATE TABLE user_plushies (
+        user_id TEXT NOT NULL,
+        username TEXT NOT NULL,
+        series TEXT NOT NULL,
+        key TEXT NOT NULL,
+        PRIMARY KEY (user_id, series, key)
+      );
+      CREATE TABLE viewer_activity (
+        user_id TEXT PRIMARY KEY,
+        username TEXT NOT NULL,
+        last_active_at TEXT NOT NULL
+      );
+      CREATE INDEX viewer_activity_last_active_at_idx
+        ON viewer_activity(last_active_at);
+    `);
+    database.close();
+
+    const connection = openDatabase(path);
+    expect(connection.state).toBe('existing');
+    const tables = connection.database
+      .prepare(
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name",
+      )
+      .pluck()
+      .all();
+    expect(tables).not.toContain('goose_db_version');
+    connection.close();
+  });
+
   it.each([
-    ['below v7', 'DELETE FROM goose_db_version WHERE version_id = 7'],
-    ['above v7', 'INSERT INTO goose_db_version (version_id, is_applied) VALUES (8, 1)'],
-    ['malformed history', 'UPDATE goose_db_version SET is_applied = 0 WHERE version_id = 4'],
     ['missing index', 'DROP INDEX viewer_activity_last_active_at_idx'],
     ['wrong schema', 'ALTER TABLE user_stats ADD COLUMN unexpected TEXT'],
     ['unexpected application objects', 'CREATE TABLE unexpected (id INTEGER PRIMARY KEY)'],
@@ -100,22 +130,12 @@ describe('openDatabase', () => {
     expect(() => openDatabase(path)).toThrow();
   });
 
-  it('rejects a partial non-empty database without adding migration tables', () => {
+  it('rejects a partial non-empty database without creating tables', () => {
     const path = databasePath();
     const database = new BetterSqlite3(path);
     database.exec('CREATE TABLE unrelated (id INTEGER PRIMARY KEY)');
     database.close();
     expect(() => openDatabase(path)).toThrow();
-    const inspected = new BetterSqlite3(path);
-    expect(
-      inspected
-        .prepare(
-          "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'goose_db_version'",
-        )
-        .pluck()
-        .get(),
-    ).toBe(0);
-    inspected.close();
   });
 
   it('rejects SQLite integers outside the lossless JavaScript range', () => {

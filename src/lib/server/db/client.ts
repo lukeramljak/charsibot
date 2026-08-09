@@ -1,6 +1,6 @@
 import BetterSqlite3 from 'better-sqlite3';
 
-import { initializeOrValidateV7 } from '$lib/server/db/schema';
+import { initializeOrValidate } from '$lib/server/db/schema';
 
 export interface DatabaseConnection {
   database: BetterSqlite3.Database;
@@ -31,7 +31,7 @@ export const openDatabase = (path: string): DatabaseConnection => {
   try {
     applyPragmas(database);
 
-    const state = initializeOrValidateV7(database);
+    const state = initializeOrValidate(database);
     let closed = false;
 
     const checkpoint = (): void => {

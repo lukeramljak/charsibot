@@ -18,29 +18,36 @@ export interface ApplicationServices {
   catalog: Catalog;
 }
 
-let services: ApplicationServices | undefined;
-let readiness: Readiness | undefined;
+const store = (() => {
+  if (import.meta.env.DEV) {
+    const g = globalThis as Record<string, unknown>;
+    g.__charsibot_container ??= { services: undefined, readiness: undefined };
+    return g.__charsibot_container as { services: ApplicationServices | undefined; readiness: Readiness | undefined };
+  }
+
+  return { services: undefined as ApplicationServices | undefined, readiness: undefined as Readiness | undefined };
+})();
 
 export const setServices = (s: ApplicationServices): void => {
-  services = s;
+  store.services = s;
 };
 
 export const getServices = (): ApplicationServices => {
-  if (!services) {
+  if (!store.services) {
     throw new ApplicationError('not_ready', 'application is not ready');
   }
 
-  return services;
+  return store.services;
 };
 
 export const setReadiness = (r: Readiness): void => {
-  readiness = r;
+  store.readiness = r;
 };
 
 export const getReadiness = (): Readiness => {
-  if (!readiness) {
+  if (!store.readiness) {
     throw new ApplicationError('not_ready', 'application is not ready');
   }
 
-  return readiness;
+  return store.readiness;
 };
