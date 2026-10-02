@@ -1,0 +1,77 @@
+{
+  "series": "halloween",
+  "assetDir": "halloween",
+  "redemptionTitle": "Halloween Series Blind Box",
+  "name": "Spookypups",
+  "revealSound": "reveal.mp3",
+  "boxFrontFace": "box-front.png",
+  "boxSideFace": "box-side.png",
+  "displayColor": "#4e121f",
+  "textColor": "#ffffff",
+  "plushies": [
+    {
+      "key": "pupkin-patch",
+      "sortOrder": 1,
+      "weight": 5,
+      "name": "Pupkin Patch",
+      "image": "pupkin-patch.png",
+      "emptyImage": "pupkin-patch-blank.png"
+    },
+    {
+      "key": "vampup",
+      "sortOrder": 2,
+      "weight": 5,
+      "name": "Vampup",
+      "image": "vampup.png",
+      "emptyImage": "vampup-blank.png"
+    },
+    {
+      "key": "devil",
+      "sortOrder": 3,
+      "weight": 5,
+      "name": "Devil",
+      "image": "devil.png",
+      "emptyImage": "devil-blank.png"
+    },
+    {
+      "key": "skelepup",
+      "sortOrder": 4,
+      "weight": 5,
+      "name": "Skelepup",
+      "image": "skelepup.png",
+      "emptyImage": "skelepup-blank.png"
+    },
+    {
+      "key": "ghost",
+      "sortOrder": 5,
+      "weight": 5,
+      "name": "Ghost",
+      "image": "ghost.png",
+      "emptyImage": "ghost-blank.png"
+    },
+    {
+      "key": "frankensteins-dog",
+      "sortOrder": 6,
+      "weight": 5,
+      "name": "Frankenstein's Dog",
+      "image": "frankensteins-dog.png",
+      "emptyImage": "frankensteins-dog-blank.png"
+    },
+    {
+      "key": "wizard",
+      "sortOrder": 7,
+      "weight": 5,
+      "name": "Wizard",
+      "image": "wizard.png",
+      "emptyImage": "wizard-blank.png"
+    },
+    {
+      "key": "secret",
+      "sortOrder": 8,
+      "weight": 1,
+      "name": "Secret",
+      "image": "secret.png",
+      "emptyImage": "secret-blank.png"
+    }
+  ]
+}

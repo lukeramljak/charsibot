@@ -53,6 +53,7 @@ describe('catalog loading', () => {
     expect(catalog.series.map((config) => config.series)).toEqual([
       'coobubu',
       'easter',
+      'halloween',
       'olliepop',
       'pixel',
       'valentines',
